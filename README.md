@@ -1,2 +1,2 @@
 # brewable
-Raspberry  Pi nased temperature controller
+Raspberry  Pi based temperature controller
