@@ -1,12 +1,12 @@
 import time
 import multiprocessing
-import ast
 import json
 
 # Input temperature sensor
 #import systemtemp as st
 #import ds18b20 as st
 #DEVICE_DIR = '/sys/bus/w1/devices/w1_bus_master1/w1_master_slaves'
+PROFILE_DATA_FILE='profileData.txt'
 
 # Output relay
 #from seedrelay import Relay
@@ -48,12 +48,26 @@ class GPIOProcess(multiprocessing.Process):
         # Loop
         count = 0
         while True:
-            # Incoming request
+            # Incoming request from app
             if not self.input_queue.empty():
                 data = self.input_queue.get()
                 # Do something with it
                 print "data 0: ", data
-                #jmsg = json.loads(data)
+                print "data 0 length: ", len(data)
+                jmsg = json.loads(data.strip())
+                print "data 1: ", jmsg['type']
+                print "data 2: ", jmsg['data']
+                if jmsg['type'].startswith('save_profiles'):
+                    with open(PROFILE_DATA_FILE, 'w') as json_file:
+                        json.dump({'profiles_data':jmsg['data']}, json_file)
+                        #json.dump(data, json_file)
+                elif jmsg['type'].startswith('load_profiles'):
+                    with open(PROFILE_DATA_FILE) as json_file:
+                        json_data = json.load(json_file)
+                        print(json_data['profiles_data'])
+                        jdata = json.dumps({'type':'loaded_profiles',
+                                            'data':json_data['profiles_data']})
+                        self.output_queue.put(jdata)
                 #if jmsg['type'].startswith('CMD'):
                 #    self.run_command(jmsg)
 

@@ -6,10 +6,44 @@ title.main {
 	color: cyan;
 }
 
-body {
+body.status {
 	font-family: ariel;
+	background-color: lightgray;
 	margin:	0px;
 	padding: 20px;
+}
+body.profiles {
+	font-family: ariel;
+	background-color: lightblue;
+	margin:	0px;
+	padding: 20px;
+}
+
+#profilesTableHolder {
+	overflow-y: hidden;
+	overflow-x: auto;
+}
+#profilesTable {
+	font-family: ariel;
+	font-size: 70%;
+	border-collapse: collapse;
+}
+caption {
+	font-family: ariel;
+	font-size: 150%;
+	font-weight: bold;
+}
+td {
+	border: 1px solid #000;
+	white-space: nowrap;
+}
+.setpoint {
+	font-family: ariel;
+	font-size: 125%;
+}
+.durpoint {
+	font-family: ariel;
+	font-size: 125%;
 }
 
 .yaxisticks text {

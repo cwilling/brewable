@@ -1,3 +1,14 @@
+
+// Show/Hide stuff
+function toggle_visibility(id) {
+   var e = document.getElementById(id);
+   if(e.style.display == 'none')
+      e.style.display = 'block';
+   else
+      e.style.display = 'none';
+}
+
+
 $(document).ready( function(){
 
 
@@ -45,10 +56,9 @@ var sendMessage = function(message) {
     });
 
 
-// Open Profiles page
 
+  // Open Profiles page
   profileLink.onclick = function() {
-    //gmyWin = myOpenWindow("/static/mp2.html", "Profiles", "height=0", gmyWin );
     gmyWin = myOpenWindow("/profile", "Profiles", "height=0", gmyWin );
     console.log('Profiles button clicked');
   }

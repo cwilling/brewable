@@ -3,16 +3,17 @@
   <head>
     <link rel="stylesheet" href="static/brewable.css" type="text/css" media="screen">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
-    <script type="text/javascript" src="static/mp1.js"></script>
+    <script type="text/javascript" src="static/status.js"></script>
 
     <title class="main">brewable console</title>
   </head>
-  <body>
+  <body class="status">
 
-  <p>MP1</p>
+  <p>Status</p>
+
+  <div id="msgrx" style="display:none;">
   <p>Messages received:</p>
-  <div id="received">
-  </div>
+  <div id="received"></div>
   <button id="clear">Clear</button>
   
   <p>Send data to device server</p>
@@ -20,11 +21,15 @@
 	<input type="text" id="cmd_value">
 	<button id="cmd_send">Send</button>
   </form>
+  </div>
 
 
   <div id="container">
     <button id="open_profiles"; type="button">Profiles</button>
   </div>
+
+<a href="#bar" name="bar" onclick="toggle_visibility('msgrx');">Read more...</a>
+<div id="foo" style="display:none;">Show this FOO.</div>
 
 
   </body>
