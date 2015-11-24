@@ -62,12 +62,19 @@ class GPIOProcess(multiprocessing.Process):
                         json.dump({'profiles_data':jmsg['data']}, json_file)
                         #json.dump(data, json_file)
                 elif jmsg['type'].startswith('load_profiles'):
-                    with open(PROFILE_DATA_FILE) as json_file:
-                        json_data = json.load(json_file)
-                        print(json_data['profiles_data'])
-                        jdata = json.dumps({'type':'loaded_profiles',
-                                            'data':json_data['profiles_data']})
+                    try:
+                        with open(PROFILE_DATA_FILE) as json_file:
+                            json_data = json.load(json_file)
+                            print(json_data['profiles_data'])
+                            jdata = json.dumps({'type':'loaded_profiles',
+                                                'data':json_data['profiles_data']})
+                    except:
+                            print "Couldn't load profile data file"
+                            jdata = json.dumps({'type':'loaded_profiles',
+                                                'data':[]})
+                    finally:
                         self.output_queue.put(jdata)
+
                 #if jmsg['type'].startswith('CMD'):
                 #    self.run_command(jmsg)
 
@@ -78,12 +85,17 @@ class GPIOProcess(multiprocessing.Process):
             #jdata = json.dumps({'sensorId':self.sensorDevices[0].getId(),
             #                    'type':'live_update',
             #                    'data':data})
-            print "XXX", data
-            self.output_queue.put(data)
+            #print "XXX", data
+            #self.output_queue.put(data)
             #print "XXX", jdata
             #self.output_queue.put(jdata)
-            count += 1
 
+            # Send a heartbeat (in absence or any sensors)
+            if len(self.sensorDevices) == 0:
+                jdata = json.dumps({'type':'heartbeat','data':count});
+                self.output_queue.put(jdata)
+
+            count += 1
 
             time.sleep(1)
 

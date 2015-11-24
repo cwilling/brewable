@@ -26,7 +26,7 @@ $(document).ready( function(){
 
   var received = $('#received');
 
-  createProfileTableFunction(document.getElementById("profilesTable"));
+  //createProfileTableFunction(document.getElementById("profilesTable"));
 
   // Save button
   var saveProfilesButton = document.getElementById("saveProfiles");
@@ -74,9 +74,19 @@ socket.onmessage = function (message) {
       received.append(jmsg.data);
       received.append($('<br/>'));
     } else if (jmsg.type === 'loaded_profiles' ) {
-      received.append('RCVD: profiles data');
+      console.log('Data length = ' + jmsg.data.length);
+      if ( jmsg.data.length == 0 ) {
+        received.append('RCVD: EMPTY profiles data');
+      } else {
+        received.append('RCVD: OK profiles data');
+      }
       received.append($('<br/>'));
-      updateProfilesTableData(jmsg.data);
+      //updateProfilesTableData(jmsg.data);
+      createProfileTableFunction(jmsg.data);
+    } else if (jmsg.type === 'heartbeat' ) {
+      received.append('HEARTBEAT: ');
+      received.append(jmsg.data);
+      received.append($('<br/>'));
     } else {
       console.log('Unknown json messsage type: ' + jmsg.type);
     }
@@ -118,7 +128,7 @@ var sendMessage = function(message) {
 
 
   // Profiles Table
-  function createProfileTableFunction(table) {
+  function OLDcreateProfileTableFunction(table) {
 
     for (i=0;i<profilesTableRows;i++) {
       var row = table.insertRow(i);
@@ -129,10 +139,27 @@ var sendMessage = function(message) {
       }
     }
   }
-  function populateProfilesTableCell(rowNumber, cellNumber) {
+  function createProfileTableFunction(loadedProfileData) {
+    var pdata;
+    table = document.getElementById("profilesTable");
+
+    if( loadedProfileData.length == 0 ) {
+      pdata = dummyProfileSet;
+    } else {
+      pdata = loadedProfileData;
+    }
+    for (i=0;i<pdata.length;i++) {
+      var row = table.insertRow(i);
+      var th = row.insertCell(0).appendChild(document.createElement('TH'));
+      th.appendChild(document.createTextNode("Profile " + i));
+      for (j=0;j<pdata[i].length;j++) {
+         row.insertCell(j+1).appendChild(populateProfilesTableCell(i,j,pdata[i]));
+      }
+    }
+  }
+  function populateProfilesTableCell(rowNumber, cellNumber, rowData) {
     var cell = document.createElement('TABLE');
     var row = cell.insertRow(0);
-    var dummyRow = dummyProfileSet[rowNumber];
 
     row.appendChild(document.createTextNode("sp" + cellNumber));
 
@@ -142,7 +169,7 @@ var sendMessage = function(message) {
     tempInput.type = "text";
     tempInput.size = 2;
     //tempInput.value = "21.0";
-    tempInput.value = dummyRow[cellNumber].target;
+    tempInput.value = rowData[cellNumber].target;
     row.appendChild(tempInput);
 
     tscale = document.createElement('SPAN');
@@ -157,7 +184,8 @@ var sendMessage = function(message) {
     timeInput.className = "durpoint";
     timeInput.type = "text";
     timeInput.size = 2;
-    timeInput.value = 1.0;
+    //timeInput.value = 1.0;
+    timeInput.value = rowData[cellNumber].duration;
     row.appendChild(timeInput);
 
     durUnit = document.createElement('SPAN');
