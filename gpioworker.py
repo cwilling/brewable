@@ -33,14 +33,17 @@ class GPIOProcess(multiprocessing.Process):
 
         # Setup
         # First look for sensor devices
-#        sensor_file = open(DEVICE_DIR)
-#        sensors = sensor_file.read()
-#        sensor_file.close
-#        for sensorId in sensors.split():
-#            self.sensorDevices.append(SensorDevice(sensorId))
-#            print sensorId
-#        for sensor in self.sensorDevices:
-#            print "SENSOR", sensor.getId()
+        try:
+            sensor_file = open(DEVICE_DIR)
+            sensors = sensor_file.read()
+            sensor_file.close
+            for sensorId in sensors.split():
+                self.sensorDevices.append(SensorDevice(sensorId))
+                print sensorId
+            for sensor in self.sensorDevices:
+                print "SENSOR", sensor.getId()
+        except:
+            print "No sensors connected?"
 
         # Now check the relays
         #self.relay_test()
@@ -54,41 +57,48 @@ class GPIOProcess(multiprocessing.Process):
                 # Do something with it
                 print "data 0: ", data
                 print "data 0 length: ", len(data)
-                jmsg = json.loads(data.strip())
-                print "data 1: ", jmsg['type']
-                print "data 2: ", jmsg['data']
-                if jmsg['type'].startswith('save_profiles'):
-                    with open(PROFILE_DATA_FILE, 'w') as json_file:
-                        json.dump({'profiles_data':jmsg['data']}, json_file)
-                        #json.dump(data, json_file)
-                elif jmsg['type'].startswith('load_profiles'):
-                    try:
-                        with open(PROFILE_DATA_FILE) as json_file:
-                            json_data = json.load(json_file)
-                            print(json_data['profiles_data'])
-                            jdata = json.dumps({'type':'loaded_profiles',
-                                                'data':json_data['profiles_data']})
-                    except:
-                            print "Couldn't load profile data file"
-                            jdata = json.dumps({'type':'loaded_profiles',
-                                                'data':[]})
-                    finally:
-                        self.output_queue.put(jdata)
+                try:
+                    jmsg = json.loads(data.strip())
+                    if jmsg['type'].startswith('save_profiles'):
+                        with open(PROFILE_DATA_FILE, 'w') as json_file:
+                            json.dump({'profiles_data':jmsg['data']}, json_file)
+                            #json.dump(data, json_file)
+                    elif jmsg['type'].startswith('load_profiles'):
+                        try:
+                            with open(PROFILE_DATA_FILE) as json_file:
+                                json_data = json.load(json_file)
+                                print(json_data['profiles_data'])
+                                jdata = json.dumps({'type':'loaded_profiles',
+                                                    'data':json_data['profiles_data']})
+                        except:
+                                print "Couldn't load profile data file"
+                                jdata = json.dumps({'type':'loaded_profiles',
+                                                    'data':[]})
+                        finally:
+                            self.output_queue.put(jdata)
 
-                #if jmsg['type'].startswith('CMD'):
-                #    self.run_command(jmsg)
+                    elif jmsg['type'].startswith('CMD'):
+                        print "CMD CMD CMD"
+                        #self.run_command(jmsg)
+                except:
+                    print "Non json msg: ", data
 
 
             # Data/info from device
             data = "generic %d" % count
-            #data = st.get_temp(self.sensorDevices[0].getId())
-            #jdata = json.dumps({'sensorId':self.sensorDevices[0].getId(),
-            #                    'type':'live_update',
-            #                    'data':data})
+            try:
+                data = st.get_temp(self.sensorDevices[0].getId())
+                jdata = json.dumps({'sensorId':self.sensorDevices[0].getId(),
+                                    'type':'live_update',
+                                    'data':data})
+            except:
+                jdata = json.dumps({'sensorId':'dummy_123',
+                                    'type':'live_update',
+                                    'data':21})
             #print "XXX", data
             #self.output_queue.put(data)
-            #print "XXX", jdata
-            #self.output_queue.put(jdata)
+            print "XXX", jdata
+            self.output_queue.put(jdata)
 
             # Send a heartbeat (in absence or any sensors)
             if len(self.sensorDevices) == 0:

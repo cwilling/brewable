@@ -3,34 +3,47 @@
   <head>
     <link rel="stylesheet" href="static/brewable.css" type="text/css" media="screen">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+    <script src="http://d3js.org/d3.v3.min.js"></script>
     <script type="text/javascript" src="static/status.js"></script>
 
     <title class="main">brewable console</title>
   </head>
   <body class="status">
 
-  <p>Status</p>
+    <p>Status</p>
 
-  <div id="msgrx" style="display:none;">
-  <p>Messages received:</p>
-  <div id="received"></div>
-  <button id="clear">Clear</button>
-  
-  <p>Send data to device server</p>
-  <form id="sent">
-	<input type="text" id="cmd_value">
-	<button id="cmd_send">Send</button>
-  </form>
-  </div>
+    <div id="msgrx" style="display:none;">
+      <p>Messages received:</p>
+      <div id="received"></div>
+      <button id="clear">Clear</button>
+    
+      <p>Send data to device server</p>
+      <form id="sent">
+        <input type="text" id="cmd_value">
+        <button id="cmd_send">Send</button>
+      </form>
+    </div>
 
 
-  <div id="container">
-    <button id="open_profiles"; type="button">Profiles</button>
-  </div>
+    <div id="container">
+      <button id="open_profiles"; type="button">Profiles</button>
+    </div>
 
-<a href="#bar" name="bar" onclick="toggle_visibility('msgrx');">Read more...</a>
-<div id="foo" style="display:none;">Show this FOO.</div>
+    <a href="#bar" name="bar" onclick="toggle_visibility('msgrx');">Read more...</a>
+    <div id="foo" style="display:none;">Show this FOO.</div>
+
+    <section class="relay_buttons">
+      <h1>Relay Buttons</h1>
+      <button id="relay_btn_1" type="button" >Relay 1</button>
+      <button id="relay_btn_2" type="button" >Relay 2</button>
+      <button id="relay_btn_3" type="button" >Relay 3</button>
+      <button id="relay_btn_4" type="button" >Relay 4</button>
+    </section>
 
 
   </body>
 </html>
+
+<!--
+ex:set ai shiftwidth=2 inputtab=spaces smarttab noautotab:
+-->

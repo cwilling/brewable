@@ -87,5 +87,65 @@ console.log("XXX %s", winName);
   return theWin;
 }
 
+var margin = {top: 100, right: 20, bottom: 30, left: 80},
+    width = 600 - margin.left - margin.right,
+    height = 400 - margin.top - margin.bottom;
+
+var minDataPoint = 20;
+var maxDataPoint = 80;
+var linearScale = d3.scale.linear()
+	.domain([minDataPoint, maxDataPoint])
+	.range([height, 0]);
+var yAxis = d3.svg.axis()
+	.scale(linearScale)
+	.orient("left").ticks(5);
+
+function make_x_axis() {		
+    return d3.svg.axis()
+        .scale(x)
+        .orient("bottom")
+        .ticks(5)
+}
+function make_y_axis() {		
+    return d3.svg.axis()
+        .scale(y)
+        .orient("left")
+        .ticks(5)
+}
+
+var svgContainer = d3.select("body")
+    .append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+	.style("border", "1px solid black")
+    .append("g")
+	.attr("class", "yaxisticks")
+        .attr("transform", 
+              "translate(" + margin.left + "," + margin.top + ")")
+        .call(yAxis);
+
+svgContainer.append("g")
+    .attr("class", "yaxistext")
+    .append("text")
+	.attr("transform", "rotate(-90)")
+	.attr("x", 0 - margin.top)
+	.attr("y", 0 - (margin.left/2))
+	.attr("dy", "lem")
+	.style("text-anchor", "middle")
+	.text("Temperature (C)");
+
+
+var lineGraph = svgContainer.append("path");
+
+var live_temps = [];
+var live_temps_scaled = [];
+
+var live_temps_lineData = [];
+var live_temps_lineData_scaled = [];
+
+var lineFunction = d3.svg.line()
+	.x(function(d) {return d.time})
+	.y(function(d) {return d.temp})
+	.interpolate("linear");
 
 });

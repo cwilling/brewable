@@ -22,7 +22,7 @@ output_queue = multiprocessing.Queue()
  
 class IndexHandler(tornado.web.RequestHandler):
     def get(self):
-        self.render('status.html')
+        self.render('index.html')
  
 class ProfileHandler(tornado.web.RequestHandler):
     def get(self):
@@ -45,7 +45,7 @@ class WebSocketHandlerStatus(tornado.websocket.WebSocketHandler):
         #print 'tornado received from client: %s' % json.dumps(message)
         print 'tornado received from client (SSS): %s' % message
         self.write_message('SSS ack')
-        input_queue.put("SSS" + message)
+        input_queue.put(message)
  
     def on_close(self):
         clients.discard(self)
