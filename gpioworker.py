@@ -4,12 +4,12 @@ import json
 
 # Input temperature sensor
 #import systemtemp as st
-#import ds18b20 as st
-#DEVICE_DIR = '/sys/bus/w1/devices/w1_bus_master1/w1_master_slaves'
+import ds18b20 as st
+DEVICE_DIR = '/sys/bus/w1/devices/w1_bus_master1/w1_master_slaves'
 PROFILE_DATA_FILE='profileData.txt'
 
 # Output relay
-#from seedrelay import Relay
+from seedrelay import Relay
 
 class SensorDevice():
     def __init__(self, id):
@@ -27,7 +27,7 @@ class GPIOProcess(multiprocessing.Process):
         self.input_queue = input_queue
         self.output_queue = output_queue
         self.sensorDevices = []
-        #self.relay = Relay()
+        self.relay = Relay()
 
     def run(self):
 
@@ -79,7 +79,7 @@ class GPIOProcess(multiprocessing.Process):
 
                     elif jmsg['type'].startswith('CMD'):
                         print "CMD CMD CMD"
-                        #self.run_command(jmsg)
+                        self.run_command(jmsg)
                 except:
                     print "Non json msg: ", data
 
@@ -110,37 +110,37 @@ class GPIOProcess(multiprocessing.Process):
             time.sleep(1)
 
 
-#    def relay_test(self):
-#        print "Relay count = ", self.relay.device_count()
-#        for i in range(self.relay.device_count()):
-#            self.relay.ON(i+1)
-#            time.sleep(1)
-#        for i in range(self.relay.device_count()):
-#            self.relay.OFF(i+1)
-#            time.sleep(1)
-#        self.relay.ALLON()
-#        time.sleep(1)
-#        self.relay.ALLOFF()
+    def relay_test(self):
+        print "Relay count = ", self.relay.device_count()
+        for i in range(self.relay.device_count()):
+            self.relay.ON(i+1)
+            time.sleep(1)
+        for i in range(self.relay.device_count()):
+            self.relay.OFF(i+1)
+            time.sleep(1)
+        self.relay.ALLON()
+        time.sleep(1)
+        self.relay.ALLOFF()
 
-#    def run_command(self, jmsg):
-#        print "Running command: ", jmsg['command']
-#        print "data 4: ", jmsg['argc']
-#        print "data 5: ", jmsg['args']
-#        channel = jmsg['args'][0]
-#        if self.relay.isOn(channel):
-#            print "relay %d is already on; switching off" % channel
-#            self.relay.OFF(jmsg['args'][0])
-#        else:
-#            print "relay %d is off; switching on" % channel
-#            self.relay.ON(jmsg['args'][0])
-#        print "STATE: ", self.relay.state()
-#        if self.relay.isOn(channel):
-#            data = 'relay ' + str(channel) + ' now ON'
-#        else:
-#            data = 'relay ' + str(channel) + ' now OFF'
-#        jdata = json.dumps({'type':'info',
-#                            'data':data})
-#        self.output_queue.put(jdata)
+    def run_command(self, jmsg):
+        print "Running command: ", jmsg['command']
+        print "data 4: ", jmsg['argc']
+        print "data 5: ", jmsg['args']
+        channel = jmsg['args'][0]
+        if self.relay.isOn(channel):
+            print "relay %d is already on; switching off" % channel
+            self.relay.OFF(jmsg['args'][0])
+        else:
+            print "relay %d is off; switching on" % channel
+            self.relay.ON(jmsg['args'][0])
+        print "STATE: ", self.relay.state()
+        if self.relay.isOn(channel):
+            data = 'relay ' + str(channel) + ' now ON'
+        else:
+            data = 'relay ' + str(channel) + ' now OFF'
+        jdata = json.dumps({'type':'info',
+                            'data':data})
+        self.output_queue.put(jdata)
 
 
 # ex:set ai shiftwidth=4 inputtab=spaces smarttab noautotab:
