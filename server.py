@@ -22,7 +22,7 @@ output_queue = multiprocessing.Queue()
  
 class IndexHandler(tornado.web.RequestHandler):
     def get(self):
-        self.render('index.html')
+        self.render('status.html')
  
 class ProfileHandler(tornado.web.RequestHandler):
     def get(self):

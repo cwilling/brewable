@@ -1,59 +1,60 @@
 title.main {
-	text-align: center;
-	font-family: ariel;
-	font-size: 160%;
-	font-style: italic;
-	color: cyan;
+    text-align: center;
+    font-family: ariel;
+    font-size: 160%;
+    font-style: italic;
+    color: cyan;
 }
 
 body.status {
-	font-family: ariel;
-	background-color: lightgray;
-	margin:	0px;
-	padding: 20px;
+    font-family: ariel;
+    background-color: lightgray;
+    margin:	0px;
+    padding: 0px;
+    position: static;
 }
 body.profiles {
-	font-family: ariel;
-	background-color: lightblue;
-	margin:	0px;
-	padding: 20px;
+    font-family: ariel;
+    background-color: lightblue;
+    margin:	0px;
+    padding: 20px;
 }
 
 #profilesTableHolder {
-	overflow-y: hidden;
-	overflow-x: auto;
+    overflow-y: hidden;
+    overflow-x: auto;
 }
 #profilesTable {
-	font-family: ariel;
-	font-size: 70%;
-	border-collapse: collapse;
-}
+    font-family: ariel;
+    font-size: 70%;
+    border-collapse: collapse;
+    }
 caption {
-	font-family: ariel;
-	font-size: 150%;
-	font-weight: bold;
+    font-family: ariel;
+    font-size: 150%;
+    font-weight: bold;
 }
 td {
-	border: 1px solid #000;
-	white-space: nowrap;
+    border: 1px solid #000;
+    white-space: nowrap;
 }
 .setpoint {
-	font-family: ariel;
-	font-size: 125%;
+    font-family: ariel;
+    font-size: 125%;
 }
 .durpoint {
-	font-family: ariel;
-	font-size: 125%;
+    font-family: ariel;
+    font-size: 125%;
 }
 
 .yaxisticks text {
-	font-size: 80%;
-	fill: rgb(100, 100, 100);
+    font-size: 80%;
+    fill: rgb(100, 100, 100);
 }
 
 .yaxistext text {
-	font-size: 125%;
-	fill: rgb(0, 0, 0);
+    font-size: 125%;
+    fill: rgb(0, 0, 0);
 }
 
 .grid .tick {
@@ -62,15 +63,85 @@ td {
     shape-rendering: crispEdges;
 }
 .grid path {
-          stroke-width: 0;
+    stroke-width: 0;
 }
 
 #received {
-	width: 300px;
-	height: 300px;
-	border: 1px solid #dedede;
-	overflow-y: scroll;
+    width: 300px;
+    height: 300px;
+    border: 1px solid #dedede;
+    overflow-y: scroll;
 }
 	
 
-#sent { width: 500px; }
+#sent { width:	500px; }
+
+div#maintenance {
+    display:none;
+    position:	absolute;
+    bottom:	0;
+}
+
+div#navigation_holder {
+    height:	94px;
+    /* clear:   both; */
+}
+ul#navigation.status_navigation {
+    margin:	0;
+    padding:	0;
+    list-style-type: none;
+    background:	#036;
+    float:	left;
+    width:	100%;
+    top:	0;
+    border:	5px solid red;
+}
+ul#navigation li {
+    display:	inline;
+    margin:	0;
+    padding:	0;
+}
+ul#navigation a {
+    display:	block;
+    float:	left;
+    padding:	2em 5em;
+    text-decoration: none;
+    color:	#fff;
+    background:	#036;
+    border-right: 1px solid #fff;
+}
+ul#navigation a:hover {
+    color:	#000;
+    background:	#69c;
+}
+
+div#main_content {
+    float:	right;
+    width:	100%;
+    height:	720px;
+    background:	#444;
+    overflow:   hidden
+}
+div#content_1 {
+    display:block;
+    width:	100%;
+    height:	100%;
+    background:	#400;
+    color:	#fff;
+}
+div#content_2 {
+    display:block;
+    width:	100%;
+    height:	100%;
+    background:	#004;
+    color:	#fff;
+}
+div#content_3 {
+    display:block;
+    width:	100%;
+    height:	100%;
+    background:	#040;
+    color:	#fff;
+}
+
+/* ex:set ai shiftwidth=4 inputtab=spaces smarttab noautotab: */

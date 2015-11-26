@@ -1,11 +1,21 @@
 
 // Show/Hide stuff
 function toggle_visibility(id) {
-   var e = document.getElementById(id);
-   if(e.style.display == 'none')
-      e.style.display = 'block';
-   else
-      e.style.display = 'none';
+  var e = document.getElementById(id);
+  if(e.style.display == 'none')
+    e.style.display = 'block';
+  else
+    e.style.display = 'none';
+}
+function switch_visibility(id1, id2, id3) {
+  var e1 = document.getElementById(id1);
+  var e2 = document.getElementById(id2);
+  var e3 = document.getElementById(id3);
+  if(e1.style.display == 'none') {
+    e1.style.display = 'block';
+    e2.style.display = 'none';
+    e3.style.display = 'none';
+  }
 }
 
 
@@ -113,6 +123,7 @@ function make_y_axis() {
         .ticks(5)
 }
 
+/*
 var svgContainer = d3.select("body")
     .append("svg")
         .attr("width", width + margin.left + margin.right)
@@ -147,5 +158,12 @@ var lineFunction = d3.svg.line()
 	.x(function(d) {return d.time})
 	.y(function(d) {return d.temp})
 	.interpolate("linear");
+*/
+
 
 });
+
+
+/*
+ex:set ai shiftwidth=2 inputtab=spaces smarttab noautotab:
+*/

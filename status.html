@@ -10,10 +10,36 @@
   </head>
   <body class="status">
 
-    <p>Status</p>
+    <div id="navigation_holder">
+    <ul id="navigation" class="status_navigation">
+<!--
+      <li><a href="#" onclick="switch_visibility('content_1','content_2','content_3');">Status 1</a></li>
+      <li><a href="#" onclick="switch_visibility('content_2','content_3','content_1');">Status 2</a></li>
+      <li><a href="#" onclick="switch_visibility('content_3','content_2','content_1');">Status 3</a></li>
+      <li><a href="#" id="open_profiles">Profiles</a></li>
+      <li><a href="#" onclick="toggle_visibility('maintenance');">Maintenance</a></li>
+-->
+      <li><a href="#content_1">Status 1</a></li>
+      <li><a href="#content_2">Status 2</a></li>
+      <li><a href="#content_3">Status 3</a></li>
+      <li><a href="#" id="open_profiles">Profiles</a></li>
+      <li><a href="#" onclick="toggle_visibility('maintenance');">Maintenance</a></li>
+    </ul>
+    </div>
 
-    <div id="msgrx" style="display:none;">
-      <p>Messages received:</p>
+    <div id="main_content">
+      <div id="content_1">
+        Content 1
+      </div>
+      <div id="content_2">
+        Content 2
+      </div>
+      <div id="content_3">
+        Content 3
+      </div>
+    </div>
+
+    <div id="maintenance" style="display: none;">
       <div id="received"></div>
       <button id="clear">Clear</button>
     
@@ -22,14 +48,8 @@
         <input type="text" id="cmd_value">
         <button id="cmd_send">Send</button>
       </form>
-    </div>
 
 
-    <div id="container">
-      <button id="open_profiles"; type="button">Profiles</button>
-    </div>
-
-    <a href="#bar" name="bar" onclick="toggle_visibility('msgrx');">Read more...</a>
     <div id="foo" style="display:none;">Show this FOO.</div>
 
     <section class="relay_buttons">
@@ -39,7 +59,7 @@
       <button id="relay_btn_3" type="button" >Relay 3</button>
       <button id="relay_btn_4" type="button" >Relay 4</button>
     </section>
-
+    </div>
 
   </body>
 </html>
