@@ -86,12 +86,6 @@ svg#live_update {
     background:	#fff;
 }
 
-div#maintenance {
-    display:none;
-    position:	absolute;
-    bottom:	0;
-}
-
 div#navigation_holder {
     height:	94px;
     /* clear:   both; */
@@ -159,6 +153,13 @@ div#content_4 {
     height:	100%;
     background:	#448;
     color:	#fff;
+}
+div#content_5 {
+    display:    block;
+    width:	100%;
+    height:	100%;
+    background:	#8f8;
+    color:	#000;
 }
 
 /* ex:set ai shiftwidth=4 inputtab=spaces smarttab noautotab: */

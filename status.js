@@ -1,29 +1,17 @@
 
-// Show/Hide stuff
-function toggle_visibility(id) {
-  var e = document.getElementById(id);
-  if(e.style.display == 'none')
-    e.style.display = 'block';
-  else
-    e.style.display = 'none';
-}
-function switch_visibility(id1, id2, id3) {
-  var e1 = document.getElementById(id1);
-  var e2 = document.getElementById(id2);
-  var e3 = document.getElementById(id3);
-  if(e1.style.display == 'none') {
-    e1.style.display = 'block';
-    e2.style.display = 'none';
-    e3.style.display = 'none';
-  }
-}
-
-// Generate a dummy set of profiles to initially populate the profiles table.
-// When the websocket to server is established, we can obtain real values.
+/*
+For now, hard code the number of profiles (profilesTableRows)
+and number of steps per profile (profilesTableColumns).
+Eventually we'll make these settings dynamic.
+*/
 var profilesTableColumns = 10;
 var profilesTableRows = 4;
-var dummyProfileSet = generateDummyProfileSet(profilesTableRows, profilesTableColumns);
 
+/*
+In case we can't load saved profiles (first time use, botched file etc.),
+generate a dummy set of profiles to initially populate the profiles table.
+*/
+var dummyProfileSet = generateDummyProfileSet(profilesTableRows, profilesTableColumns);
 
 function generateDummyProfileSet(profiles, setpoints) {
   var i, j;
@@ -47,7 +35,7 @@ function generateDummyProfileSet(profiles, setpoints) {
 $(document).ready( function(){
 
 
-var received = $('#received');
+  var received = $('#received');
 
   // Profiles Save button
   var saveProfilesButton = document.getElementById("saveProfiles");
@@ -73,81 +61,78 @@ var received = $('#received');
   }
 
 
-//var socket = new WebSocket("ws://localhost:8080/ws");
-var socket = new WebSocket("ws://" + location.host + "/wsStatus");
+  //var socket = new WebSocket("ws://localhost:8080/ws");
+  var socket = new WebSocket("ws://" + location.host + "/wsStatus");
  
-socket.onopen = function(){  
-  console.log("sss connected"); 
+  socket.onopen = function(){  
+    console.log("sss connected"); 
 
-  // Request profiles data
-  var argv = [];
-  msgobj = {type:'load_profiles', data:argv};
-  sendMessage({data:JSON.stringify(msgobj)});
-};
+    // Request profiles data
+    var argv = [];
+    msgobj = {type:'load_profiles', data:argv};
+    sendMessage({data:JSON.stringify(msgobj)});
+  };
 
-socket.onmessage = function (message) {
+  socket.onmessage = function (message) {
 
-  var jmsg;
-  try {
-    jmsg = JSON.parse(message.data);
-    if ( jmsg.type === 'info' ) {
-      received.append('INFO: ');
-      received.append(jmsg.data);
-      received.append($('<br/>'));
-    } else if (jmsg.type === 'loaded_profiles' ) {
-      console.log('Data length = ' + jmsg.data.length);
-      if ( jmsg.data.length == 0 ) {
-        received.append('RCVD: EMPTY profiles data');
+    var jmsg;
+    try {
+      jmsg = JSON.parse(message.data);
+      if ( jmsg.type === 'info' ) {
+        received.append('INFO: ');
+        received.append(jmsg.data);
+        received.append($('<br/>'));
+      } else if (jmsg.type === 'loaded_profiles' ) {
+        console.log('Data length = ' + jmsg.data.length);
+        if ( jmsg.data.length == 0 ) {
+          received.append('RCVD: EMPTY profiles data');
+        } else {
+          received.append('RCVD: OK profiles data');
+        }
+        received.append($('<br/>'));
+        //updateProfilesTableData(jmsg.data);
+        createProfileTableFunction(jmsg.data);
+      } else if (jmsg.type === 'heartbeat' ) {
+        received.append('HEARTBEAT: ');
+        received.append(jmsg.data);
+        received.append($('<br/>'));
+      } else if (jmsg.type === 'live_update' ) {
+        add_live_data(jmsg.data);
       } else {
-        received.append('RCVD: OK profiles data');
+        console.log('Unknown json messsage type: ' + jmsg.type);
       }
-      received.append($('<br/>'));
-      //updateProfilesTableData(jmsg.data);
-      createProfileTableFunction(jmsg.data);
-    } else if (jmsg.type === 'heartbeat' ) {
-      received.append('HEARTBEAT: ');
-      received.append(jmsg.data);
-      received.append($('<br/>'));
-    } else if (jmsg.type === 'live_update' ) {
-      add_live_data(jmsg.data);
-    } else {
-      console.log('Unknown json messsage type: ' + jmsg.type);
     }
-  }
-  catch (err ) {
-    console.log('Non-json msg: ' + message.data);
-    //received.append(message.data);
-    //received.append($('<br/>'));
-  }
-  finally {
-    received.scrollTop(received.prop('scrollHeight'));
-  }
+    catch (err ) {
+      console.log('Non-json msg: ' + message.data);
+      //received.append(message.data);
+      //received.append($('<br/>'));
+    }
+    finally {
+      received.scrollTop(received.prop('scrollHeight'));
+    }
 
-};
+  };
 
-socket.onclose = function(){
-  console.log("disconnected"); 
-};
+  socket.onclose = function(){
+    console.log("disconnected"); 
+  };
 
-var sendMessage = function(message) {
-  console.log("sending:" + message.data);
-  socket.send(message.data);
-};
+  var sendMessage = function(message) {
+    console.log("sending:" + message.data);
+    socket.send(message.data);
+  };
 
-    // GUI Stuff
+  // send a command to the serial port
+  $("#cmd_send").click(function(ev){
+    ev.preventDefault();
+    var cmd = $('#cmd_value').val();
+    sendMessage({ 'data' : cmd});
+    $('#cmd_value').val("");
+  });
 
-
-    // send a command to the serial port
-    $("#cmd_send").click(function(ev){
-      ev.preventDefault();
-      var cmd = $('#cmd_value').val();
-      sendMessage({ 'data' : cmd});
-      $('#cmd_value').val("");
-    });
-
-    $('#clear').click(function(){
-      received.empty();
-    });
+  $('#clear').click(function(){
+    received.empty();
+  });
 
 
 

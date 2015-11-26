@@ -16,7 +16,7 @@
       <li><a href="#content_2">Status 2</a></li>
       <li><a href="#content_3">Status 3</a></li>
       <li><a href="#content_4" id="open_profiles">Profiles</a></li>
-      <li><a href="#" onclick="toggle_visibility('maintenance');">Maintenance</a></li>
+      <li><a href="#content_5">Maintenance</a></li>
     </ul>
     </div>
 
@@ -41,31 +41,28 @@
           <select id="temperatureScaleSelector" style="position: relative; width:20%; float: left;"></select>
           <button id="saveProfiles" style="position: relative; width:20%; float: left;">Save</button>
         </div>
-        Content 4
+      </div>
+      <div id="content_5">
+        <div id="received"></div>
+        <button id="clear">Clear</button>
+
+        <p>Send data to device server</p>
+        <form id="sent">
+          <input type="text" id="cmd_value">
+          <button id="cmd_send">Send</button>
+        </form>
+
+
+        <section class="relay_buttons">
+          <h1>Relay Buttons</h1>
+          <button id="relay_btn_1" type="button" >Relay 1</button>
+          <button id="relay_btn_2" type="button" >Relay 2</button>
+          <button id="relay_btn_3" type="button" >Relay 3</button>
+          <button id="relay_btn_4" type="button" >Relay 4</button>
+        </section>
       </div>
     </div>
 
-    <div id="maintenance" style="display: none;">
-      <div id="received"></div>
-      <button id="clear">Clear</button>
-    
-      <p>Send data to device server</p>
-      <form id="sent">
-        <input type="text" id="cmd_value">
-        <button id="cmd_send">Send</button>
-      </form>
-
-
-    <div id="foo" style="display:none;">Show this FOO.</div>
-
-    <section class="relay_buttons">
-      <h1>Relay Buttons</h1>
-      <button id="relay_btn_1" type="button" >Relay 1</button>
-      <button id="relay_btn_2" type="button" >Relay 2</button>
-      <button id="relay_btn_3" type="button" >Relay 3</button>
-      <button id="relay_btn_4" type="button" >Relay 4</button>
-    </section>
-    </div>
 
   </body>
 </html>
