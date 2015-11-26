@@ -12,30 +12,36 @@
 
     <div id="navigation_holder">
     <ul id="navigation" class="status_navigation">
-<!--
-      <li><a href="#" onclick="switch_visibility('content_1','content_2','content_3');">Status 1</a></li>
-      <li><a href="#" onclick="switch_visibility('content_2','content_3','content_1');">Status 2</a></li>
-      <li><a href="#" onclick="switch_visibility('content_3','content_2','content_1');">Status 3</a></li>
-      <li><a href="#" id="open_profiles">Profiles</a></li>
-      <li><a href="#" onclick="toggle_visibility('maintenance');">Maintenance</a></li>
--->
       <li><a href="#content_1">Status 1</a></li>
       <li><a href="#content_2">Status 2</a></li>
       <li><a href="#content_3">Status 3</a></li>
-      <li><a href="#" id="open_profiles">Profiles</a></li>
+      <li><a href="#content_4" id="open_profiles">Profiles</a></li>
       <li><a href="#" onclick="toggle_visibility('maintenance');">Maintenance</a></li>
     </ul>
     </div>
 
     <div id="main_content">
       <div id="content_1">
-        Content 1
+        <div id="live_updateHolder">
+        </div>
       </div>
       <div id="content_2">
         Content 2
       </div>
       <div id="content_3">
         Content 3
+      </div>
+      <div id="content_4">
+        <div id="profilesTableHolder">
+          <table id="profilesTable" class="profilesTable" align="center">
+            <caption>Profiles Editor</caption>
+          </table>
+        </div>
+        <div id="profilesControls" class="profilesControls" style="overflow: hidden; position: relative;">
+          <select id="temperatureScaleSelector" style="position: relative; width:20%; float: left;"></select>
+          <button id="saveProfiles" style="position: relative; width:20%; float: left;">Save</button>
+        </div>
+        Content 4
       </div>
     </div>
 
