@@ -81,21 +81,29 @@ var received = $('#received');
 console.log("XXX " + received);
 
 //var socket = new WebSocket("ws://localhost:8080/ws");
-var socket = new WebSocket("ws://" + location.host + "/ws");
+var socket = new WebSocket("ws://" + location.host + "/wsStatus");
  
 socket.onopen = function(){  
   console.log("connected"); 
 }; 
 
 socket.onmessage = function (message) {
+  var jmsg;
 
-  var jmsg = JSON.parse(message.data)
-  if ( jmsg.type === 'info' ) {
-    d3.select('#received').append('li').text('info: ' + jmsg.data);
-  } else if (jmsg.type === 'live_update' ) {
-    add_live_data(jmsg.data);
+  try {
+    jmsg = JSON.parse(message.data);
+    if ( jmsg.type === 'info' ) {
+      d3.select('#received').append('li').text('info: ' + jmsg.data);
+    } else if (jmsg.type === 'live_update' ) {
+      add_live_data(jmsg.data);
+    }
   }
-  received.scrollTop(received.prop('scrollHeight'));
+  catch (err) {
+    console.log('Non-json message: ' + message);
+  }
+  finally {
+    received.scrollTop(received.prop('scrollHeight'));
+  }
 
 //d3.select('#received').append('li').text("> " + message.data);
 received.scrollTop(received.prop('scrollHeight'));
