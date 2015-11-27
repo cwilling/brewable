@@ -128,10 +128,10 @@ class GPIOProcess(multiprocessing.Process):
 #    def toggle_relay_command(self, channel):
 #        if self.relay.isOn(channel):
 #            print "relay %d is already on; switching off" % channel
-#            self.relay.OFF(jmsg['args'][0])
+#            self.relay.OFF(channel)
 #        else:
 #            print "relay %d is off; switching on" % channel
-#            self.relay.ON(jmsg['args'][0])
+#            self.relay.ON(channel)
 #        print "STATE: ", self.relay.state()
 #        if self.relay.isOn(channel):
 #            data = 'relay ' + str(channel) + ' now ON'
