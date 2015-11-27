@@ -78,8 +78,11 @@ class GPIOProcess(multiprocessing.Process):
                             self.output_queue.put(jdata)
 
                     elif jmsg['type'].startswith('CMD'):
-                        print "CMD CMD CMD"
-                        #self.run_command(jmsg)
+                        # With a CMD type, the data field is an array whose
+                        # first element is the command, the remaining elements are the command's args
+                        command = jmsg['data']
+                        print "running command: ", command
+                        #self.run_command(command)
                 except:
                     print "Non json msg: ", data
 
@@ -122,11 +125,7 @@ class GPIOProcess(multiprocessing.Process):
 #        time.sleep(1)
 #        self.relay.ALLOFF()
 
-#    def run_command(self, jmsg):
-#        print "Running command: ", jmsg['command']
-#        print "data 4: ", jmsg['argc']
-#        print "data 5: ", jmsg['args']
-#        channel = jmsg['args'][0]
+#    def toggle_relay_command(self, channel):
 #        if self.relay.isOn(channel):
 #            print "relay %d is already on; switching off" % channel
 #            self.relay.OFF(jmsg['args'][0])
@@ -142,5 +141,8 @@ class GPIOProcess(multiprocessing.Process):
 #                            'data':data})
 #        self.output_queue.put(jdata)
 
+#    def run_command(self, command):
+#        if command[0].startswith('toggle_relay'):
+#            self.toggle_relay_command(command[1])
 
 # ex:set ai shiftwidth=4 inputtab=spaces smarttab noautotab:

@@ -135,6 +135,29 @@ $(document).ready( function(){
   });
 
 
+  $("#relay_btn_1").click(function(ev){
+    ev.preventDefault();
+    send_relay_cmd(1);
+  });
+  $("#relay_btn_2").click(function(ev){
+    ev.preventDefault();
+    send_relay_cmd(2);
+  });
+  $("#relay_btn_3").click(function(ev){
+    ev.preventDefault();
+    send_relay_cmd(3);
+  });
+  $("#relay_btn_4").click(function(ev){
+    ev.preventDefault();
+    send_relay_cmd(4);
+  });
+
+  function send_relay_cmd(data) {
+    var cmd = ["toggle_relay",data]
+    var msgobj = {type:'CMD', data:cmd};
+    sendMessage({data:JSON.stringify(msgobj)});
+  }
+
 
 var margin = {top: 100, right: 20, bottom: 30, left: 80},
     width = 600 - margin.left - margin.right,
