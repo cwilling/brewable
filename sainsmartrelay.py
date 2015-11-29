@@ -5,7 +5,7 @@ import RPi.GPIO as gpio
 import signal
 import time
 
-BOARD_MODE = gpio.BCM
+PIN_NUMBERING_MODE = gpio.BCM
 
 RelayPins = {
 'PIN_RELAY_1'	: 17,
@@ -22,20 +22,21 @@ RELAY_OFF = (not RELAY_ON);
 
 class Relay():
     def __init__(self):
-        gpio.setmode(BOARD_MODE);
-        for dev in range(self.device_count()):
-            gpio.setup(RelayPins['PIN_RELAY_{}'.format(dev+1)], gpio.OUT)
+        self.gpio_version = gpio.VERSION
+        self.rpi_info = gpio.RPI_INFO
+        print "GPIO VERSION: ", self.gpio_version
+        print "RPI INFO: ", self.rpi_info
+        gpio.setmode(PIN_NUMBERING_MODE);
+        gpio.setup(RelayPins.values(), gpio.OUT)
         print "Relay setup done"
 
     def ALLON(self):
         print 'ALLON ...'
-        for dev in range(self.device_count()):
-            gpio.output(RelayPins['PIN_RELAY_{}'.format(dev+1)], RELAY_ON);
+        gpio.output(RelayPins.values(), RELAY_ON)
 
     def ALLOFF(self):
         print 'ALLOFF...'
-        for dev in range(self.device_count()):
-            gpio.output(RelayPins['PIN_RELAY_{}'.format(dev+1)], RELAY_OFF);
+        gpio.output(RelayPins.values(), RELAY_OFF)
 
     def ON_1(self):
         gpio.output(RelayPins['PIN_RELAY_1'], RELAY_ON);
