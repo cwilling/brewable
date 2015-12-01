@@ -93,10 +93,10 @@ class Relay():
     def isOn(self, id):
         if self.state()[id-1] == 0:
             print '{} is ON'.format(id)
-            return RELAY_ON
+            return True
         else:
             print '{} is OFF'.format(id)
-            return RELAY_OFF
+            return False
 
 
 if __name__=="__main__":
