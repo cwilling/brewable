@@ -1,4 +1,5 @@
-
+var availableSensors = [];
+var availableRelays = [];
 /*
 For now, hard code the number of profiles (profilesTableRows)
 and number of steps per profile (profilesTableColumns).
@@ -34,9 +35,47 @@ function generateDummyProfileSet(profiles, setpoints) {
 
 $(document).ready( function(){
 
+  var profilesLoadedEvent = new Event('profilesLoadedEvent');
 
   var received = $('#received');
 
+/***********************  Jobs Configuration page  ***************************/
+  // When profiles have been loaded from server, populate the profile selector
+  var jobProfileSelector = document.getElementById("jobProfileSelector");
+  document.addEventListener('profilesLoadedEvent', function (e) {
+    console.log("profilesLoadedEvent happened!"); 
+    var table = document.getElementById("profilesTable");
+    var option;
+
+    for (var i=0;i<table.rows.length;i++) {
+      option = document.createElement('OPTION');
+      option.text = table.rows[i].cells[0].textContent;
+      option.value = i;
+      jobProfileSelector.add(option);
+    }
+
+    // Since profiles are available, ask for available sensors & relays too
+    var argv = [];
+    msgobj = {type:'list_sensors', data:argv};
+    sendMessage({data:JSON.stringify(msgobj)});
+
+    var argv = [];
+    msgobj = {type:'list_relays', data:argv};
+    sendMessage({data:JSON.stringify(msgobj)});
+
+  }, false);
+
+
+  // PreHeat - check whether to preset a temperature then alert and wait
+  // for manual start.
+  var jobPreHeatCheck = document.getElementById("jobPreHeat");
+
+
+
+
+
+
+/********************** Profiles Configuration page ***************************/
   // Profiles Save button
   var saveProfilesButton = document.getElementById("saveProfiles");
   saveProfilesButton.onclick = function() {
@@ -82,8 +121,22 @@ $(document).ready( function(){
         received.append('INFO: ');
         received.append(jmsg.data);
         received.append($('<br/>'));
+      } else if (jmsg.type === 'sensor_list' ) {
+        // Keep a copy for later
+        availableSensors = [];
+        for (var i=0;i<jmsg.data.length;i++) {
+          availableSensors.push(jmsg.data[i]);
+        }
+        createSensorTableFunction();
+      } else if (jmsg.type === 'relay_list' ) {
+        console.log("Received relay_list " + jmsg.data);
+        // Keep a copy for later
+        availableRelays = [];
+        for (var i=0;i<jmsg.data.length;i++) {
+          availableRelays.push(jmsg.data[i]);
+        }
+        createRelayTableFunction();
       } else if (jmsg.type === 'loaded_profiles' ) {
-        console.log('Data length = ' + jmsg.data.length);
         if ( jmsg.data.length == 0 ) {
           received.append('RCVD: EMPTY profiles data');
         } else {
@@ -102,7 +155,7 @@ $(document).ready( function(){
         console.log('Unknown json messsage type: ' + jmsg.type);
       }
     }
-    catch (err ) {
+    catch(err ) {
       console.log('Non-json msg: ' + message.data);
       //received.append(message.data);
       //received.append($('<br/>'));
@@ -240,6 +293,7 @@ var lineFunction = d3.svg.line()
          row.insertCell(j+1).appendChild(populateProfilesTableCell(i,j,pdata[i]));
       }
     }
+    document.dispatchEvent(profilesLoadedEvent);
   }
   function populateProfilesTableCell(rowNumber, cellNumber, rowData) {
     var cell = document.createElement('TABLE');
@@ -340,6 +394,53 @@ var lineFunction = d3.svg.line()
     sendMessage({data:JSON.stringify(msgobj)});
 
   }
+
+  // Create a table of sensors based on data  from server (availableSensors)
+  function createSensorTableFunction() {
+    console.log("Reached createSensorTableFunction() " + availableSensors);
+
+    var table = document.getElementById("jobSensorsTable");
+
+    for(var i=0;i<availableSensors.length;i++) {
+        console.log("Adding sensor: " + availableSensors[i]);
+        var row = table.insertRow(i);
+
+        var checkLabel = document.createElement("LABEL");
+        checkLabel.setAttribute("for", availableSensors[i]);
+        checkLabel.textContent = availableSensors[i];
+
+        var check = document.createElement("INPUT");
+        check.type = "checkbox";
+        check.id = availableSensors[i];
+
+        row.appendChild(check);
+        row.appendChild(checkLabel);
+    }
+
+  }
+  // Create a table of relays based on data  from server (availableRelays)
+  function createRelayTableFunction() {
+    console.log("Reached createRelayTableFunction() " + availableRelays);
+
+    var table = document.getElementById("jobRelaysTable");
+
+    for(var i=0;i<availableRelays.length;i++) {
+        console.log("Adding relay: " + availableRelays[i]);
+        var row = table.insertRow(i);
+
+        var checkLabel = document.createElement("LABEL");
+        checkLabel.setAttribute("for", availableRelays[i]);
+        checkLabel.textContent = availableRelays[i];
+
+        var check = document.createElement("INPUT");
+        check.type = "checkbox";
+        check.id = availableRelays[i];
+
+        row.appendChild(check);
+        row.appendChild(checkLabel);
+    }
+  }
+
 
   function add_live_data(data) {
     //d3.select('#received').append('li').text("live_data: " + data);

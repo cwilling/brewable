@@ -13,7 +13,7 @@
     <div id="navigation_holder">
     <ul id="navigation" class="status_navigation">
       <li><a href="#content_1">Status 1</a></li>
-      <li><a href="#content_2">Status 2</a></li>
+      <li><a href="#content_2" id="open_jobs">Jobs</a></li>
       <li><a href="#content_4" id="open_profiles">Profiles</a></li>
       <li><a href="#content_5">Maintenance</a></li>
     </ul>
@@ -26,6 +26,31 @@
       </div>
       <div id="content_2">
         Content 2
+        <div id="jobComposer">
+          <div id="jobStartButton">
+            Save
+          </div>
+          <br><input type="text" id="jobName">
+          <div id="jobPreHeat">
+            <label for="selectPreHeat">Pre Heat/Cool</label>
+              <input type="checkbox" name="selectPreHeat" id="selectPreHeat" value="selectPreHeat"><br>
+          </div>
+          <div id="jobProfileHolder">
+            <select id="jobProfileSelector"></select>
+          </div>
+          <div id="jobDevicesHolder">
+            <div id="jobSensorsHolder">
+              <table id="jobSensorsTable" class="jobSensorsTable" align="center">
+                <caption id="jobSensorsTableCaption">Sensors</caption>
+              </table>
+            </div>
+            <div id="jobRelaysHolder">
+              <table id="jobRelaysTable" class="jobRelaysTable" align="center">
+                <caption id="jobRelaysTableCaption">Relays</caption>
+              </table>
+            </div>
+          </div>
+        </div>
       </div>
       <div id="content_3">
         Content 3
@@ -33,7 +58,7 @@
       <div id="content_4">
         <div id="profilesTableHolder">
           <table id="profilesTable" class="profilesTable" align="center">
-            <caption>Profiles Editor</caption>
+            <caption id="profilesTableCaption">Profiles Editor</caption>
           </table>
         </div>
         <div id="profilesControls" class="profilesControls" style="overflow: hidden; position: relative;">

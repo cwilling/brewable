@@ -77,9 +77,24 @@ class GPIOProcess(multiprocessing.Process):
                         finally:
                             self.output_queue.put(jdata)
 
+                    elif jmsg['type'].startswith('list_sensors'):
+                        sensor_ids = []
+                        for sensor in self.sensorDevices:
+                            sensor_ids.append(sensor.getId())
+                        jdata = json.dumps({'type':'sensor_list',
+                                            'data':sensor_ids})
+                        self.output_queue.put(jdata)
+                    elif jmsg['type'].startswith('list_relays'):
+                        relay_ids = []
+                        for i in range(self.relay.device_count()):
+                            relay_ids.append('Relay {:02}'.format(i+1))
+                        jdata = json.dumps({'type':'relay_list',
+                                            'data':relay_ids})
+                        self.output_queue.put(jdata)
                     elif jmsg['type'].startswith('CMD'):
                         # With a CMD type, the data field is an array whose
-                        # first element is the command, the remaining elements are the command's args
+                        # first element is the command,
+                        # the remaining elements are the command's args
                         command = jmsg['data']
                         print "running command: ", command
                         self.run_command(command)
