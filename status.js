@@ -40,6 +40,8 @@ $(document).ready( function(){
   var received = $('#received');
 
 /***********************  Jobs Configuration page  ***************************/
+  //Clear the job name
+  document.getElementById("jobName").value = "";
   // When profiles have been loaded from server, populate the profile selector
   var jobProfileSelector = document.getElementById("jobProfileSelector");
   document.addEventListener('profilesLoadedEvent', function (e) {
@@ -66,10 +68,102 @@ $(document).ready( function(){
   }, false);
 
 
-  // PreHeat - check whether to preset a temperature then alert and wait
-  // for manual start.
-  var jobPreHeatCheck = document.getElementById("jobPreHeat");
+  // Save a new job
+  var saveNewJobButton = document.getElementById("jobSaveButton");
+  saveNewJobButton.onclick = function() {
+    console.log("SAVE new job");
+    var OKtoSave = true;
 
+    // Collect the job name
+    // TODO: check for name duplication
+    var jobName = document.getElementById("jobName").value;
+    if ( jobName.length == 0 ) {
+      OKtoSave = false;
+      alert("Please set a name for this job");
+      return;
+    }
+
+    // Collect whether to preheat/cool
+    var jobPreHeat = false;
+    if (document.getElementById("selectPreHeat").checked) {
+      jobPreHeat = true;
+    }
+
+    // Collect which profile to use
+    var jobSelectId = document.getElementById("jobProfileSelector").value;
+    var table = document.getElementById("profilesTable");
+    var jobProfile = table.rows[jobSelectId];
+
+    // Extract the time/temp steps from profiles table
+    var tempType = document.getElementById("temperatureScaleSelector").value;
+    var saveJobProfile = [];
+    for (var j=0;j<table.rows[jobSelectId].cells.length - 1;j++) {
+      var setpoint = {};
+      //console.log("target = " + "sp" + jobSelectId + "_" + j);
+      var target = document.getElementById("sp" + jobSelectId + "_" + j).value;
+      if (tempType == 'F') {
+        target = ((target - 32.0)* 5) / 9;
+      }
+      var duration = document.getElementById("dh" + jobSelectId + "_" + j).value;
+      //console.log("Element has val = " + target + " and " + duration);
+      setpoint = {target:target, duration:duration};
+      saveJobProfile.push(setpoint);
+    }
+
+    // Collect which sensor(s) to use
+    var table = document.getElementById("jobSensorsTable");
+    var useSensors = [];
+
+    for (var i=0;i<table.rows.length;i++) {
+      var cell = document.getElementById("as_" + i);
+      console.log("checking " + document.getElementById("label_as_" + i).textContent);
+      if ( cell.checked ) {
+        useSensors.push(document.getElementById("label_as_" + i).textContent);
+      }
+    }
+    console.log("Sensors checked: " + useSensors);
+    if ( useSensors.length == 0 ) {
+      OKtoSave = false;
+      alert("Please select a temperature sensor");
+      return;
+    }
+
+    // Collect which relay(s) to use
+    var table = document.getElementById("jobRelaysTable");
+    var useRelays = [];
+
+    for (var i=0;i<table.rows.length;i++) {
+      var cell = document.getElementById("ar_" + i);
+      console.log("checking " + document.getElementById("label_ar_" + i).textContent);
+      if ( cell.checked ) {
+        useRelays.push(document.getElementById("label_ar_" + i).textContent);
+      }
+    }
+    console.log("Relays checked: " + useRelays);
+    if ( useRelays.length == 0 ) {
+      OKtoSave = false;
+      alert("Please select a relay");
+      return;
+    }
+
+    if ( OKtoSave ) {
+      var jobData = {
+        name: jobName,
+        preheat: jobPreHeat,
+        profile: saveJobProfile,
+        sensors: useSensors,
+        relays:	useRelays
+      };
+      var msgobj = {type:'save_jobs', data:jobData};
+      console.log("msgobj: " + msgobj);
+      sendMessage({data:JSON.stringify(msgobj)});
+    } else {
+      console.log("NOT OKtoSave");
+    }
+
+
+
+  }
 
 
 
@@ -406,12 +500,13 @@ var lineFunction = d3.svg.line()
         var row = table.insertRow(i);
 
         var checkLabel = document.createElement("LABEL");
-        checkLabel.setAttribute("for", availableSensors[i]);
+        checkLabel.setAttribute("for", "as_" + i);
         checkLabel.textContent = availableSensors[i];
+        checkLabel.id = "label_as_" + i;
 
         var check = document.createElement("INPUT");
         check.type = "checkbox";
-        check.id = availableSensors[i];
+        check.id = "as_" + i;
 
         row.appendChild(check);
         row.appendChild(checkLabel);
@@ -429,12 +524,14 @@ var lineFunction = d3.svg.line()
         var row = table.insertRow(i);
 
         var checkLabel = document.createElement("LABEL");
-        checkLabel.setAttribute("for", availableRelays[i]);
+        checkLabel.setAttribute("for", "ar_" + i);
         checkLabel.textContent = availableRelays[i];
+        checkLabel.id = "label_ar_" + i;
 
         var check = document.createElement("INPUT");
         check.type = "checkbox";
-        check.id = availableRelays[i];
+        //check.id = availableRelays[i];
+        check.id = "ar_" + i;
 
         row.appendChild(check);
         row.appendChild(checkLabel);

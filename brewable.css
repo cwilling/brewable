@@ -174,23 +174,40 @@ div#jobComposer {
     top:	0;
     border:	5px solid red;
 }
-#jobStartButton {
+#jobSaveButton {
     float:	left;
-    margin:	0;
-    margin:     1em;
-    padding:	2em;
+    margin:     0;
+    padding:	0;
+    text-decoration: none;
     background:	#000;
 }
-#jobName {
+#jobSaveButton a {
+    display:    block;
+    text-decoration: none;
+    color:	#fff;
+    background:	#036;
+    margin:     0;
+    padding:	1em;
+}
+#jobSaveButton a:hover {
+    color:      #000;
+    background: #69c;
+}
+#jobNameHolder {
+    text-align: center;
     float:	left;
-    width:      12em;
-    margin:	3em 2em;
+    width:      14em;
+    margin:	0;
+    padding:	4px;
+    border:	1px solid white;
+}
+#jobName {
     padding:	0;
 }
 #jobPreHeat {
     float:	left;
-    margin:	1em;
-    padding:	2em;
+    margin:	0;
+    padding:	1em;
     background:	#333;
     background:	#000;
 }
@@ -204,20 +221,19 @@ div#jobComposer {
     float:	left;
     width:      12em;
     padding:	0;
-    margin:	3em 2em;
+    margin:	1em 2em;
     background:	#aaa;
 }
 #jobDevicesHolder {
     float:	left;
-    margin:	1em;
+    margin:	0;
     padding:	0;
-    background:	#999;
 }
 #jobSensorsHolder {
     float:	left;
     width:      12em;
     margin:	0;
-    padding:	2em;
+    padding:	0;
     background:	#555;
     border:	1px solid white;
 }
@@ -234,7 +250,7 @@ div#jobComposer {
     float:	left;
     width:      12em;
     margin:	0;
-    padding:	2em;
+    padding:	0;
     background:	#888;
     border:	1px solid white;
 }
