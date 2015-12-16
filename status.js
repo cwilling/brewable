@@ -57,12 +57,14 @@ $(document).ready( function(){
     }
 
     // Since profiles are available, ask for available sensors & relays too
-    var argv = [];
-    msgobj = {type:'list_sensors', data:argv};
+    msgobj = {type:'list_sensors', data:[]};
     sendMessage({data:JSON.stringify(msgobj)});
 
-    var argv = [];
-    msgobj = {type:'list_relays', data:argv};
+    msgobj = {type:'list_relays', data:[]};
+    sendMessage({data:JSON.stringify(msgobj)});
+
+    // Request job data
+    msgobj = {type:'load_jobs', data:[]};
     sendMessage({data:JSON.stringify(msgobj)});
 
   }, false);
@@ -116,12 +118,12 @@ $(document).ready( function(){
 
     for (var i=0;i<table.rows.length;i++) {
       var cell = document.getElementById("as_" + i);
-      console.log("checking " + document.getElementById("label_as_" + i).textContent);
+      //console.log("checking " + document.getElementById("label_as_" + i).textContent);
       if ( cell.checked ) {
         useSensors.push(document.getElementById("label_as_" + i).textContent);
       }
     }
-    console.log("Sensors checked: " + useSensors);
+    //console.log("Sensors checked: " + useSensors);
     if ( useSensors.length == 0 ) {
       OKtoSave = false;
       alert("Please select a temperature sensor");
@@ -134,12 +136,12 @@ $(document).ready( function(){
 
     for (var i=0;i<table.rows.length;i++) {
       var cell = document.getElementById("ar_" + i);
-      console.log("checking " + document.getElementById("label_ar_" + i).textContent);
+      //console.log("checking " + document.getElementById("label_ar_" + i).textContent);
       if ( cell.checked ) {
         useRelays.push(document.getElementById("label_ar_" + i).textContent);
       }
     }
-    console.log("Relays checked: " + useRelays);
+    //console.log("Relays checked: " + useRelays);
     if ( useRelays.length == 0 ) {
       OKtoSave = false;
       alert("Please select a relay");
@@ -154,7 +156,7 @@ $(document).ready( function(){
         sensors: useSensors,
         relays:	useRelays
       };
-      var msgobj = {type:'save_jobs', data:jobData};
+      var msgobj = {type:'save_job', data:jobData};
       console.log("msgobj: " + msgobj);
       sendMessage({data:JSON.stringify(msgobj)});
     } else {
@@ -201,8 +203,7 @@ $(document).ready( function(){
     console.log("sss connected"); 
 
     // Request profiles data
-    var argv = [];
-    msgobj = {type:'load_profiles', data:argv};
+    msgobj = {type:'load_profiles', data:[]};
     sendMessage({data:JSON.stringify(msgobj)});
   };
 
@@ -230,6 +231,9 @@ $(document).ready( function(){
           availableRelays.push(jmsg.data[i]);
         }
         createRelayTableFunction();
+      } else if (jmsg.type === 'loaded_jobs' ) {
+        console.log("Received loaded_jobs " + jmsg.data);
+        createStoredJobsList(jmsg.data);
       } else if (jmsg.type === 'loaded_profiles' ) {
         if ( jmsg.data.length == 0 ) {
           received.append('RCVD: EMPTY profiles data');
@@ -496,7 +500,7 @@ var lineFunction = d3.svg.line()
     var table = document.getElementById("jobSensorsTable");
 
     for(var i=0;i<availableSensors.length;i++) {
-        console.log("Adding sensor: " + availableSensors[i]);
+        //console.log("Adding sensor: " + availableSensors[i]);
         var row = table.insertRow(i);
 
         var checkLabel = document.createElement("LABEL");
@@ -520,7 +524,7 @@ var lineFunction = d3.svg.line()
     var table = document.getElementById("jobRelaysTable");
 
     for(var i=0;i<availableRelays.length;i++) {
-        console.log("Adding relay: " + availableRelays[i]);
+        //console.log("Adding relay: " + availableRelays[i]);
         var row = table.insertRow(i);
 
         var checkLabel = document.createElement("LABEL");
@@ -538,6 +542,22 @@ var lineFunction = d3.svg.line()
     }
   }
 
+  // Genrate a list of stored jobs
+  function createStoredJobsList(data) {
+    console.log("Reached createStoredJobsList()");
+
+    for (var i=0;i<data.length;i++) {
+      var thisJob = data[i];
+      var name = thisJob['name'];
+      var preheat = "Preheat OFF";
+      var description = "                ".slice(name.length) + name;
+      if ( thisJob['preheat'] ) {
+        preheat = "Preheat  ON";
+      }
+      description = description + "    " + preheat + "    " + thisJob['profile'] + "    " + thisJob['sensors'] + "    " + thisJob['relays'];
+      console.log("loading job: " + description);
+    }
+  }
 
   function add_live_data(data) {
     //d3.select('#received').append('li').text("live_data: " + data);

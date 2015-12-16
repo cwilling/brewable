@@ -7,6 +7,7 @@ import json
 import ds18b20 as st
 DEVICE_DIR = '/sys/bus/w1/devices/w1_bus_master1/w1_master_slaves'
 PROFILE_DATA_FILE='profileData.txt'
+JOB_DATA_FILE='jobData.txt'
 
 # Output relay
 from seedrelay import Relay
@@ -28,6 +29,7 @@ class GPIOProcess(multiprocessing.Process):
         self.output_queue = output_queue
         self.sensorDevices = []
         self.relay = Relay()
+        self.jobs = []
 
     def run(self):
 
@@ -45,6 +47,19 @@ class GPIOProcess(multiprocessing.Process):
         except:
             print "No sensors connected?"
 
+        # Load saved jobs
+        try:
+            with open(JOB_DATA_FILE) as json_file:
+                json_data = json.load(json_file)
+                #print "Job data: ", json_data['job_data']
+                for job in json_data['job_data']:
+                    self.jobs.append(job)
+                print "Job data: ", self.jobs
+        except Exception as e:
+            # Can't open job file - either corrupted or doesn't exist
+            print e
+
+
         # Now check the relays
         #self.relay_test()
 
@@ -59,10 +74,21 @@ class GPIOProcess(multiprocessing.Process):
                 print "data 0 length: ", len(data)
                 try:
                     jmsg = json.loads(data.strip())
-                    if jmsg['type'].startswith('save_profiles'):
+                    if jmsg['type'].startswith('save_job'):
+                        # Update local version, then save to file
+                        print("gpio found save_job msg")
+                        self.jobs.append(jmsg['data'])
+                        # print("self.jobs: ", self.jobs)
+                        with open(JOB_DATA_FILE, 'w') as json_file:
+                            json.dump({'job_data':self.jobs}, json_file)
+                    elif jmsg['type'].startswith('load_jobs'):
+                        print("gpio found load_jobs msg")
+                        jdata = json.dumps({'type':'loaded_jobs',
+                                            'data':self.jobs})
+                        self.output_queue.put(jdata)
+                    elif jmsg['type'].startswith('save_profiles'):
                         with open(PROFILE_DATA_FILE, 'w') as json_file:
                             json.dump({'profiles_data':jmsg['data']}, json_file)
-                            #json.dump(data, json_file)
                     elif jmsg['type'].startswith('load_profiles'):
                         try:
                             with open(PROFILE_DATA_FILE) as json_file:

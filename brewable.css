@@ -239,11 +239,11 @@ div#jobComposer {
 }
 #jobSensorsTable.jobSensorsTable {
     font-family: ariel;
-    font-size: 90%;
+    font-size:  90%;
 }
 #jobSensorsTableCaption {
     font-family: ariel;
-    font-size: 120%;
+    font-size:  120%;
     font-weight: bold;
 }
 #jobRelaysHolder {
@@ -256,12 +256,68 @@ div#jobComposer {
 }
 #jobRelaysTable.jobRelaysTable {
     font-family: ariel;
-    font-size: 90%;
+    font-size:  90%;
 }
 #jobRelaysTableCaption {
     font-family: ariel;
-    font-size: 120%;
+    font-size:  120%;
     font-weight: bold;
+}
+#jobsListHolder {
+    border:	5px solid red;
+    margin-top: 100px;
+    float:      left;
+    width:      100%;
+    height:     50%;
+}
+#jobsListTitle {
+    font-family: ariel;
+    font-size:  120%;
+    font-weight: bold;
+    text-align: center;
+    background:	#777;
+    padding:    1em;
+}
+#jobsListButtonsHolder {
+    background:	#666;
+    height:     1em;
+    margin-top: 0px;
+    padding:    0;
+    height:    3em;
+}
+ul#jobsListButtons.jobsListButtons {
+    margin:	0;
+    padding:	0;
+    list-style-type: none;
+    background:	#036;
+    float:	left;
+    width:	100%;
+    border:	2px solid green;
+}
+ul#jobsListButtons li {
+    display:	inline;
+    margin:	0;
+    padding:	0;
+}
+ul#jobsListButtons a {
+    display:	block;
+    float:	left;
+    padding:	1em;
+    text-decoration: none;
+    color:	#fff;
+    background:	#036;
+    border-right: 1px solid #fff;
+}
+ul#jobsListButtons a:hover {
+    color:	#000;
+    background:	#69c;
+}
+#jobsListJobs {
+    background:	#555;
+    margin-top: 0px;
+    padding:    0;
+    width:      100%;
+    height:     40%;
 }
 
 /* ex:set ai shiftwidth=4 inputtab=spaces smarttab noautotab: */
