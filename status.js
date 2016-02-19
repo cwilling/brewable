@@ -40,6 +40,35 @@ $(document).ready( function(){
   var received = $('#received');
 
 /***********************  Jobs Configuration page  ***************************/
+  // Refresh job list button
+  var refreshJobButton = document.getElementById("refresh_job_button");
+  refreshJobButton.onclick = function () {
+    console.log("REFRESH job button clicked");
+
+    // Request job data
+    msgobj = {type:'load_jobs', data:[]};
+    sendMessage({data:JSON.stringify(msgobj)});
+  }
+
+  // New jobs button
+  var newJobButton = document.getElementById("new_job_button");
+  newJobButton.onclick = function () {
+    console.log("NEW job button clicked");
+  }
+
+  // Edit job button
+  var editJobButton = document.getElementById("edit_job_button");
+  editJobButton.onclick = function () {
+    console.log("EDIT job button clicked");
+  }
+
+  // Run job button
+  var runJobButton = document.getElementById("run_job_button");
+  runJobButton.onclick = function () {
+    console.log("RUN job button clicked");
+  }
+
+
   //Clear the job name
   document.getElementById("jobName").value = "";
   // When profiles have been loaded from server, populate the profile selector
@@ -528,7 +557,7 @@ var lineFunction = d3.svg.line()
         var row = table.insertRow(i);
 
         var checkLabel = document.createElement("LABEL");
-        checkLabel.setAttribute("for", "ar_" + i);
+        checkLabel.setAttribute("for", "ar_" + i);      // ar for avail. relays
         checkLabel.textContent = availableRelays[i];
         checkLabel.id = "label_ar_" + i;
 
@@ -542,9 +571,16 @@ var lineFunction = d3.svg.line()
     }
   }
 
-  // Genrate a list of stored jobs
+  // Generate a table of stored jobs
   function createStoredJobsList(data) {
     console.log("Reached createStoredJobsList()");
+    var table = document.getElementById("jobsListJobs");
+
+    // First remove existing list elements
+    while ( table.hasChildNodes() ) {
+      table.removeChild(table.firstChild);
+    }
+
 
     for (var i=0;i<data.length;i++) {
       var thisJob = data[i];
@@ -556,6 +592,20 @@ var lineFunction = d3.svg.line()
       }
       description = description + "    " + preheat + "    " + thisJob['profile'] + "    " + thisJob['sensors'] + "    " + thisJob['relays'];
       console.log("loading job: " + description);
+
+      var row = table.insertRow(i);
+      var radioLabel = document.createElement("LABEL");
+      radioLabel.setAttribute("for", "jl_" + i);      // jl for jobs list
+      radioLabel.textContent = description;
+      radioLabel.id = "label_jl_" + i;
+
+      var radio = document.createElement("INPUT");
+      radio.setAttribute("type", "radio");
+      radio.setAttribute("name", "jobsList");
+      radio.id = "jl_" + i;
+
+      row.appendChild(radio);
+      row.appendChild(radioLabel);
     }
   }
 

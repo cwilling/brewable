@@ -280,33 +280,30 @@ div#jobComposer {
 }
 #jobsListButtonsHolder {
     background:	#666;
-    height:     1em;
-    margin-top: 0px;
-    padding:    0;
-    height:    3em;
+    padding:    2em;
 }
-ul#jobsListButtons.jobsListButtons {
-    margin:	0;
+ul#jobsListButtons {
+    margin:	auto;
     padding:	0;
-    list-style-type: none;
-    background:	#036;
-    float:	left;
-    width:	100%;
+    min-width:	40%;
+    list-style: none;
+    text-align: center;
+    background:	#330;
     border:	2px solid green;
 }
 ul#jobsListButtons li {
     display:	inline;
-    margin:	0;
+    margin:	auto;
     padding:	0;
+    /*border:	2px solid blue; */
 }
 ul#jobsListButtons a {
-    display:	block;
-    float:	left;
+    margin:	auto;
     padding:	1em;
     text-decoration: none;
     color:	#fff;
     background:	#036;
-    border-right: 1px solid #fff;
+    border: 1px solid #fff;
 }
 ul#jobsListButtons a:hover {
     color:	#000;
