@@ -25,12 +25,11 @@ function generateDummyProfileSet(profiles, setpoints) {
         //setpoint = {target: (20.0+j+i), duration: 1};
         setpoint = {target: 0, duration: 0};
         profile.push(setpoint);
-      }
-      profileSet.push(profile);
     }
-    return profileSet;
+    profileSet.push(profile);
   }
-
+  return profileSet;
+}
 
 
 $(document).ready( function(){
@@ -66,6 +65,23 @@ $(document).ready( function(){
   var runJobButton = document.getElementById("run_job_button");
   runJobButton.onclick = function () {
     console.log("RUN job button clicked");
+  }
+
+  // Delete job button
+  var deleteJobButton = document.getElementById("delete_job_button");
+  deleteJobButton.onclick = function () {
+    console.log("DELETE job button clicked");
+    var jobsList = document.getElementsByName("jobsList");
+    var jobIndex = selectedJobIndex();
+    if ( jobIndex < 0 )
+        return;
+    // else confirmation dialog?
+
+    // Request job deletion
+    //var jobData = { index: jobIndex };
+    msgobj = {type:'delete_job', data:{ index: jobIndex }};
+    sendMessage({data:JSON.stringify(msgobj)});
+
   }
 
 
@@ -586,7 +602,8 @@ var lineFunction = d3.svg.line()
       var thisJob = data[i];
       var name = thisJob['name'];
       var preheat = "Preheat OFF";
-      var description = "                ".slice(name.length) + name;
+      //var description = "________________".slice(name.length) + name;
+      var description = name + '................'.slice(name.length);
       if ( thisJob['preheat'] ) {
         preheat = "Preheat  ON";
       }
@@ -607,6 +624,20 @@ var lineFunction = d3.svg.line()
       row.appendChild(radio);
       row.appendChild(radioLabel);
     }
+  }
+
+  // Return index of selected job (or -1 if none is selected)
+  function selectedJobIndex() {
+    var jobsList = document.getElementsByName("jobsList");
+    //console.log(jobsList.length + " jobs found");
+    for ( var i=0; i<jobsList.length;i++) {
+      if ( jobsList[i].type == "radio" && jobsList[i].checked ) {
+        //console.log("selected job: " + i);
+        return i;
+      }
+    }
+    //console.log("No job selected");
+    return -1;
   }
 
   function add_live_data(data) {

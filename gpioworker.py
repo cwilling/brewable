@@ -81,8 +81,23 @@ class GPIOProcess(multiprocessing.Process):
                         # print("self.jobs: ", self.jobs)
                         with open(JOB_DATA_FILE, 'w') as json_file:
                             json.dump({'job_data':self.jobs}, json_file)
+                        # Return updated jobs list to client
+                        jdata = json.dumps({'type':'loaded_jobs',
+                                            'data':self.jobs})
+                        self.output_queue.put(jdata)
                     elif jmsg['type'].startswith('load_jobs'):
                         print("gpio found load_jobs msg")
+                        jdata = json.dumps({'type':'loaded_jobs',
+                                            'data':self.jobs})
+                        self.output_queue.put(jdata)
+                    elif jmsg['type'].startswith('delete_job'):
+                        # First check if index in range?
+                        del self.jobs[jmsg['data']['index']]
+
+                        # Save result
+                        with open(JOB_DATA_FILE, 'w') as json_file:
+                            json.dump({'job_data':self.jobs}, json_file)
+                        # Return updated jobs list to client
                         jdata = json.dumps({'type':'loaded_jobs',
                                             'data':self.jobs})
                         self.output_queue.put(jdata)
