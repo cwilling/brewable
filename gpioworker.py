@@ -2,8 +2,9 @@ import time
 import multiprocessing
 import json
 
-# Input temperature sensor
+# Input temperature sensor - choose one of these to be 'st'
 #import systemtemp as st
+#import ds18b20 as st
 import ds18b20 as st
 DEVICE_DIR = '/sys/bus/w1/devices/w1_bus_master1/w1_master_slaves'
 PROFILE_DATA_FILE='profileData.txt'

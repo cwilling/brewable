@@ -122,11 +122,20 @@ $(document).ready( function(){
     var OKtoSave = true;
 
     // Collect the job name
-    // TODO: check for name duplication
     var jobName = document.getElementById("jobName").value;
     if ( jobName.length == 0 ) {
       OKtoSave = false;
       alert("Please set a name for this job");
+      return;
+    }
+    // Check for name duplication
+    if ( selectedJobName(jobName) ) {
+      alert("Duplicate job name - please change it");
+      return
+    }
+    // Disallowed characters in job name?
+    if ( /\./g.test(jobName) ) {
+      alert("\".\" character not allowed in job name - please change it");
       return;
     }
 
@@ -638,6 +647,23 @@ var lineFunction = d3.svg.line()
     }
     //console.log("No job selected");
     return -1;
+  }
+
+  // Return true/false whether target name is found in jobsList
+  function selectedJobName(target) {
+    var jobsList = document.getElementsByName("jobsList");
+    console.log(jobsList.length + " jobs found");
+    for ( var i=0; i<jobsList.length;i++) {
+      var jobLabel = document.getElementById("label_jl_" + i);
+      // jobName is 1st field of textContent with all '.' removed
+      var jobName = jobLabel.textContent.split(" ")[0].replace(/\./g, "");
+      console.log("jobName: " + jobName + " looking for " + target);
+      if ( jobName === target ) {
+        return true;
+      } 
+    }
+    //console.log("No job selected");
+    return false;
   }
 
   function add_live_data(data) {
