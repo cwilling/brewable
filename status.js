@@ -71,7 +71,6 @@ $(document).ready( function(){
   var deleteJobButton = document.getElementById("delete_job_button");
   deleteJobButton.onclick = function () {
     console.log("DELETE job button clicked");
-    var jobsList = document.getElementsByName("jobsList");
     var jobIndex = selectedJobIndex();
     if ( jobIndex < 0 )
         return;
@@ -81,7 +80,31 @@ $(document).ready( function(){
     //var jobData = { index: jobIndex };
     msgobj = {type:'delete_job', data:{ index: jobIndex }};
     sendMessage({data:JSON.stringify(msgobj)});
+  }
 
+  // Run job button
+  var runJobButton = document.getElementById("run_job_button");
+  runJobButton.onclick = function () {
+    console.log("RUN job button clicked");
+    var jobIndex = selectedJobIndex();
+    if ( jobIndex < 0 )
+        return;
+
+    // We want the jobName to use for user confirmation
+    var jobLabel = document.getElementById("label_jl_" + jobIndex);
+    // jobName is 1st field of textContent with all '.' removed
+    var jobName = jobLabel.textContent.split(" ")[0].replace(/\./g, "");
+
+    var confirmRun = confirm("Run job " + jobName + "?");
+    if ( confirmRun == true ) {
+      //alert("You pressed OK");
+
+      // Request job run
+      msgobj = {type:'run_job', data:{ index: jobIndex }};
+      sendMessage({data:JSON.stringify(msgobj)});
+    } else {
+      return;
+    }
   }
 
 

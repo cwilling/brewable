@@ -316,5 +316,9 @@ ul#jobsListButtons a:hover {
     width:      100%;
     height:     40%;
 }
+#jobsListJobs {
+    font-family: "Lucida Console", Monaco, monospace;
+    font-size:  80%;
+}
 
 /* ex:set ai shiftwidth=4 inputtab=spaces smarttab noautotab: */

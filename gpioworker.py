@@ -1,6 +1,7 @@
 import time
 import multiprocessing
 import json
+import copy
 
 # Input temperature sensor - choose one of these to be 'st'
 #import systemtemp as st
@@ -9,6 +10,7 @@ import ds18b20 as st
 DEVICE_DIR = '/sys/bus/w1/devices/w1_bus_master1/w1_master_slaves'
 PROFILE_DATA_FILE='profileData.txt'
 JOB_DATA_FILE='jobData.txt'
+_TESTING_=True
 
 # Output relay
 from seedrelay import Relay
@@ -22,6 +24,15 @@ class SensorDevice():
         return self._id
 
 
+# From status.js
+# var jobData = {
+#    name: xxxxx,
+#    preheat: xxxxx,
+#    profile: xxxxx,
+#    sensors: xxxxx,
+#    relays: xxxxx,
+# };
+
 class GPIOProcess(multiprocessing.Process):
 
     def __init__(self, input_queue, output_queue):
@@ -30,7 +41,10 @@ class GPIOProcess(multiprocessing.Process):
         self.output_queue = output_queue
         self.sensorDevices = []
         self.relay = Relay()
+
+        # Lists of jobData
         self.jobs = []
+        self.runningJobs = []
 
     def run(self):
 
@@ -102,6 +116,19 @@ class GPIOProcess(multiprocessing.Process):
                         jdata = json.dumps({'type':'loaded_jobs',
                                             'data':self.jobs})
                         self.output_queue.put(jdata)
+                    elif jmsg['type'].startswith('run_job'):
+                        print("gpio received run_job msg");
+                        # First check that this job isn't already running
+                        isRunning = False
+                        for job in self.runningJobs:
+                            print "AAAA ", job.name()
+                            if job.name() == self.jobs[jmsg['data']['index']]['name']:
+                                print "Job %s already running" % job.name()
+                                isRunning = True
+                        if not isRunning:
+                            print "Start job ", jmsg['data']['index']
+                            self.setupJobRun(jmsg['data']['index'])
+                            #self.runningJobs.append(copy.copy(self.jobs[jmsg['data']['index']]))
                     elif jmsg['type'].startswith('save_profiles'):
                         with open(PROFILE_DATA_FILE, 'w') as json_file:
                             json.dump({'profiles_data':jmsg['data']}, json_file)
@@ -165,9 +192,20 @@ class GPIOProcess(multiprocessing.Process):
                 jdata = json.dumps({'type':'heartbeat','data':count});
                 self.output_queue.put(jdata)
 
+            # Check/process any running jobs
+            for job in self.runningJobs:
+                job.process()
+
+
+
+
             count += 1
 
             time.sleep(1)
+
+
+    def setupJobRun(self, jobIndex):
+        self.runningJobs.append(JobProcessor(copy.copy(self.jobs[jobIndex])))
 
 
     def relay_test(self):
@@ -201,5 +239,119 @@ class GPIOProcess(multiprocessing.Process):
     def run_command(self, command):
         if command[0].startswith('toggle_relay'):
             self.toggle_relay_command(command[1])
+
+
+
+class JobProcessor(GPIOProcess):
+
+    def __init__(self, rawJobInfo):
+        self.jobName    = rawJobInfo['name']
+        self.jobPreheat = rawJobInfo['preheat']
+        self.jobProfile = rawJobInfo['profile']
+        self.jobProfile = self.convertProfileTimes(rawJobInfo['profile'])
+        self.jobSensors = rawJobInfo['sensors']
+        self.jobRelays  = rawJobInfo['relays']
+        self.startTime  = time.time()
+
+        self.relay = Relay()
+
+        # In future, make this settable in the job itself
+        # e.g.self.jobProcessType = rawJobInfo['process_type']
+        #
+        # Probable initial types would be
+        #       SIMPLE_COOL             # single relay to cooler
+        #       SIMPLE_COOL_HEAT        # 2 relays, 1 for cool & 1 for heater
+        #       SIMPLE_HEAT             # single relay to heater
+        self.processType = "SIMPLE_COOL_HEAT"
+
+    def name(self):
+        return self.jobName
+
+    def profile(self):
+        return self.jobProfile
+
+    # Convert profile's duration fields into seconds
+    # To speed testing, assume duration filed are minutes.seconds
+    # whereas real version will have hours.minutes
+    def convertProfileTimes(self, profile):
+        for sp in profile:
+            hrs = mins = secs = '0'
+            if _TESTING_:
+                durSecs = 0
+                (mins,dot,secs) = sp['duration'].partition('.')
+                if len(mins) > 0:
+                    durSecs = 60 * int(mins)
+                else:
+                    durSecs = 0
+                if len(secs) > 0:
+                    durSecs += int(secs)
+                sp['duration'] = str(durSecs)
+            else:
+                durMins = 0
+                (hrs,dot,mins) = sp['duration'].partition('.')
+                if len(hrs) > 0:
+                    durMins = 60 * int(hrs)
+                else:
+                    durMins = 0
+                if len(mins) > 0:
+                    durMins += int(mins)
+                sp['duration'] = str(durMins)
+        return profile
+
+    def process(self):
+        accumulatedTime = 0.0
+        print "Processing job; ", self.jobName
+        for sp in self.jobProfile:
+            now = time.time()
+            if sp['duration'] == '0':
+                print "We're done. Hold at:", sp['target'], sp
+                # Hold temperature
+                self.temperatureAdjust(sp['target'])
+                break
+            if now > float(sp['duration']) + self.startTime + accumulatedTime:
+                accumulatedTime += float(sp['duration'])
+                print "passing step:", sp
+                continue
+            print "processing at step:", (now - self.startTime - accumulatedTime), sp
+            # Set temperature
+            self.temperatureAdjust(sp['target'])
+            break
+
+    def temperatureAdjust(self, target):
+        relayIds = []
+        for relay in self.jobRelays:
+            relayIds.append(int(relay.split()[1]))
+        print "Relays:", relayIds
+        if self.processType == "SIMPLE_COOL":
+            print "Using SIMPLE_COOL method to temperatureAdjust: ", target
+        elif self.processType == "SIMPLE_COOL_HEAT":
+            # Assume a single sensor for a SIMPLE method
+            temp = st.get_temp(self.jobSensors[0])
+            print "Temp:", temp, target
+
+            # Assume 2 relays for COOL_HEAT method
+            # Assume 1st is the cooler relay, 2nd is the heater
+            coolerRelay = relayIds[0]
+            heaterRelay = relayIds[1]
+
+            # If temp == target, leave it alone
+            if float(temp) > float(target):
+                # Turn on the cooler relay.
+                self.relay.ON(coolerRelay)
+                # Turn off the heater relay
+                self.relay.OFF(heaterRelay)
+                print "Start COOLING"
+            elif float(temp) < float(target):
+                # Turn off the cooler relay.
+                self.relay.OFF(coolerRelay)
+                # Turn on the heater relay
+                self.relay.ON(heaterRelay)
+                print "Start HEATING"
+            else:
+                self.relay.OFF(coolerRelay)
+                self.relay.OFF(heaterRelay)
+        elif self.processType == "SIMPLE_HEAT":
+            print "Using SIMPLE_HEAT method to temperatureAdjust: ", target
+
 
 # ex:set ai shiftwidth=4 inputtab=spaces smarttab noautotab:
