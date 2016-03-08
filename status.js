@@ -490,30 +490,18 @@ $(document).ready( function(){
       var min = 1000.0;
       var maxt = 0.0;
 
-      for (var sp=0; sp<lineData.length; sp++) {
-        var dataVal = parseFloat(lineData[sp].y);
-        var timeVal = parseFloat(lineData[sp].x);
-        if ( dataVal > max ) {
-          max = dataVal;
-        }
-        if ( dataVal < min ) {
-          min = dataVal;
-        }
-
-        if ( timeVal > maxt ) {
-          maxt = timeVal;
-        }
-
-      }
-      //console.log("min = " + min + ", max = " + max + ", maxt = " + maxt);
+      min = d3.min(lineData, function(d) {return parseFloat(d.y);});
+      max = d3.max(lineData, function(d) {return parseFloat(d.y);});
       if ( min < minDataPoint ) {
-        console.log("new min = " + dataVal);
+        console.log("new min = " + min);
         minDataPoint = min;
       }
       if ( max > maxDataPoint ) {
-        console.log("new max = " + dataVal);
+        console.log("new max = " + max);
         maxDataPoint = max;
       }
+
+      maxt = d3.max(lineData, function(d) {return parseFloat(d.x);});
       if ( maxt > maxTime ) {
         maxTime = maxt;
       }
@@ -529,7 +517,7 @@ $(document).ready( function(){
       var scaledLineData = [];
       var lineData = profileDisplayData[profile];
       for ( var sp=0;sp<lineData.length;sp++) {
-        console.log("scaled sp = " + lineData[sp].x + " : " + lineData[sp].y);
+        //console.log("scaled sp = " + lineData[sp].x + " : " + lineData[sp].y);
         scaledLineData.push({"x":lineData[sp].x, "y":linearScale(lineData[sp].y)});
       }
       var profileLineFunction = d3.svg.line()
