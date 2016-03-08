@@ -13,7 +13,8 @@ JOB_DATA_FILE='jobData.txt'
 _TESTING_=True
 
 # Output relay
-from seedrelay import Relay
+from sainsmartrelay import Relay
+#from seedrelay import Relay
 
 class SensorDevice():
     def __init__(self, id):
@@ -78,6 +79,9 @@ class GPIOProcess(multiprocessing.Process):
         # Now check the relays
         #self.relay_test()
 
+        # Start with all relays off
+        self.relay.ALLOFF()
+
         # Loop
         count = 0
         while True:
@@ -126,9 +130,15 @@ class GPIOProcess(multiprocessing.Process):
                                 print "Job %s already running" % job.name()
                                 isRunning = True
                         if not isRunning:
-                            print "Start job ", jmsg['data']['index']
-                            self.setupJobRun(jmsg['data']['index'])
-                            #self.runningJobs.append(copy.copy(self.jobs[jmsg['data']['index']]))
+                            if not self.setupJobRun(jmsg['data']['index']):
+                                # Need to send msg back to client here!
+                                print "Couldn't start job"
+                            else:
+                                print "Started job ", jmsg['data']['index']
+                                # Return running jobs list to client
+                                jdata = json.dumps({'type':'started_jobs',
+                                                    'data':self.runningJobs})
+                                self.output_queue.put(jdata)
                     elif jmsg['type'].startswith('save_profiles'):
                         with open(PROFILE_DATA_FILE, 'w') as json_file:
                             json.dump({'profiles_data':jmsg['data']}, json_file)
@@ -205,7 +215,12 @@ class GPIOProcess(multiprocessing.Process):
 
 
     def setupJobRun(self, jobIndex):
-        self.runningJobs.append(JobProcessor(copy.copy(self.jobs[jobIndex])))
+        try:
+            self.runningJobs.append(JobProcessor(copy.copy(self.jobs[jobIndex])))
+            return True
+        except:
+            print "JOB CREATE FAIL!"
+            return False
 
 
     def relay_test(self):
@@ -249,7 +264,7 @@ class JobProcessor(GPIOProcess):
         self.jobPreheat = rawJobInfo['preheat']
         self.jobProfile = rawJobInfo['profile']
         self.jobProfile = self.convertProfileTimes(rawJobInfo['profile'])
-        self.jobSensors = rawJobInfo['sensors']
+        self.jobSensors = self.validateSensors(rawJobInfo['sensors'])
         self.jobRelays  = rawJobInfo['relays']
         self.startTime  = time.time()
 
@@ -269,6 +284,14 @@ class JobProcessor(GPIOProcess):
 
     def profile(self):
         return self.jobProfile
+
+    # Confirm specififed sensors exist in the system
+    def validateSensors(self, sensors):
+        for sensor in sensors:
+            print "VALIDATE:", sensor
+            if not st.isValidTempDevice(sensor):
+                raise Exception()
+        return sensors
 
     # Convert profile's duration fields into seconds
     # To speed testing, assume duration filed are minutes.seconds
@@ -330,6 +353,10 @@ class JobProcessor(GPIOProcess):
             print "Temp:", temp, target
 
             # Assume 2 relays for COOL_HEAT method
+            if len(relayIds) < 2:
+                print "Need 2 relays for COOL_HEAT method"
+                # Cancel job somehow?
+                return
             # Assume 1st is the cooler relay, 2nd is the heater
             coolerRelay = relayIds[0]
             heaterRelay = relayIds[1]

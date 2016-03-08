@@ -1,3 +1,5 @@
+var _TESTING_ = true;
+
 var availableSensors = [];
 var availableRelays = [];
 /*
@@ -31,6 +33,20 @@ function generateDummyProfileSet(profiles, setpoints) {
   return profileSet;
 }
 
+/* Convert text from profile editor into time units.
+*/
+function resolveGraphTimeValue(rawval) {
+  var pieces = rawval.split(".");
+  if (pieces.length > 1 ) {
+    result = 60 * parseInt(pieces[0])
+                + parseInt(pieces[1]/60)
+                + parseInt(pieces[1]%60);
+  } else {
+    result = 60 * parseInt(pieces[0]);
+  }
+  console.log("resolveGraphTimeValue(): " + result);
+  return result;
+}
 
 $(document).ready( function(){
 
@@ -248,11 +264,15 @@ $(document).ready( function(){
 
 
 
-/********************** Profiles Configuration page ***************************/
+/********************* Profiles Configuration page ***************************/
   // Profiles Save button
   var saveProfilesButton = document.getElementById("saveProfiles");
   saveProfilesButton.onclick = function() {
     saveProfiles();
+  }
+  var updateProfileGraphButton = document.getElementById("updateProfileGraph");
+  updateProfileGraphButton.onclick = function() {
+    updateProfileGraph();
   }
 
   // Profiles temperature scale
@@ -271,184 +291,6 @@ $(document).ready( function(){
   var select = document.getElementById("temperatureScaleSelector");
     updateProfilesTableTempScale(select.value);
   }
-
-
-  //var socket = new WebSocket("ws://localhost:8080/ws");
-  var socket = new WebSocket("ws://" + location.host + "/wsStatus");
- 
-  socket.onopen = function(){  
-    console.log("sss connected"); 
-
-    // Request profiles data
-    msgobj = {type:'load_profiles', data:[]};
-    sendMessage({data:JSON.stringify(msgobj)});
-  };
-
-  socket.onmessage = function (message) {
-
-    var jmsg;
-    try {
-      jmsg = JSON.parse(message.data);
-      if ( jmsg.type === 'info' ) {
-        received.append('INFO: ');
-        received.append(jmsg.data);
-        received.append($('<br/>'));
-      } else if (jmsg.type === 'sensor_list' ) {
-        // Keep a copy for later
-        availableSensors = [];
-        for (var i=0;i<jmsg.data.length;i++) {
-          availableSensors.push(jmsg.data[i]);
-        }
-        createSensorTableFunction();
-      } else if (jmsg.type === 'relay_list' ) {
-        console.log("Received relay_list " + jmsg.data);
-        // Keep a copy for later
-        availableRelays = [];
-        for (var i=0;i<jmsg.data.length;i++) {
-          availableRelays.push(jmsg.data[i]);
-        }
-        createRelayTableFunction();
-      } else if (jmsg.type === 'loaded_jobs' ) {
-        console.log("Received loaded_jobs " + jmsg.data);
-        createStoredJobsList(jmsg.data);
-      } else if (jmsg.type === 'loaded_profiles' ) {
-        if ( jmsg.data.length == 0 ) {
-          received.append('RCVD: EMPTY profiles data');
-        } else {
-          received.append('RCVD: OK profiles data');
-        }
-        received.append($('<br/>'));
-        //updateProfilesTableData(jmsg.data);
-        createProfileTableFunction(jmsg.data);
-      } else if (jmsg.type === 'heartbeat' ) {
-        received.append('HEARTBEAT: ');
-        received.append(jmsg.data);
-        received.append($('<br/>'));
-      } else if (jmsg.type === 'live_update' ) {
-        add_live_data(jmsg.data);
-      } else {
-        console.log('Unknown json messsage type: ' + jmsg.type);
-      }
-    }
-    catch(err ) {
-      console.log('Non-json msg: ' + message.data);
-      //received.append(message.data);
-      //received.append($('<br/>'));
-    }
-    finally {
-      received.scrollTop(received.prop('scrollHeight'));
-    }
-
-  };
-
-  socket.onclose = function(){
-    console.log("disconnected"); 
-  };
-
-  var sendMessage = function(message) {
-    console.log("sending:" + message.data);
-    socket.send(message.data);
-  };
-
-  // send a command to the serial port
-  $("#cmd_send").click(function(ev){
-    ev.preventDefault();
-    var cmd = $('#cmd_value').val();
-    sendMessage({ 'data' : cmd});
-    $('#cmd_value').val("");
-  });
-
-  $('#clear').click(function(){
-    received.empty();
-  });
-
-
-  $("#relay_btn_1").click(function(ev){
-    ev.preventDefault();
-    send_relay_cmd(1);
-  });
-  $("#relay_btn_2").click(function(ev){
-    ev.preventDefault();
-    send_relay_cmd(2);
-  });
-  $("#relay_btn_3").click(function(ev){
-    ev.preventDefault();
-    send_relay_cmd(3);
-  });
-  $("#relay_btn_4").click(function(ev){
-    ev.preventDefault();
-    send_relay_cmd(4);
-  });
-
-  function send_relay_cmd(data) {
-    var cmd = ["toggle_relay",data]
-    var msgobj = {type:'CMD', data:cmd};
-    sendMessage({data:JSON.stringify(msgobj)});
-  }
-
-
-var margin = {top: 100, right: 20, bottom: 30, left: 80},
-    width = 600 - margin.left - margin.right,
-    height = 400 - margin.top - margin.bottom;
-
-var minDataPoint = 20;
-var maxDataPoint = 80;
-var linearScale = d3.scale.linear()
-	.domain([minDataPoint, maxDataPoint])
-	.range([height, 0]);
-var yAxis = d3.svg.axis()
-	.scale(linearScale)
-	.orient("left").ticks(5);
-
-function make_x_axis() {		
-    return d3.svg.axis()
-        .scale(x)
-        .orient("bottom")
-        .ticks(5)
-}
-function make_y_axis() {		
-    return d3.svg.axis()
-        .scale(y)
-        .orient("left")
-        .ticks(5)
-}
-
-var svgContainer = d3.select("#live_updateHolder")
-    .append("svg")
-        .attr("id", "live_update")
-        .attr("width", width + margin.left + margin.right)
-        .attr("height", height + margin.top + margin.bottom)
-	.style("border", "1px solid black")
-    .append("g")
-	.attr("class", "yaxisticks")
-        .attr("transform", 
-              "translate(" + margin.left + "," + margin.top + ")")
-        .call(yAxis);
-
-svgContainer.append("g")
-    .attr("class", "yaxistext")
-    .append("text")
-	.attr("transform", "rotate(-90)")
-	.attr("x", 0 - margin.top)
-	.attr("y", 0 - (margin.left/2))
-	.attr("dy", "lem")
-	.style("text-anchor", "middle")
-	.text("Temperature (C)");
-
-
-var lineGraph = svgContainer.append("path");
-
-var live_temps = [];
-var live_temps_scaled = [];
-
-var live_temps_lineData = [];
-var live_temps_lineData_scaled = [];
-
-var lineFunction = d3.svg.line()
-	.x(function(d) {return d.time})
-	.y(function(d) {return d.temp})
-	.interpolate("linear");
-
 
   // Create a profiles table based on some data (loadedProfileData)
   function createProfileTableFunction(loadedProfileData) {
@@ -540,7 +382,7 @@ var lineFunction = d3.svg.line()
     var setpoint = {};
     var setpoints = [], profile = [], profileSet = [];
     var tempType = document.getElementById("temperatureScaleSelector").value;
-    var idName, target, duration;
+    var target, duration;
     var msgobj, jmsg;
 
 
@@ -569,6 +411,350 @@ var lineFunction = d3.svg.line()
     sendMessage({data:JSON.stringify(msgobj)});
 
   }
+
+  /* Profile Graph */
+  function getProfileData() {
+    console.log("At: getProfileData()");
+
+    var setpoint = {};
+    var profile = [], profileSet = [];
+    var target, duration;
+    var tempType = document.getElementById("temperatureScaleSelector").value;
+
+    var table = document.getElementById("profilesTable");
+    var rows = table.rows;
+    for (var i=0;i<rows.length;i++) {
+      profile = [];
+      for (var j=0;j<rows[i].cells.length-1;j++) {
+        setpoint = {};
+        target = document.getElementById("sp" + i + "_" + j).value;
+        if (tempType == 'F') {
+          target = ((target - 32.0)* 5) / 9;
+        }
+        duration = document.getElementById("dh" + i + "_" + j).value;
+        setpoint = {target:target, duration:duration};
+        profile.push(setpoint);
+      }
+      profileSet.push(profile);
+    }
+    return profileSet;
+/*
+    var cannedProfileData = [[{"x": 0,   "y": 27}, {"x": 240, "y": 27},
+                             {"x": 300, "y": 24}, {"x": 360, "y": 29},
+                             {"x": 420, "y": 26}, {"x": 480, "y": 25},
+                             {"x": 540, "y": 20}, {"x": 600, "y": 26} ],
+                             [{"x": 0, "y": 20},  {"x": 180, "y": 20},
+                             {"x": 360, "y": 24}, {"x": 420, "y": 29},
+                             {"x": 450, "y": 22}, {"x": 480, "y": 22},
+                             {"x": 540, "y": 24}, {"x": 600, "y": 24} ],
+                             ];
+    console.log("canned length = " + cannedProfileData.length);
+    return cannedProfileData;
+*/
+  }
+
+  function updateProfileGraph() {
+    console.log("At: updateProfileGraph()");
+    var profileData = getProfileData(); // raw data from Profiles Editor
+    var profileDisplayData = [];        // "processed" data for display
+    var setpoint = {};
+    var lineColours = ["green", "red", "orange", "blue"];
+
+    /* From the raw profile, generate a dataset that has accumulated times
+    */
+    console.log("profileData length = " + profileData.length);
+    for (var profile=0;profile<profileData.length;profile++) {
+      console.log("profile length = " + profileData[profile].length);
+      var nextStep = 0.0;
+      var lineData = [];
+      for (var sp=0;sp<profileData[profile].length;sp++) {
+        //console.log("pdata: " + profileData[profile][sp]["duration"] + " : " + profileData[profile][sp]["target"]);
+        setpoint = {"x":nextStep,
+                    "y":profileData[profile][sp]["target"]};
+        lineData.push(setpoint);
+        console.log("pdata: " + setpoint["x"] + " : " + setpoint["y"]);
+
+        //nextStep += parseInt(profileData[profile][sp]["duration"]);
+        nextStep += resolveGraphTimeValue(profileData[profile][sp]["duration"]);
+      }
+      profileDisplayData.push(lineData);
+    }
+
+    // First find extent of data
+    var maxTime = 0.0;
+    var maxDataPoint = 0.0;
+    var minDataPoint = 1000.0;
+    for ( var profile=0;profile<profileDisplayData.length;profile++) {
+      var lineData = profileDisplayData[profile];
+      var max = 0.0;
+      var min = 1000.0;
+      var maxt = 0.0;
+
+      for (var sp=0; sp<lineData.length; sp++) {
+        var dataVal = parseFloat(lineData[sp].y);
+        var timeVal = parseFloat(lineData[sp].x);
+        if ( dataVal > max ) {
+          max = dataVal;
+        }
+        if ( dataVal < min ) {
+          min = dataVal;
+        }
+
+        if ( timeVal > maxt ) {
+          maxt = timeVal;
+        }
+
+      }
+      //console.log("min = " + min + ", max = " + max + ", maxt = " + maxt);
+      if ( min < minDataPoint ) {
+        console.log("new min = " + dataVal);
+        minDataPoint = min;
+      }
+      if ( max > maxDataPoint ) {
+        console.log("new max = " + dataVal);
+        maxDataPoint = max;
+      }
+      if ( maxt > maxTime ) {
+        maxTime = maxt;
+      }
+    }
+    console.log("minData = " + minDataPoint + ", maxData = " + maxDataPoint + ", maxTime = " + maxTime);
+
+    // Scale & display data
+    var linearScale = d3.scale.linear()
+                                .domain([minDataPoint,maxDataPoint])
+                                .range([500,0]);
+    var newScaledData = [];
+    for ( var profile=0;profile<profileDisplayData.length;profile++) {
+      var scaledLineData = [];
+      var lineData = profileDisplayData[profile];
+      for ( var sp=0;sp<lineData.length;sp++) {
+        console.log("scaled sp = " + lineData[sp].x + " : " + lineData[sp].y);
+        scaledLineData.push({"x":lineData[sp].x, "y":linearScale(lineData[sp].y)});
+      }
+      var profileLineFunction = d3.svg.line()
+                                .x(function(d) { return d.x; })
+                                .y(function(d) { return d.y; })
+                                .interpolate("linear");
+      var lineGraph = profileGraphHolder.append("path")
+                                .attr("d", profileLineFunction(scaledLineData))
+                                .attr("stroke", lineColours[profile])
+                                .attr("stroke-width", 3)
+                                .attr("fill", "none");
+    }
+
+  }
+
+
+/*
+  var circleData = [
+    { "cx": 20, "cy": 20, "radius": 20, "color" : "green" },
+    { "cx": 70, "cy": 70, "radius": 20, "color" : "purple" }];
+  console.log("Profile Graph");
+*/
+  var profileGraphHolder = d3.select("#profilesGraphHolder").append("svg")
+                                .attr("width", 1800)
+                                .attr("height", 500)
+
+/*
+  var circleGroup = profileGraphHolder.append("g");
+  var circles = circleGroup.selectAll("circle")
+                                    .data(circleData)
+                                    .enter()
+                                    .append("circle");
+
+  var circleAttributes = circles
+                          .attr("cx", function (d) { return d.cx; })
+                          .attr("cy", function (d) { return d.cy; })
+                          .attr("r", function (d) { return d.radius; })
+                          .style("fill", function (d) { return d.color; });
+*/
+
+
+
+// END of Profiles Configuration
+/*****************************************************************************/
+
+
+  //var socket = new WebSocket("ws://localhost:8080/ws");
+  var socket = new WebSocket("ws://" + location.host + "/wsStatus");
+ 
+  socket.onopen = function(){  
+    console.log("sss connected"); 
+
+    // Request profiles data
+    msgobj = {type:'load_profiles', data:[]};
+    sendMessage({data:JSON.stringify(msgobj)});
+  };
+
+  socket.onmessage = function (message) {
+
+    var jmsg;
+    try {
+      jmsg = JSON.parse(message.data);
+      if ( jmsg.type === 'info' ) {
+        received.append('INFO: ');
+        received.append(jmsg.data);
+        received.append($('<br/>'));
+      } else if (jmsg.type === 'sensor_list' ) {
+        // Keep a copy for later
+        availableSensors = [];
+        for (var i=0;i<jmsg.data.length;i++) {
+          availableSensors.push(jmsg.data[i]);
+        }
+        createSensorTableFunction();
+      } else if (jmsg.type === 'relay_list' ) {
+        console.log("Received relay_list " + jmsg.data);
+        // Keep a copy for later
+        availableRelays = [];
+        for (var i=0;i<jmsg.data.length;i++) {
+          availableRelays.push(jmsg.data[i]);
+        }
+        createRelayTableFunction();
+      } else if (jmsg.type === 'loaded_jobs' ) {
+        console.log("Received loaded_jobs " + jmsg.data);
+        createStoredJobsList(jmsg.data);
+      } else if (jmsg.type === 'started_job' ) {
+        console.log("Received started_job " + jmsg.data);
+        createRunningJobsList(jmsg.data);
+      } else if (jmsg.type === 'loaded_profiles' ) {
+        if ( jmsg.data.length == 0 ) {
+          received.append('RCVD: EMPTY profiles data');
+        } else {
+          received.append('RCVD: OK profiles data');
+        }
+        received.append($('<br/>'));
+        //updateProfilesTableData(jmsg.data);
+        createProfileTableFunction(jmsg.data);
+      } else if (jmsg.type === 'heartbeat' ) {
+        received.append('HEARTBEAT: ');
+        received.append(jmsg.data);
+        received.append($('<br/>'));
+      } else if (jmsg.type === 'live_update' ) {
+        add_live_data(jmsg.data);
+      } else {
+        console.log('Unknown json messsage type: ' + jmsg.type);
+      }
+    }
+    catch(err ) {
+      console.log('Non-json msg: ' + message.data);
+      //received.append(message.data);
+      //received.append($('<br/>'));
+    }
+    finally {
+      received.scrollTop(received.prop('scrollHeight'));
+    }
+
+  };
+
+  socket.onclose = function(){
+    console.log("disconnected"); 
+  };
+
+  var sendMessage = function(message) {
+    console.log("sending:" + message.data);
+    socket.send(message.data);
+  };
+
+  // send a command to the serial port
+  $("#cmd_send").click(function(ev){
+    ev.preventDefault();
+    var cmd = $('#cmd_value').val();
+    sendMessage({ 'data' : cmd});
+    $('#cmd_value').val("");
+  });
+
+  $('#clear').click(function(){
+    received.empty();
+  });
+
+
+  $("#relay_btn_1").click(function(ev){
+    ev.preventDefault();
+    send_relay_cmd(1);
+  });
+  $("#relay_btn_2").click(function(ev){
+    ev.preventDefault();
+    send_relay_cmd(2);
+  });
+  $("#relay_btn_3").click(function(ev){
+    ev.preventDefault();
+    send_relay_cmd(3);
+  });
+  $("#relay_btn_4").click(function(ev){
+    ev.preventDefault();
+    send_relay_cmd(4);
+  });
+
+  function send_relay_cmd(data) {
+    var cmd = ["toggle_relay",data]
+    var msgobj = {type:'CMD', data:cmd};
+    sendMessage({data:JSON.stringify(msgobj)});
+  }
+
+
+var margin = {top: 100, right: 20, bottom: 30, left: 80},
+    width = 600 - margin.left - margin.right,
+    height = 400 - margin.top - margin.bottom;
+
+var minDataPoint = 20;
+var maxDataPoint = 80;
+var linearScale = d3.scale.linear()
+	.domain([minDataPoint, maxDataPoint])
+	.range([height, 0]);
+var yAxis = d3.svg.axis()
+	.scale(linearScale)
+	.orient("left").ticks(5);
+
+  function make_x_axis() {		
+      return d3.svg.axis()
+          .scale(x)
+          .orient("bottom")
+          .ticks(5)
+  }
+  function make_y_axis() {		
+      return d3.svg.axis()
+          .scale(y)
+          .orient("left")
+          .ticks(5)
+  }
+
+var svgContainer = d3.select("#live_updateHolder")
+    .append("svg")
+        .attr("id", "live_update")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+	.style("border", "1px solid black")
+    .append("g")
+	.attr("class", "yaxisticks")
+        .attr("transform", 
+              "translate(" + margin.left + "," + margin.top + ")")
+        .call(yAxis);
+
+svgContainer.append("g")
+    .attr("class", "yaxistext")
+    .append("text")
+	.attr("transform", "rotate(-90)")
+	.attr("x", 0 - margin.top)
+	.attr("y", 0 - (margin.left/2))
+	.attr("dy", "lem")
+	.style("text-anchor", "middle")
+	.text("Temperature (C)");
+
+
+var lineGraph = svgContainer.append("path");
+
+var live_temps = [];
+var live_temps_scaled = [];
+
+var live_temps_lineData = [];
+var live_temps_lineData_scaled = [];
+
+var lineFunction = d3.svg.line()
+	.x(function(d) {return d.time})
+	.y(function(d) {return d.temp})
+	.interpolate("linear");
+
 
   // Create a table of sensors based on data  from server (availableSensors)
   function createSensorTableFunction() {
@@ -619,7 +805,7 @@ var lineFunction = d3.svg.line()
     }
   }
 
-  // Generate a table of stored jobs
+  // Generate a listing of stored jobs
   function createStoredJobsList(data) {
     console.log("Reached createStoredJobsList()");
     var table = document.getElementById("jobsListJobs");
@@ -688,6 +874,14 @@ var lineFunction = d3.svg.line()
     //console.log("No job selected");
     return false;
   }
+
+  // Generate a listing of running jobs
+  function createRunningJobsList(data) {
+    console.log("Reached createRunningJobsList()");
+    var table = document.getElementById("jobsListRunningJobs");
+
+  }
+
 
   function add_live_data(data) {
     //d3.select('#received').append('li').text("live_data: " + data);

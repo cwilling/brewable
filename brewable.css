@@ -28,11 +28,14 @@ body.profiles {
     font-family: ariel;
     font-size: 70%;
     border-collapse: collapse;
-    }
+}
 #profilesTableCaption {
     font-family: ariel;
     font-size: 150%;
     font-weight: bold;
+}
+#profilesGraphHolder {
+    background-color: bisque;
 }
 td {
     border: 1px solid #000;
