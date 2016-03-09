@@ -438,19 +438,6 @@ $(document).ready( function(){
       profileSet.push(profile);
     }
     return profileSet;
-/*
-    var cannedProfileData = [[{"x": 0,   "y": 27}, {"x": 240, "y": 27},
-                             {"x": 300, "y": 24}, {"x": 360, "y": 29},
-                             {"x": 420, "y": 26}, {"x": 480, "y": 25},
-                             {"x": 540, "y": 20}, {"x": 600, "y": 26} ],
-                             [{"x": 0, "y": 20},  {"x": 180, "y": 20},
-                             {"x": 360, "y": 24}, {"x": 420, "y": 29},
-                             {"x": 450, "y": 22}, {"x": 480, "y": 22},
-                             {"x": 540, "y": 24}, {"x": 600, "y": 24} ],
-                             ];
-    console.log("canned length = " + cannedProfileData.length);
-    return cannedProfileData;
-*/
   }
 
   function updateProfileGraph() {
@@ -459,6 +446,9 @@ $(document).ready( function(){
     var profileDisplayData = [];        // "processed" data for display
     var setpoint = {};
     var lineColours = ["green", "red", "orange", "blue"];
+
+    // Clear any current graph
+    profileGraphHolder.selectAll("*").remove();
 
     /* From the raw profile, generate a dataset that has accumulated times
     */
@@ -510,8 +500,17 @@ $(document).ready( function(){
 
     // Scale & display data
     var linearScale = d3.scale.linear()
-                                .domain([minDataPoint,maxDataPoint])
-                                .range([500,0]);
+                      .domain([minDataPoint,maxDataPoint])
+                      .range([profileGraphHeight,0]);
+    var yAxis = d3.svg.axis()
+                      .scale(linearScale)
+                      .orient("left").ticks(5);
+    var yAxisGroup = profileGraphHolder.append("g")
+                      .attr("transform",
+                            "translate(" + profileGraphMargin.left + "," + profileGraphMargin.top + ")")
+                      .call(yAxis);
+
+
     var newScaledData = [];
     for ( var profile=0;profile<profileDisplayData.length;profile++) {
       var scaledLineData = [];
@@ -525,6 +524,8 @@ $(document).ready( function(){
                                 .y(function(d) { return d.y; })
                                 .interpolate("linear");
       var lineGraph = profileGraphHolder.append("path")
+                                .attr("transform",
+                                      "translate(" + profileGraphMargin.left + "," + profileGraphMargin.top + ")")
                                 .attr("d", profileLineFunction(scaledLineData))
                                 .attr("stroke", lineColours[profile])
                                 .attr("stroke-width", 3)
@@ -534,35 +535,18 @@ $(document).ready( function(){
   }
 
 
-/*
-  var circleData = [
-    { "cx": 20, "cy": 20, "radius": 20, "color" : "green" },
-    { "cx": 70, "cy": 70, "radius": 20, "color" : "purple" }];
-  console.log("Profile Graph");
-*/
+  var profileGraphMargin = {top: 100, right: 20, bottom: 30, left: 80},
+    profileGraphWidth = 1800 - profileGraphMargin.left - profileGraphMargin.right,
+    profileGraphHeight = 500 - profileGraphMargin.top - profileGraphMargin.bottom;
   var profileGraphHolder = d3.select("#profilesGraphHolder").append("svg")
-                                .attr("width", 1800)
-                                .attr("height", 500)
-
-/*
-  var circleGroup = profileGraphHolder.append("g");
-  var circles = circleGroup.selectAll("circle")
-                                    .data(circleData)
-                                    .enter()
-                                    .append("circle");
-
-  var circleAttributes = circles
-                          .attr("cx", function (d) { return d.cx; })
-                          .attr("cy", function (d) { return d.cy; })
-                          .attr("r", function (d) { return d.radius; })
-                          .style("fill", function (d) { return d.color; });
-*/
-
+                      .attr("id", "profiles_graph_holder")
+                      .attr("width", profileGraphWidth + profileGraphMargin.right + profileGraphMargin.left)
+                      .attr("height", profileGraphHeight + profileGraphMargin.top + profileGraphMargin.bottom)
+                      .style("border", "1px solid black")
 
 
 // END of Profiles Configuration
 /*****************************************************************************/
-
 
   //var socket = new WebSocket("ws://localhost:8080/ws");
   var socket = new WebSocket("ws://" + location.host + "/wsStatus");
