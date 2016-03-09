@@ -502,16 +502,26 @@ $(document).ready( function(){
     console.log("minData = " + minDataPoint + ", maxData = " + maxDataPoint + ", maxTime = " + maxTime);
 
     // Scale & display data
-    var linearScale = d3.scale.linear()
+    var linearScaleY = d3.scale.linear()
                       .domain([minDataPoint,maxDataPoint])
                       .range([profileGraphHeight,0]);
     var yAxis = d3.svg.axis()
-                      .scale(linearScale)
+                      .scale(linearScaleY)
                       .orient("left").ticks(5);
     var yAxisGroup = profileGraphHolder.append("g")
                       .attr("transform",
                             "translate(" + profileGraphMargin.left + "," + profileGraphMargin.top + ")")
                       .call(yAxis);
+    var linearScaleX = d3.scale.linear()
+                      .domain([0,maxTime])
+                      .range([0,profileGraphWidth]);
+    var xAxis = d3.svg.axis()
+                      .scale(linearScaleX)
+                      .orient("bottom").ticks(20);
+    var xAxisGroup = profileGraphHolder.append("g")
+                      .attr("transform",
+                            "translate(" + profileGraphMargin.left + "," + (profileGraphHeight + profileGraphMargin.top) + ")")
+                      .call(xAxis);
 
 
     var newScaledData = [];
@@ -520,7 +530,8 @@ $(document).ready( function(){
       var lineData = profileDisplayData[profile];
       for ( var sp=0;sp<lineData.length;sp++) {
         //console.log("scaled sp = " + lineData[sp].x + " : " + lineData[sp].y);
-        scaledLineData.push({"x":lineData[sp].x, "y":linearScale(lineData[sp].y)});
+        scaledLineData.push({"x":linearScaleX(lineData[sp].x),
+                             "y":linearScaleY(lineData[sp].y)});
       }
       var profileLineFunction = d3.svg.line()
                                 .x(function(d) { return d.x; })
