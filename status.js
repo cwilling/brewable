@@ -467,7 +467,6 @@ $(document).ready( function(){
         lineData.push(setpoint);
         console.log("pdata: " + setpoint["x"] + " : " + setpoint["y"]);
 
-        //nextStep += parseInt(profileData[profile][sp]["duration"]);
         nextStep += resolveGraphTimeValue(profileData[profile][sp]["duration"]);
       }
       profileDisplayData.push(lineData);
@@ -617,7 +616,9 @@ $(document).ready( function(){
         received.append(jmsg.data);
         received.append($('<br/>'));
       } else if (jmsg.type === 'live_update' ) {
-        add_live_data(jmsg.data);
+        add_live_data(jmsg.sensorId, jmsg.data);
+      } else if (jmsg.type === 'relay_state' ) {
+        update_relay_state(jmsg.data);
       } else {
         console.log('Unknown json messsage type: ' + jmsg.type);
       }
@@ -869,9 +870,10 @@ var lineFunction = d3.svg.line()
   }
 
 
-  function add_live_data(data) {
+  function add_live_data(sensor, data) {
     //d3.select('#received').append('li').text("live_data: " + data);
     var l = live_temps.push(linearScale(data));
+    console.log("add_live_data(): from " + sensor);
 
     for (i=0;i<l;i++) {
       live_temps_lineData[i] = {time:i,temp:live_temps[i]};
@@ -889,6 +891,20 @@ var lineFunction = d3.svg.line()
     }
   }
 
+  function update_relay_state(data) {
+    var x = 0;
+
+/* Testing (works)
+    for ( var i=0;i<data.length;i++ ) {
+      if ( data[i] ) {
+        console.log("update_relay_state(): Relay " + (i+1) + " = ON");
+      } else {
+        console.log("update_relay_state(): Relay " + (i+1) + " = OFF");
+      }
+    }
+*/
+
+  }
 
 });
 

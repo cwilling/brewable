@@ -84,18 +84,18 @@ class Relay():
         mystate = []
         for dev in range(self.device_count()):
             this_dev = RelayPins['PIN_RELAY_{}'.format(dev+1)]
-            print "dev #", this_dev
+            #print "dev #", this_dev
             mystate.append(gpio.input(this_dev))
-        print "state: ", mystate
+        #print "state: ", mystate
         return mystate
 
 
     def isOn(self, id):
         if self.state()[id-1] == 0:
-            print '{} is ON'.format(id)
+            #print '{} is ON'.format(id)
             return True
         else:
-            print '{} is OFF'.format(id)
+            #print '{} is OFF'.format(id)
             return False
 
 

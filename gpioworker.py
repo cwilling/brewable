@@ -181,23 +181,31 @@ class GPIOProcess(multiprocessing.Process):
                     print "Non json msg: ", data
 
 
-            # Data/info from device
+            # Data/info from sensor device
             data = "generic %d" % count
             try:
-                data = st.get_temp(self.sensorDevices[0].getId())
-                jdata = json.dumps({'sensorId':self.sensorDevices[0].getId(),
+                for sensor in self.sensorDevices:
+                    data = st.get_temp(sensor.getId())
+                    jdata = json.dumps({'sensorId':sensor.getId(),
                                     'type':'live_update',
                                     'data':data})
+                    #print "XXX", jdata
+                    self.output_queue.put(jdata)
             except:
                 jdata = json.dumps({'sensorId':'dummy_123',
                                     'type':'live_update',
                                     'data':21})
-            #print "XXX", data
-            #self.output_queue.put(data)
-            print "XXX", jdata
+                print "XXX", jdata
+                self.output_queue.put(jdata)
+
+            # Data/info from relay device
+            relay_state = list(self.relay.isOn(i+1) for i in range(len(self.relay.state())))
+            print "relay_state: ", relay_state
+            jdata = json.dumps({'type':'relay_state',
+                                'data':relay_state})
             self.output_queue.put(jdata)
 
-            # Send a heartbeat (in absence or any sensors)
+            # Send a heartbeat (in absence of any sensors)
             if len(self.sensorDevices) == 0:
                 jdata = json.dumps({'type':'heartbeat','data':count});
                 self.output_queue.put(jdata)
