@@ -876,7 +876,7 @@ var liveLineFunction = d3.svg.line()
 
   function add_live_data(sensor, data) {
     //svgContainer.selectAll("#"+sensor).remove();
-    var liveLineColours = ["yellow", "blue", "red", "green"];
+    var liveLineColours = ["green", "blue", "red", "yellow"];
     if ( !(sensor in liveTemps) ) {
       liveTemps[sensor] = [];
       liveTempsLineData[sensor] = [];
@@ -896,7 +896,7 @@ var liveLineFunction = d3.svg.line()
       //console.log("sensor_key = " + i + " = " + sensor_key);
       var lineGraph = svgContainer.append("path")
             .attr("id", sensor_key)
-            .attr("d", liveLineFunction(liveTempsLineData[sensor]))
+            .attr("d", liveLineFunction(liveTempsLineData[sensor_key]))
             .attr("stroke", liveLineColours[i])
             .attr("stroke-width", 3)
             .attr("fill", "none");
