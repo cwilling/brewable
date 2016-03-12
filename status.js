@@ -686,11 +686,11 @@ var margin = {top: 100, right: 20, bottom: 30, left: 80},
 
 var minDataPoint = 20;
 var maxDataPoint = 80;
-var linearScale = d3.scale.linear()
+var liveLinearScale = d3.scale.linear()
 	.domain([minDataPoint, maxDataPoint])
 	.range([height, 0]);
 var yAxis = d3.svg.axis()
-	.scale(linearScale)
+	.scale(liveLinearScale)
 	.orient("left").ticks(5);
 
   function make_x_axis() {		
@@ -729,15 +729,19 @@ svgContainer.append("g")
 	.text("Temperature (C)");
 
 
-var lineGraph = svgContainer.append("path");
+//var lineGraph = svgContainer.append("path");
+
+// Container for temperature arrays named by sensor id
+var liveTemps = {};
 
 var live_temps = [];
 var live_temps_scaled = [];
 
+var liveTempsLineData = {};
 var live_temps_lineData = [];
 var live_temps_lineData_scaled = [];
 
-var lineFunction = d3.svg.line()
+var liveLineFunction = d3.svg.line()
 	.x(function(d) {return d.time})
 	.y(function(d) {return d.temp})
 	.interpolate("linear");
@@ -871,24 +875,36 @@ var lineFunction = d3.svg.line()
 
 
   function add_live_data(sensor, data) {
-    //d3.select('#received').append('li').text("live_data: " + data);
-    var l = live_temps.push(linearScale(data));
-    console.log("add_live_data(): from " + sensor);
-
-    for (i=0;i<l;i++) {
-      live_temps_lineData[i] = {time:i,temp:live_temps[i]};
+    //svgContainer.selectAll("#"+sensor).remove();
+    var liveLineColours = ["yellow", "blue", "red", "green"];
+    if ( !(sensor in liveTemps) ) {
+      liveTemps[sensor] = [];
+      liveTempsLineData[sensor] = [];
+      //console.log("add_live_data(): added entry for " + sensor);
     }
 
-    svgContainer.selectAll('#live').remove();
-    lineGraph = svgContainer.append("path")
-          .attr("id", "live")
-          .attr("d", lineFunction(live_temps_lineData))
-          .attr("stroke", "blue")
-          .attr("stroke-width", 2)
-          .attr("fill", "none");
-    if ( l > 500 ) {
-      live_temps.shift();
+    var dataLength = liveTemps[sensor].push(liveLinearScale(data));
+
+    for (var i=0;i<dataLength;i++) {
+      liveTempsLineData[sensor][i] = {time:i,temp:liveTemps[sensor][i]};
     }
+
+    var sensor_keys = Object.keys(liveTemps);
+    for (var i=0;i<sensor_keys.length;i++) {
+      var sensor_key = sensor_keys[i];
+      //svgContainer.selectAll("#"+sensor_key).remove();
+      //console.log("sensor_key = " + i + " = " + sensor_key);
+      var lineGraph = svgContainer.append("path")
+            .attr("id", sensor_key)
+            .attr("d", liveLineFunction(liveTempsLineData[sensor]))
+            .attr("stroke", liveLineColours[i])
+            .attr("stroke-width", 3)
+            .attr("fill", "none");
+      if ( dataLength > 500 ) {
+        liveTemps.shift();
+      }
+    }
+
   }
 
   function update_relay_state(data) {
