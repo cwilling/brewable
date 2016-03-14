@@ -2,6 +2,7 @@ import time
 import multiprocessing
 import json
 import copy
+import os, errno
 
 # Input temperature sensor - choose one of these to be 'st'
 #import systemtemp as st
@@ -10,6 +11,7 @@ import ds18b20 as st
 DEVICE_DIR = '/sys/bus/w1/devices/w1_bus_master1/w1_master_slaves'
 PROFILE_DATA_FILE='profileData.txt'
 JOB_DATA_FILE='jobData.txt'
+JOB_HISTORY_DIR='history'
 _TESTING_=True
 
 # Output relay
@@ -43,8 +45,9 @@ class GPIOProcess(multiprocessing.Process):
         self.sensorDevices = []
         self.relay = Relay()
 
-        # Lists of jobData
+        # List of "raw" jobData, as constructed by client "Jobs" page
         self.jobs = []
+        # List of JobProcessor instances
         self.runningJobs = []
 
     def run(self):
@@ -63,7 +66,20 @@ class GPIOProcess(multiprocessing.Process):
         except:
             print "No sensors connected?"
 
-        # Load saved jobs
+        # Load running jobs
+        # Look through all files in the history directory.
+        # If any is "current" (still running),
+        # then add it to self.runningJobs.
+        # First ensure the directory exists
+        try:
+            os.makedirs(JOB_HISTORY_DIR)
+        except OSError as exc:
+            if exc.errno == errno.EEXIST and os.path.isdir(JOB_HISTORY_DIR):
+                pass
+            else:
+                raise
+
+        # Load saved job descriptions
         try:
             with open(JOB_DATA_FILE) as json_file:
                 json_data = json.load(json_file)
@@ -139,6 +155,13 @@ class GPIOProcess(multiprocessing.Process):
                                 jdata = json.dumps({'type':'started_jobs',
                                                     'data':self.runningJobs})
                                 self.output_queue.put(jdata)
+                    elif jmsg['type'].startswith('load_running_jobs'):
+                        print "Rcvd request to LOAD RUNNING JOBS"
+                        if len(self.runningJobs) > 0:
+                            for job in self.runningJobs:
+                                print "BBBB ", job.name()
+                        else:
+                            print "No jobs running"
                     elif jmsg['type'].startswith('save_profiles'):
                         with open(PROFILE_DATA_FILE, 'w') as json_file:
                             json.dump({'profiles_data':jmsg['data']}, json_file)
@@ -213,6 +236,8 @@ class GPIOProcess(multiprocessing.Process):
             # Check/process any running jobs
             for job in self.runningJobs:
                 job.process()
+                if count % 3  == 0:
+                    job.report()
 
 
 
@@ -270,13 +295,13 @@ class JobProcessor(GPIOProcess):
     def __init__(self, rawJobInfo):
         self.jobName    = rawJobInfo['name']
         self.jobPreheat = rawJobInfo['preheat']
-        self.jobProfile = rawJobInfo['profile']
         self.jobProfile = self.convertProfileTimes(rawJobInfo['profile'])
         self.jobSensors = self.validateSensors(rawJobInfo['sensors'])
         self.jobRelays  = rawJobInfo['relays']
         self.startTime  = time.time()
-
-        self.relay = Relay()
+        self.historyFileName = (self.name()  + "-"
+                                            + time.strftime("%Y%m%d_%H%M%S")
+                                            + ".txt")
 
         # In future, make this settable in the job itself
         # e.g.self.jobProcessType = rawJobInfo['process_type']
@@ -286,6 +311,31 @@ class JobProcessor(GPIOProcess):
         #       SIMPLE_COOL_HEAT        # 2 relays, 1 for cool & 1 for heater
         #       SIMPLE_HEAT             # single relay to heater
         self.processType = "SIMPLE_COOL_HEAT"
+        self.relay = Relay()
+
+        self.history = []
+
+        # Start a history file
+        # We'll periodically append updates
+        # (see "status" element in process())
+        print "historyFileName: ", self.historyFileName
+        header = {'type':'header',
+                  'jobName':self.jobName,
+                  'jobPreheat':self.jobPreheat,
+                  'jobProfile':self.jobProfile,
+                  'jobSensors':self.jobSensors,
+                  'jobRelays':self.jobRelays,
+                  'startTime':self.startTime,
+                  'historyFileName':self.historyFileName
+                 }
+        print "header ", header
+
+        # Its _not_ a json file,
+        # rather text file with individually json encoded entry per line
+        self.history.append(str(header))
+        with open(os.path.join(JOB_HISTORY_DIR, self.historyFileName), 'w') as f:
+             f.write(str(header) + '\n')
+
 
     def name(self):
         return self.jobName
@@ -332,13 +382,22 @@ class JobProcessor(GPIOProcess):
     def process(self):
         accumulatedTime = 0.0
         print "Processing job; ", self.jobName
+        now = time.time()
+        #elapsedTime = now - self.startTime
+        # Start history record
+        status = {'jobName':self.jobName,
+                  'type':'status',
+                  'elapsed':now - self.startTime
+                 }
         for sp in self.jobProfile:
-            now = time.time()
             if sp['duration'] == '0':
                 print "We're done. Hold at:", sp['target'], sp
                 # Hold temperature
                 self.temperatureAdjust(sp['target'])
+                status['running'] = 'done'
                 break
+            else:
+                status['running'] = 'running'
             if now > float(sp['duration']) + self.startTime + accumulatedTime:
                 accumulatedTime += float(sp['duration'])
                 print "passing step:", sp
@@ -347,12 +406,29 @@ class JobProcessor(GPIOProcess):
             # Set temperature
             self.temperatureAdjust(sp['target'])
             break
+        # Save history
+        for sensor in self.jobSensors:
+            status[sensor] = st.get_temp(sensor)
+        relay_state = list(self.relay.isOn(i+1) for i in range(len(self.relay.state())))
+        for relay in self.jobRelays:
+            if self.relay.isOn(int(relay.split()[1])):
+                status[relay] = 'ON'
+            else:
+                status[relay] = 'OFF'
+
+        self.history.append(status)
+        with open(os.path.join(JOB_HISTORY_DIR, self.historyFileName), 'a') as f:
+             f.write(str(status) + '\n')
+
+    def report(self):
+        print "REPORT time"
+        #print self.history
 
     def temperatureAdjust(self, target):
         relayIds = []
         for relay in self.jobRelays:
             relayIds.append(int(relay.split()[1]))
-        print "Relays:", relayIds
+        #print "Relays:", relayIds
         if self.processType == "SIMPLE_COOL":
             print "Using SIMPLE_COOL method to temperatureAdjust: ", target
         elif self.processType == "SIMPLE_COOL_HEAT":

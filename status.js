@@ -55,7 +55,7 @@ $(document).ready( function(){
   var received = $('#received');
 
 /***********************  Jobs Configuration page  ***************************/
-  // Refresh job list button
+  // Refresh job list button ('Jobs' page'
   var refreshJobButton = document.getElementById("refresh_job_button");
   refreshJobButton.onclick = function () {
     console.log("REFRESH job button clicked");
@@ -567,6 +567,10 @@ $(document).ready( function(){
   socket.onopen = function(){  
     console.log("sss connected"); 
 
+    // Load any running jobs from server; to show on Status page
+    msgobj = {type:'load_running_jobs', data:[]};
+    sendMessage({data:JSON.stringify(msgobj)});
+
     // Request profiles data
     msgobj = {type:'load_profiles', data:[]};
     sendMessage({data:JSON.stringify(msgobj)});
@@ -901,7 +905,7 @@ var liveLineFunction = d3.svg.line()
             .attr("stroke-width", 3)
             .attr("fill", "none");
       if ( dataLength > 500 ) {
-        liveTemps.shift();
+        liveTemps[sensor_key].shift();
       }
     }
 
