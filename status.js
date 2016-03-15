@@ -341,9 +341,14 @@ $(document).ready( function(){
     timeInput.className = "durpoint";
     timeInput.type = "text";
     timeInput.size = 2;
-    timeInput.onkeyup = function() {updateProfileGraph();};
     //timeInput.value = 1.0;
     timeInput.value = rowData[cellNumber].duration;
+    timeInput.onkeyup = function() {
+                          if (timeInput.value.charAt(0) == '.') {
+                            timeInput.value = "0" + timeInput.value;
+                          }
+                          updateProfileGraph();
+                        };
     row.appendChild(timeInput);
 
     durUnit = document.createElement('SPAN');
