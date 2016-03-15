@@ -324,7 +324,7 @@ $(document).ready( function(){
     tempInput.className = "setpoint";
     tempInput.type = "text";
     tempInput.size = 2;
-    tempInput.onkeydown = function() {updateProfileGraph();};
+    tempInput.onkeyup = function() {updateProfileGraph();};
     //tempInput.value = "21.0";
     tempInput.value = rowData[cellNumber].target;
     row.appendChild(tempInput);
@@ -341,7 +341,7 @@ $(document).ready( function(){
     timeInput.className = "durpoint";
     timeInput.type = "text";
     timeInput.size = 2;
-    timeInput.onkeydown = function() {updateProfileGraph();};
+    timeInput.onkeyup = function() {updateProfileGraph();};
     //timeInput.value = 1.0;
     timeInput.value = rowData[cellNumber].duration;
     row.appendChild(timeInput);
