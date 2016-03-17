@@ -34,7 +34,7 @@ body.profiles {
     font-size: 150%;
     font-weight: bold;
 }
-#profilesGraphHolder {
+.profiles_graph {
     background-color: bisque;
 }
 td {
@@ -322,6 +322,10 @@ ul#jobsListButtons a:hover {
 #jobsListJobs {
     font-family: "Lucida Console", Monaco, monospace;
     font-size:  80%;
+}
+
+.running_job {
+    background-color: bisque;
 }
 
 /* ex:set ai shiftwidth=4 inputtab=spaces smarttab noautotab: */

@@ -152,8 +152,18 @@ class GPIOProcess(multiprocessing.Process):
                             else:
                                 print "Started job ", jmsg['data']['index']
                                 # Return running jobs list to client
-                                jdata = json.dumps({'type':'started_jobs',
-                                                    'data':self.runningJobs})
+                                print "started_job jdata: X"
+                                #jdata = json.dumps({'type':'started_job',
+                                #                    'data':self.runningJobs})
+                                #print "started_job jdata: ", jdata
+                                #self.output_queue.put(jdata)
+                                running_jobs = []
+                                for j in self.runningJobs:
+                                    print "started_job jdata: Y", j.jobInfo()
+                                    running_jobs.append(j.jobInfo())
+                                print "started_job jdata: Z", running_jobs
+                                jdata = json.dumps({'type':'running_jobs',
+                                                    'data':running_jobs})
                                 self.output_queue.put(jdata)
                     elif jmsg['type'].startswith('load_running_jobs'):
                         print "Rcvd request to LOAD RUNNING JOBS"
@@ -336,6 +346,18 @@ class JobProcessor(GPIOProcess):
         with open(os.path.join(JOB_HISTORY_DIR, self.historyFileName), 'w') as f:
              f.write(str(header) + '\n')
 
+
+    def jobInfo(self):
+        #return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, indent=4)
+        info = {'type':'jobData',
+              'jobName':self.jobName,
+              'jobPreheat':self.jobPreheat,
+              'jobProfile':self.jobProfile,
+              'jobSensors':self.jobSensors,
+              'jobRelays':self.jobRelays,
+              'startTime':self.startTime,
+             }
+        return info
 
     def name(self):
         return self.jobName

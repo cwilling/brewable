@@ -44,7 +44,7 @@ function resolveGraphTimeValue(rawval) {
   } else {
     result = 60 * parseInt(pieces[0]);
   }
-  console.log("resolveGraphTimeValue(): " + result);
+  //console.log("resolveGraphTimeValue(): " + result);
   return result;
 }
 
@@ -470,7 +470,7 @@ $(document).ready( function(){
         setpoint = {"x":nextStep,
                     "y":profileData[profile][sp]["target"]};
         lineData.push(setpoint);
-        console.log("pdata: " + setpoint["x"] + " : " + setpoint["y"]);
+        //console.log("pdata: " + setpoint["x"] + " : " + setpoint["y"]);
 
         nextStep += resolveGraphTimeValue(profileData[profile][sp]["duration"]);
       }
@@ -490,11 +490,11 @@ $(document).ready( function(){
       min = d3.min(lineData, function(d) {return parseFloat(d.y);});
       max = d3.max(lineData, function(d) {return parseFloat(d.y);});
       if ( min < minDataPoint ) {
-        console.log("new min = " + min);
+        //console.log("new min = " + min);
         minDataPoint = min;
       }
       if ( max > maxDataPoint ) {
-        console.log("new max = " + max);
+        //console.log("new max = " + max);
         maxDataPoint = max;
       }
 
@@ -528,7 +528,6 @@ $(document).ready( function(){
                       .call(xAxis);
 
 
-    var newScaledData = [];
     for ( var profile=0;profile<profileDisplayData.length;profile++) {
       var scaledLineData = [];
       var lineData = profileDisplayData[profile];
@@ -557,7 +556,8 @@ $(document).ready( function(){
     profileGraphWidth = 1800 - profileGraphMargin.left - profileGraphMargin.right,
     profileGraphHeight = 500 - profileGraphMargin.top - profileGraphMargin.bottom;
   var profileGraphHolder = d3.select("#profilesGraphHolder").append("svg")
-                      .attr("id", "profiles_graph_holder")
+                      .attr("id", "profiles_graph")
+                      .attr("class", "profiles_graph")
                       .attr("width", profileGraphWidth + profileGraphMargin.right + profileGraphMargin.left)
                       .attr("height", profileGraphHeight + profileGraphMargin.top + profileGraphMargin.bottom)
                       .style("border", "1px solid black")
@@ -608,7 +608,7 @@ $(document).ready( function(){
       } else if (jmsg.type === 'loaded_jobs' ) {
         console.log("Received loaded_jobs " + jmsg.data);
         createStoredJobsList(jmsg.data);
-      } else if (jmsg.type === 'started_job' ) {
+      } else if (jmsg.type === 'running_jobs' ) {
         console.log("Received started_job " + jmsg.data);
         createRunningJobsList(jmsg.data);
       } else if (jmsg.type === 'loaded_profiles' ) {
@@ -820,7 +820,6 @@ var liveLineFunction = d3.svg.line()
       var thisJob = data[i];
       var name = thisJob['name'];
       var preheat = "Preheat OFF";
-      //var description = "________________".slice(name.length) + name;
       var description = name + '................'.slice(name.length);
       if ( thisJob['preheat'] ) {
         preheat = "Preheat  ON";
@@ -877,8 +876,103 @@ var liveLineFunction = d3.svg.line()
 
   // Generate a listing of running jobs
   function createRunningJobsList(data) {
-    console.log("Reached createRunningJobsList()");
-    var table = document.getElementById("jobsListRunningJobs");
+    console.log("Reached createRunningJobsList(): " + data.length);
+    var runningJobsHolder = document.getElementById("running_jobsHolder");
+
+    // Clean out any existing stuff in the running_jobsHolder div.
+    var last;
+    while (last = runningJobsHolder.lastChild) runningJobsHolder.removeChild(last);
+
+    for (var i=0;i<data.length;i++) {
+      // First create a div in which to display data
+      var adiv = document.createElement("DIV");
+      adiv.id = "running_job_" + i;
+      adiv.appendChild(document.createTextNode('Running Job ' + i));
+      runningJobsHolder.appendChild(adiv);
+
+      var runningJobsGraphMargin = {top: 50, right: 20, bottom: 40, left: 80},
+          runningJobsGraphWidth = 1800 - runningJobsGraphMargin.left - runningJobsGraphMargin.right,
+          runningJobsGraphHeight = 300 - runningJobsGraphMargin.top - runningJobsGraphMargin.bottom;
+      var runningJobsGraphHolder = d3.select("#running_job_" + i).append("svg")
+                        .attr("id", "running_job_" + i)
+                        .attr("class", "running_job")
+                        .attr("width", runningJobsGraphWidth + runningJobsGraphMargin.right + runningJobsGraphMargin.left)
+                        .attr("height", runningJobsGraphHeight + runningJobsGraphMargin.top + runningJobsGraphMargin.bottom)
+                        .style("border", "1px solid black")
+
+      // Collect profile data into local array (lineData[])
+      var job = data[i];
+      var profileData = job.jobProfile
+      console.log("createRunningJobsList(): name: " + job.jobName + " " + profileData.length);
+
+      var nextStep = 0.0;
+      var lineData = [];
+      var setpoint = {};
+      for (var sp=0;sp<profileData.length;sp++) {
+        //console.log("rundata A: " + profileData[sp]["duration"] + " : " + profileData[sp]["target"] + " (" + nextStep + ")");
+        setpoint = {"x":nextStep,
+                    "y":profileData[sp]["target"]};
+        lineData.push(setpoint);
+        //console.log("rundata B: " + setpoint["x"] + " : " + setpoint["y"]);
+
+        nextStep += parseFloat(profileData[sp]["duration"]);
+      }
+
+      // Find extent of values in lineData
+      var maxTime = 0.0;
+      var maxDataPoint = 0.0;
+      var minDataPoint = 1000.0;
+      var min = d3.min(lineData, function(d) {return parseFloat(d.y);});
+      var max = d3.max(lineData, function(d) {return parseFloat(d.y);}) + 1.0;
+      var maxt = d3.max(lineData, function(d) {return parseFloat(d.x);}) + 60;
+      if ( min < minDataPoint ) minDataPoint = min;
+      if ( max > maxDataPoint ) maxDataPoint = max;
+      if ( maxt > maxTime ) maxTime = maxt;
+      console.log("minData = " + minDataPoint + ", maxData = " + maxDataPoint + ", maxTime = " + maxTime + "  " + typeof(maxt));
+
+      // Scale & display axes
+      var linearScaleY = d3.scale.linear()
+                        .domain([minDataPoint,maxDataPoint])
+                        .range([runningJobsGraphHeight,0]);
+      var yAxis = d3.svg.axis()
+                        .scale(linearScaleY)
+                        .orient("left").ticks(5);
+      var yAxisGroup = runningJobsGraphHolder.append("g")
+                        .attr("transform",
+                              "translate(" + runningJobsGraphMargin.left + "," + runningJobsGraphMargin.top + ")")
+                        .call(yAxis);
+      var linearScaleX = d3.scale.linear()
+                        .domain([0,maxTime])
+                        .range([0,runningJobsGraphWidth]);
+      var xAxis = d3.svg.axis()
+                        .scale(linearScaleX)
+                        .orient("bottom").ticks(20);
+      var xAxisGroup = runningJobsGraphHolder.append("g")
+                        .attr("transform",
+                              "translate(" + runningJobsGraphMargin.left + "," + (runningJobsGraphHeight + runningJobsGraphMargin.top) + ")")
+                        .call(xAxis);
+
+      // Scale data
+      var scaledLineData = [];
+      for ( var sp=0;sp<lineData.length;sp++) {
+        //console.log("scaled sp = " + lineData[sp].x + " : " + lineData[sp].y);
+        scaledLineData.push({"x":linearScaleX(lineData[sp].x),
+                             "y":linearScaleY(lineData[sp].y)});
+      }
+      // Draw the graph
+      var runningJobsLineFunction = d3.svg.line()
+                                .x(function(d) { return d.x; })
+                                .y(function(d) { return d.y; })
+                                .interpolate("linear");
+      var lineGraph = runningJobsGraphHolder.append("path")
+                                .attr("transform",
+                                      "translate(" + runningJobsGraphMargin.left + "," + runningJobsGraphMargin.top + ")")
+                                .attr("d", runningJobsLineFunction(scaledLineData))
+                                .attr("stroke", "gray")
+                                .attr("stroke-width", 2)
+                                .attr("fill", "none");
+
+    }
 
   }
 
