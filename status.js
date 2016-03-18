@@ -611,6 +611,8 @@ $(document).ready( function(){
       } else if (jmsg.type === 'running_jobs' ) {
         console.log("Received started_job " + jmsg.data);
         createRunningJobsList(jmsg.data);
+      } else if (jmsg.type === 'running_job_status' ) {
+        updateRunningJob(jmsg.data);
       } else if (jmsg.type === 'loaded_profiles' ) {
         if ( jmsg.data.length == 0 ) {
           received.append('RCVD: EMPTY profiles data');
@@ -755,6 +757,10 @@ var liveLineFunction = d3.svg.line()
 	.y(function(d) {return d.temp})
 	.interpolate("linear");
 
+// { job1; {}, job2: {}, .... jobn: {} }
+// where each job object's value is { linearScaleY: ..., linearScaleX: ..., history: [] }
+var runningJobsFunctions = {};
+
 
   // Create a table of sensors based on data  from server (availableSensors)
   function createSensorTableFunction() {
@@ -874,7 +880,7 @@ var liveLineFunction = d3.svg.line()
     return false;
   }
 
-  // Generate a listing of running jobs
+  // Generate a display listing of running jobs on front Status page
   function createRunningJobsList(data) {
     console.log("Reached createRunningJobsList(): " + data.length);
     var runningJobsHolder = document.getElementById("running_jobsHolder");
@@ -884,24 +890,29 @@ var liveLineFunction = d3.svg.line()
     while (last = runningJobsHolder.lastChild) runningJobsHolder.removeChild(last);
 
     for (var i=0;i<data.length;i++) {
-      // First create a div in which to display data
+      var job = data[i];
+      var jobFunctions = {};
+      jobFunctions['history'] = [];
+
+      // Create a div in which to display data
       var adiv = document.createElement("DIV");
-      adiv.id = "running_job_" + i;
+      adiv.id = job.jobName
       adiv.appendChild(document.createTextNode('Running Job ' + i));
       runningJobsHolder.appendChild(adiv);
 
-      var runningJobsGraphMargin = {top: 50, right: 20, bottom: 40, left: 80},
+      var runningJobsGraphMargin = {top: 60, right: 20, bottom: 40, left: 80},
           runningJobsGraphWidth = 1800 - runningJobsGraphMargin.left - runningJobsGraphMargin.right,
           runningJobsGraphHeight = 300 - runningJobsGraphMargin.top - runningJobsGraphMargin.bottom;
-      var runningJobsGraphHolder = d3.select("#running_job_" + i).append("svg")
-                        .attr("id", "running_job_" + i)
+      jobFunctions['runningJobsGraphMargin'] = runningJobsGraphMargin;
+
+      var runningJobsGraphHolder = d3.select("#" + job.jobName).append("svg")
+                        .attr("id", "running_job_" + job.jobName)
                         .attr("class", "running_job")
                         .attr("width", runningJobsGraphWidth + runningJobsGraphMargin.right + runningJobsGraphMargin.left)
                         .attr("height", runningJobsGraphHeight + runningJobsGraphMargin.top + runningJobsGraphMargin.bottom)
                         .style("border", "1px solid black")
 
       // Collect profile data into local array (lineData[])
-      var job = data[i];
       var profileData = job.jobProfile
       console.log("createRunningJobsList(): name: " + job.jobName + " " + profileData.length);
 
@@ -931,33 +942,47 @@ var liveLineFunction = d3.svg.line()
       console.log("minData = " + minDataPoint + ", maxData = " + maxDataPoint + ", maxTime = " + maxTime + "  " + typeof(maxt));
 
       // Scale & display axes
-      var linearScaleY = d3.scale.linear()
+      //var linearScaleY = d3.scale.linear()
+       //                 .domain([minDataPoint,maxDataPoint])
+       //                 .range([runningJobsGraphHeight,0]);
+      // We want to access this same scale later (for asynchronous temperature update reports)
+      // so keep in an object (jobJunctions) which will be stored in a global object (runningJobsFuctions)
+      // according to the jobName (since different jobs will have different scales).
+      jobFunctions['linearScaleY'] = d3.scale.linear()
                         .domain([minDataPoint,maxDataPoint])
                         .range([runningJobsGraphHeight,0]);
       var yAxis = d3.svg.axis()
-                        .scale(linearScaleY)
+                        .scale(jobFunctions['linearScaleY'])
                         .orient("left").ticks(5);
       var yAxisGroup = runningJobsGraphHolder.append("g")
                         .attr("transform",
                               "translate(" + runningJobsGraphMargin.left + "," + runningJobsGraphMargin.top + ")")
                         .call(yAxis);
-      var linearScaleX = d3.scale.linear()
+      //var linearScaleX = d3.scale.linear()
+       //                 .domain([0,maxTime])
+       //                 .range([0,runningJobsGraphWidth]);
+      jobFunctions['linearScaleX'] = d3.scale.linear()
                         .domain([0,maxTime])
                         .range([0,runningJobsGraphWidth]);
       var xAxis = d3.svg.axis()
-                        .scale(linearScaleX)
+                        .scale(jobFunctions['linearScaleX'])
                         .orient("bottom").ticks(20);
       var xAxisGroup = runningJobsGraphHolder.append("g")
                         .attr("transform",
                               "translate(" + runningJobsGraphMargin.left + "," + (runningJobsGraphHeight + runningJobsGraphMargin.top) + ")")
                         .call(xAxis);
 
+      // Keep jobFunctions beyond this function for a rainy day
+      // e.g. periodic updates about this job from the server
+      runningJobsFunctions[job.jobName] = jobFunctions;
+
       // Scale data
       var scaledLineData = [];
       for ( var sp=0;sp<lineData.length;sp++) {
         //console.log("scaled sp = " + lineData[sp].x + " : " + lineData[sp].y);
-        scaledLineData.push({"x":linearScaleX(lineData[sp].x),
-                             "y":linearScaleY(lineData[sp].y)});
+        scaledLineData.push({"x":runningJobsFunctions[job.jobName].linearScaleX(lineData[sp].x),
+                             "y":runningJobsFunctions[job.jobName].linearScaleY(lineData[sp].y)});
+                             //"y":jobFunctions['linearScaleY'](lineData[sp].y)});
       }
       // Draw the graph
       var runningJobsLineFunction = d3.svg.line()
@@ -976,6 +1001,40 @@ var liveLineFunction = d3.svg.line()
 
   }
 
+  function updateRunningJob(data) {
+    var runningJobsGraphHolder = d3.select("#running_job_" + data.jobName);
+    var jobFunctions = runningJobsFunctions[data.jobName];
+    jobFunctions['history'].push(data);
+    console.log("Received running_job_status for " + data.jobName);
+
+    // We assume only 1 temperature sensor being used but we could use more.
+    // Therefore we keep track of which one(s) in an array data['sensors']
+
+    var scaledLineData = [];
+    for (var i=0;i<jobFunctions['history'].length;i++) {
+      var sensorName = jobFunctions['history'][i]['sensors'][0];
+      //console.log("updateRunningJob(): sensor = " + data['sensors']);
+      //console.log("updateRunningJob(): sensor = " + jobFunctions['history'][i]['sensors'][0]);
+      console.log("updateRunningJob(): temp at " + jobFunctions['history'][i]['elapsed'] + " = " + jobFunctions['history'][i][sensorName]);
+      scaledLineData.push({"x":jobFunctions['linearScaleX'](parseFloat(jobFunctions['history'][i]['elapsed'])),
+                           "y":jobFunctions['linearScaleY'](parseFloat(jobFunctions['history'][i][sensorName]))});
+    }
+    // Draw the graph
+    d3.select("#path_" + data.jobName).remove();
+    var runningJobsLineFunction = d3.svg.line()
+                              .x(function(d) { return d.x; })
+                              .y(function(d) { return d.y; })
+                              .interpolate("linear");
+    var runningJobsGraphMargin = jobFunctions['runningJobsGraphMargin'];
+    var lineGraph = runningJobsGraphHolder.append("path")
+                              .attr("id", "path_" + data.jobName)
+                              .attr("transform",
+                                    "translate(" + runningJobsGraphMargin.left + "," + runningJobsGraphMargin.top + ")")
+                              .attr("d", runningJobsLineFunction(scaledLineData))
+                              .attr("stroke", "blue")
+                              .attr("stroke-width", 4)
+                              .attr("fill", "none");
+  }
 
   function add_live_data(sensor, data) {
     //svgContainer.selectAll("#"+sensor).remove();

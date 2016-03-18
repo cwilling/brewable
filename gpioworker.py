@@ -259,7 +259,7 @@ class GPIOProcess(multiprocessing.Process):
 
     def setupJobRun(self, jobIndex):
         try:
-            self.runningJobs.append(JobProcessor(copy.copy(self.jobs[jobIndex])))
+            self.runningJobs.append(JobProcessor(copy.copy(self.jobs[jobIndex]),self.output_queue))
             return True
         except:
             print "JOB CREATE FAIL!"
@@ -302,7 +302,8 @@ class GPIOProcess(multiprocessing.Process):
 
 class JobProcessor(GPIOProcess):
 
-    def __init__(self, rawJobInfo):
+    def __init__(self, rawJobInfo, output_queue):
+        self.output_queue = output_queue
         self.jobName    = rawJobInfo['name']
         self.jobPreheat = rawJobInfo['preheat']
         self.jobProfile = self.convertProfileTimes(rawJobInfo['profile'])
@@ -407,9 +408,10 @@ class JobProcessor(GPIOProcess):
         now = time.time()
         #elapsedTime = now - self.startTime
         # Start history record
-        status = {'jobName':self.jobName,
-                  'type':'status',
-                  'elapsed':now - self.startTime
+        status = {'jobName' :self.jobName,
+                  'type'    :'status',
+                  'elapsed' : now - self.startTime,
+                  'sensors' : []
                  }
         for sp in self.jobProfile:
             if sp['duration'] == '0':
@@ -430,6 +432,7 @@ class JobProcessor(GPIOProcess):
             break
         # Save history
         for sensor in self.jobSensors:
+            status['sensors'].append(sensor)
             status[sensor] = st.get_temp(sensor)
         relay_state = list(self.relay.isOn(i+1) for i in range(len(self.relay.state())))
         for relay in self.jobRelays:
@@ -438,6 +441,9 @@ class JobProcessor(GPIOProcess):
             else:
                 status[relay] = 'OFF'
 
+        jdata = json.dumps({'type':'running_job_status',
+                            'data':status})
+        self.output_queue.put(jdata)
         self.history.append(status)
         with open(os.path.join(JOB_HISTORY_DIR, self.historyFileName), 'a') as f:
              f.write(str(status) + '\n')
