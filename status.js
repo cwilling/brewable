@@ -691,6 +691,7 @@ $(document).ready( function(){
   }
 
 
+/* Initial graph for testing. Can be removed!
 var margin = {top: 100, right: 20, bottom: 30, left: 80},
     width = 600 - margin.left - margin.right,
     height = 400 - margin.top - margin.bottom;
@@ -730,15 +731,15 @@ var svgContainer = d3.select("#live_updateHolder")
         .call(yAxis);
 
 svgContainer.append("g")
-    .attr("class", "yaxistext")
+    .attr("class", "axistext")
     .append("text")
 	.attr("transform", "rotate(-90)")
 	.attr("x", 0 - margin.top)
 	.attr("y", 0 - (margin.left/2))
-	.attr("dy", "lem")
+	.attr("dy", "1em")
 	.style("text-anchor", "middle")
 	.text("Temperature (C)");
-
+*/
 
 //var lineGraph = svgContainer.append("path");
 
@@ -900,7 +901,7 @@ var runningJobsFunctions = {};
       adiv.appendChild(document.createTextNode('Running Job ' + i));
       runningJobsHolder.appendChild(adiv);
 
-      var runningJobsGraphMargin = {top: 60, right: 20, bottom: 40, left: 80},
+      var runningJobsGraphMargin = {top: 60, right: 20, bottom: 50, left: 80},
           runningJobsGraphWidth = 1800 - runningJobsGraphMargin.left - runningJobsGraphMargin.right,
           runningJobsGraphHeight = 300 - runningJobsGraphMargin.top - runningJobsGraphMargin.bottom;
       jobFunctions['runningJobsGraphMargin'] = runningJobsGraphMargin;
@@ -976,6 +977,37 @@ var runningJobsFunctions = {};
       // e.g. periodic updates about this job from the server
       runningJobsFunctions[job.jobName] = jobFunctions;
 
+      // Axis Labels
+      var yaxistext = runningJobsGraphHolder.append("g")
+                            .attr("id", "yaxistext_" + job.jobName)
+                            .attr("class", "axistext")
+                            .append("text")
+                                .attr("transform", "rotate(-90)")
+                                .attr("x", 0 - (runningJobsGraphHeight - runningJobsGraphMargin.top))
+                                .attr("y", runningJobsGraphMargin.left)
+                                .attr("dy", "-2.4em")
+                                .style("text-anchor", "middle")
+                                .text("Temperature (C)");
+      var xaxistext = runningJobsGraphHolder.append("g")
+                            .attr("id", "xaxistext_" + job.jobName)
+                            .attr("class", "axistext")
+                            .append("text")
+                            .attr("transform",
+                                "translate(" + (runningJobsGraphWidth - runningJobsGraphMargin.left)/2 + "," + (runningJobsGraphHeight+ runningJobsGraphMargin.top + runningJobsGraphMargin.bottom) + ")")
+                                .attr("dy", "-0.35em")
+                                .style("text-anchor", "middle")
+                                .text("Elapsed Time");
+      var titletext = runningJobsGraphHolder.append("g")
+                            .attr("id", "xaxistext_" + job.jobName)
+                            .attr("class", "axistext")
+                            .append("text")
+                            .attr("transform",
+                                "translate(" + (runningJobsGraphWidth - runningJobsGraphMargin.left)/2 + "," + runningJobsGraphMargin.top + ")")
+                                .attr("dy", "-1em")
+                                .style("text-anchor", "middle")
+                                .text("Job: " + job.jobName);
+
+
       // Scale data
       var scaledLineData = [];
       for ( var sp=0;sp<lineData.length;sp++) {
@@ -1013,9 +1045,7 @@ var runningJobsFunctions = {};
     var scaledLineData = [];
     for (var i=0;i<jobFunctions['history'].length;i++) {
       var sensorName = jobFunctions['history'][i]['sensors'][0];
-      //console.log("updateRunningJob(): sensor = " + data['sensors']);
-      //console.log("updateRunningJob(): sensor = " + jobFunctions['history'][i]['sensors'][0]);
-      console.log("updateRunningJob(): temp at " + jobFunctions['history'][i]['elapsed'] + " = " + jobFunctions['history'][i][sensorName]);
+      //console.log("updateRunningJob(): temp at " + jobFunctions['history'][i]['elapsed'] + " = " + jobFunctions['history'][i][sensorName]);
       scaledLineData.push({"x":jobFunctions['linearScaleX'](parseFloat(jobFunctions['history'][i]['elapsed'])),
                            "y":jobFunctions['linearScaleY'](parseFloat(jobFunctions['history'][i][sensorName]))});
     }
