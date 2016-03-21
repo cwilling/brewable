@@ -1037,7 +1037,7 @@ var runningJobsFunctions = {};
     var runningJobsGraphHolder = d3.select("#running_job_" + data.jobName);
     var jobFunctions = runningJobsFunctions[data.jobName];
     jobFunctions['history'].push(data);
-    console.log("Received running_job_status for " + data.jobName);
+    //console.log("Received running_job_status for " + data.jobName);
 
     // We assume only 1 temperature sensor being used but we could use more.
     // Therefore we keep track of which one(s) in an array data['sensors']
@@ -1067,6 +1067,10 @@ var runningJobsFunctions = {};
   }
 
   function add_live_data(sensor, data) {
+    return;
+  }
+  // Initially used for testing - can probably be removed
+  function add_live_data_OLD(sensor, data) {
     //svgContainer.selectAll("#"+sensor).remove();
     var liveLineColours = ["green", "blue", "red", "yellow"];
     if ( !(sensor in liveTemps) ) {

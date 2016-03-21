@@ -223,17 +223,17 @@ class GPIOProcess(multiprocessing.Process):
                                     'type':'live_update',
                                     'data':data})
                     #print "XXX", jdata
-                    self.output_queue.put(jdata)
+                    #self.output_queue.put(jdata)
             except:
                 jdata = json.dumps({'sensorId':'dummy_123',
                                     'type':'live_update',
                                     'data':21})
-                print "XXX", jdata
-                self.output_queue.put(jdata)
+                #print "XXX", jdata
+                #self.output_queue.put(jdata)
 
             # Data/info from relay device
             relay_state = list(self.relay.isOn(i+1) for i in range(len(self.relay.state())))
-            print "relay_state: ", relay_state
+            #print "relay_state: ", relay_state
             jdata = json.dumps({'type':'relay_state',
                                 'data':relay_state})
             self.output_queue.put(jdata)
@@ -402,10 +402,46 @@ class JobProcessor(GPIOProcess):
                 sp['duration'] = str(durMins)
         return profile
 
+    def target_temperature(self, current_time):
+        '''What is the desired temperature at current_time?'''
+
+        # First generate an array of target temps at accumulated time
+        control_steps = []
+        cumulative_time = 0.0
+        for step in self.jobProfile:
+            entry = []
+            entry.append(float(step['duration']))
+            entry.append(float(step['target']))
+            entry.append(cumulative_time)
+            #print "entry: ", entry
+            control_steps.append(entry)
+            cumulative_time += entry[0]
+
+        elapsed_time = current_time - self.startTime
+        print "elapsed_time = ", elapsed_time
+        #print "steps: ", control_steps
+
+        # If we're past the last step, return the last temperature target
+        if elapsed_time > control_steps[-1][2]:
+            print "target_temperature() DONE", control_steps[-1][1]
+            return (True, control_steps[-1][1])
+
+        previous_setpoint = control_steps[0]
+        #print "previous_setpoint: ", previous_setpoint
+        for step in control_steps:
+            if step[2] > elapsed_time:
+                print "At %f, next setpoint at: %f" % (elapsed_time, step[2])
+                slope = (step[1] - previous_setpoint[1])/(step[2] - previous_setpoint[2])
+                intercept = step[1] - slope*step[2]
+                target = slope*elapsed_time + intercept
+                return (False, target)
+            previous_setpoint = step
+
     def process(self):
         accumulatedTime = 0.0
         print "Processing job; ", self.jobName
         now = time.time()
+        (job_done, target) = self.target_temperature(now)
         #elapsedTime = now - self.startTime
         # Start history record
         status = {'jobName' :self.jobName,
@@ -413,23 +449,29 @@ class JobProcessor(GPIOProcess):
                   'elapsed' : now - self.startTime,
                   'sensors' : []
                  }
-        for sp in self.jobProfile:
-            if sp['duration'] == '0':
-                print "We're done. Hold at:", sp['target'], sp
-                # Hold temperature
-                self.temperatureAdjust(sp['target'])
-                status['running'] = 'done'
-                break
-            else:
-                status['running'] = 'running'
-            if now > float(sp['duration']) + self.startTime + accumulatedTime:
-                accumulatedTime += float(sp['duration'])
-                print "passing step:", sp
-                continue
-            print "processing at step:", (now - self.startTime - accumulatedTime), sp
-            # Set temperature
-            self.temperatureAdjust(sp['target'])
-            break
+#        for sp in self.jobProfile:
+#            if sp['duration'] == '0':
+#                print "We're done. Hold at:", sp['target'], sp
+#                # Hold temperature
+#                self.temperatureAdjust(sp['target'])
+#                status['running'] = 'done'
+#                break
+#            status['running'] = 'running'
+#            if now > float(sp['duration']) + self.startTime + accumulatedTime:
+#                accumulatedTime += float(sp['duration'])
+#                print "passing step:", sp
+#                continue
+#            print "processing at step:", (now - self.startTime - accumulatedTime), sp
+#            # Set temperature
+#            self.temperatureAdjust(sp['target'])
+#            break
+
+        if job_done:
+            status['running'] = 'done'
+        else:
+            status['running'] = 'running'
+        self.temperatureAdjust(target)
+
         # Save history
         for sensor in self.jobSensors:
             status['sensors'].append(sensor)
@@ -462,7 +504,7 @@ class JobProcessor(GPIOProcess):
         elif self.processType == "SIMPLE_COOL_HEAT":
             # Assume a single sensor for a SIMPLE method
             temp = st.get_temp(self.jobSensors[0])
-            print "Temp:", temp, target
+            print "Temp: %s for target: %s" % (temp, target)
 
             # Assume 2 relays for COOL_HEAT method
             if len(relayIds) < 2:
