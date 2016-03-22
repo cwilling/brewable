@@ -647,6 +647,16 @@ $(document).ready( function(){
 
   socket.onclose = function(){
     console.log("disconnected"); 
+
+    /* Display disconnected status */
+    var navmenu = document.getElementsByClassName("status_navigation");
+    //console.log("Nav Menu has " + navmenu.length + " elements");
+    for (var el=0;el<navmenu.length;el++ ) {
+      navmenu[el].style.background = 'red';
+    }
+    for (var el=1;el<navmenu.length;el++ ) {
+      navmenu[el].textContent = 'NOT CONNECTED!';
+    }
   };
 
   var sendMessage = function(message) {
