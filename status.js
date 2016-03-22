@@ -655,7 +655,7 @@ $(document).ready( function(){
       navmenu[el].style.background = 'red';
     }
     for (var el=1;el<navmenu.length;el++ ) {
-      navmenu[el].textContent = 'NOT CONNECTED!';
+      navmenu[el].textContent = 'NOT CONNECTED TO PI!';
     }
   };
 
