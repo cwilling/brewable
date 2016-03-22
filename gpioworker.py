@@ -157,19 +157,43 @@ class GPIOProcess(multiprocessing.Process):
                                 #                    'data':self.runningJobs})
                                 #print "started_job jdata: ", jdata
                                 #self.output_queue.put(jdata)
-                                running_jobs = []
-                                for j in self.runningJobs:
-                                    print "started_job jdata: Y", j.jobInfo()
-                                    running_jobs.append(j.jobInfo())
-                                print "started_job jdata: Z", running_jobs
-                                jdata = json.dumps({'type':'running_jobs',
-                                                    'data':running_jobs})
-                                self.output_queue.put(jdata)
+                                #running_jobs = []
+                                #for j in self.runningJobs:
+                                #    print "started_job jdata: Y", j.jobInfo()
+                                #    running_jobs.append(j.jobInfo())
+                                #print "started_job jdata: Z", running_jobs
+                                #jdata = json.dumps({'type':'running_jobs',
+                                #                    'data':running_jobs})
+                                #self.output_queue.put(jdata)
+                        if len(self.runningJobs) > 0:
+                            running_jobs = []
+                            for j in self.runningJobs:
+                                job_info = j.jobInfo()
+                                job_info['history'] = j.history[1:]
+                                print "list running job: ", job_info
+                                running_jobs.append(job_info)
+                            print "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+                            print "running_jobs list: ", running_jobs
+                            jdata = json.dumps({'type':'running_jobs',
+                                                'data':running_jobs})
+                            self.output_queue.put(jdata)
                     elif jmsg['type'].startswith('load_running_jobs'):
                         print "Rcvd request to LOAD RUNNING JOBS"
+                        # We send "public" job info (since client doesn't
+                        # need stuff like local file name etc.
+                        # Also send collected status reports
+                        # (history without "private" header)
                         if len(self.runningJobs) > 0:
-                            for job in self.runningJobs:
-                                print "BBBB ", job.name()
+                            running_jobs = []
+                            for j in self.runningJobs:
+                                job_info = j.jobInfo()
+                                job_info['history'] = j.history[1:]
+                                print "list running job: ", job_info
+                                running_jobs.append(job_info)
+                            print "running_jobs list: ", running_jobs
+                            jdata = json.dumps({'type':'running_jobs',
+                                                'data':running_jobs})
+                            self.output_queue.put(jdata)
                         else:
                             print "No jobs running"
                     elif jmsg['type'].startswith('save_profiles'):
@@ -254,7 +278,7 @@ class GPIOProcess(multiprocessing.Process):
 
             count += 1
 
-            time.sleep(1)
+            #time.sleep(1)
 
 
     def setupJobRun(self, jobIndex):
@@ -437,51 +461,37 @@ class JobProcessor(GPIOProcess):
                 return (False, target)
             previous_setpoint = step
 
+    def jobStatus(self, nowTime):
+        job_status = {'jobName' :self.jobName,
+                  'type'    :'status',
+                  'elapsed' : nowTime - self.startTime,
+                  'sensors' : []
+                 }
+        for sensor in self.jobSensors:
+            job_status['sensors'].append(sensor)
+            job_status[sensor] = st.get_temp(sensor)
+        relay_state = list(self.relay.isOn(i+1) for i in range(len(self.relay.state())))
+        for relay in self.jobRelays:
+            if self.relay.isOn(int(relay.split()[1])):
+                job_status[relay] = 'ON'
+            else:
+                job_status[relay] = 'OFF'
+
+        return job_status
+
     def process(self):
         accumulatedTime = 0.0
         print "Processing job; ", self.jobName
         now = time.time()
-        (job_done, target) = self.target_temperature(now)
-        #elapsedTime = now - self.startTime
-        # Start history record
-        status = {'jobName' :self.jobName,
-                  'type'    :'status',
-                  'elapsed' : now - self.startTime,
-                  'sensors' : []
-                 }
-#        for sp in self.jobProfile:
-#            if sp['duration'] == '0':
-#                print "We're done. Hold at:", sp['target'], sp
-#                # Hold temperature
-#                self.temperatureAdjust(sp['target'])
-#                status['running'] = 'done'
-#                break
-#            status['running'] = 'running'
-#            if now > float(sp['duration']) + self.startTime + accumulatedTime:
-#                accumulatedTime += float(sp['duration'])
-#                print "passing step:", sp
-#                continue
-#            print "processing at step:", (now - self.startTime - accumulatedTime), sp
-#            # Set temperature
-#            self.temperatureAdjust(sp['target'])
-#            break
 
+        (job_done, target) = self.target_temperature(now)
+        self.temperatureAdjust(target)
+
+        status = self.jobStatus(now)
         if job_done:
             status['running'] = 'done'
         else:
             status['running'] = 'running'
-        self.temperatureAdjust(target)
-
-        # Save history
-        for sensor in self.jobSensors:
-            status['sensors'].append(sensor)
-            status[sensor] = st.get_temp(sensor)
-        relay_state = list(self.relay.isOn(i+1) for i in range(len(self.relay.state())))
-        for relay in self.jobRelays:
-            if self.relay.isOn(int(relay.split()[1])):
-                status[relay] = 'ON'
-            else:
-                status[relay] = 'OFF'
 
         jdata = json.dumps({'type':'running_job_status',
                             'data':status})

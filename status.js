@@ -890,15 +890,27 @@ var runningJobsFunctions = {};
     var last;
     while (last = runningJobsHolder.lastChild) runningJobsHolder.removeChild(last);
 
-    for (var i=0;i<data.length;i++) {
-      var job = data[i];
+    var job_i = 0;
+    for (job_i=0;job_i<data.length;job_i++) {
+      var job = data[job_i];
       var jobFunctions = {};
       jobFunctions['history'] = [];
+      console.log("Creating graph for job: " + job_i + " (" + job.jobName + ")");
+
+      // If available, save any job history that has been sent
+      if ( 'history' in job ) {
+        console.log("FOUND job history" + " (" + job['history'].length + ")");
+        for (var i=0;i<job['history'].length;i++) {
+          jobFunctions['history'].push(job['history'][i]);
+        }
+      } else {
+        console.log("NO job history found");
+      }
 
       // Create a div in which to display data
       var adiv = document.createElement("DIV");
       adiv.id = job.jobName
-      adiv.appendChild(document.createTextNode('Running Job ' + i));
+      adiv.appendChild(document.createTextNode('Running Job ' + job_i));
       runningJobsHolder.appendChild(adiv);
 
       var runningJobsGraphMargin = {top: 60, right: 20, bottom: 50, left: 80},
@@ -915,7 +927,7 @@ var runningJobsFunctions = {};
 
       // Collect profile data into local array (lineData[])
       var profileData = job.jobProfile
-      console.log("createRunningJobsList(): name: " + job.jobName + " " + profileData.length);
+      //console.log("createRunningJobsList(): name: " + job.jobName + " " + profileData.length);
 
       var nextStep = 0.0;
       var lineData = [];
@@ -1029,6 +1041,8 @@ var runningJobsFunctions = {};
                                 .attr("stroke-width", 2)
                                 .attr("fill", "none");
 
+      // Send a dummy update to trigger immediate redraw of temperature trace
+      updateRunningJob({'jobName':job.jobName,'type':'dummy'});
     }
 
   }
@@ -1036,8 +1050,12 @@ var runningJobsFunctions = {};
   function updateRunningJob(data) {
     var runningJobsGraphHolder = d3.select("#running_job_" + data.jobName);
     var jobFunctions = runningJobsFunctions[data.jobName];
-    jobFunctions['history'].push(data);
-    //console.log("Received running_job_status for " + data.jobName);
+    if ( 'sensors' in data ) {
+      jobFunctions['history'].push(data);
+      //console.log("Received running_job_status for " + data.jobName);
+    } else {
+      console.log("Received dummy update for " + data.jobName);
+    }
 
     // We assume only 1 temperature sensor being used but we could use more.
     // Therefore we keep track of which one(s) in an array data['sensors']
