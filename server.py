@@ -106,4 +106,12 @@ if __name__ == '__main__':
 	scheduler_interval = 100
 	scheduler = tornado.ioloop.PeriodicCallback(checkQueue, scheduler_interval, io_loop = mainLoop)
 	scheduler.start()
-	mainLoop.start()
+	try:
+            mainLoop.start()
+	except KeyboardInterrupt:
+            print; print "Closing server down"
+            mainLoop.stop()
+            gpio.relay.ALLOFF()
+
+
+# ex:set ai shiftwidth=4 inputtab=spaces smarttab noautotab:
