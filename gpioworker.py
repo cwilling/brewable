@@ -368,8 +368,13 @@ class JobProcessor(GPIOProcess):
         # Its _not_ a json file,
         # rather text file with individually json encoded entry per line
         self.history.append(str(header))
+        # Add an initial temperature report
+        status = self.jobStatus(self.startTime)
+        status['running'] = 'startup'
+        self.history.append(status)
         with open(os.path.join(JOB_HISTORY_DIR, self.historyFileName), 'w') as f:
              f.write(str(header) + '\n')
+             f.write(str(status) + '\n')
 
 
     def jobInfo(self):
