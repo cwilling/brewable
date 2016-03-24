@@ -431,11 +431,22 @@ $(document).ready( function(){
 
     var table = document.getElementById("profilesTable");
     var rows = table.rows;
+    console.log("*** rows.length = " + rows.length);
     for (var i=0;i<rows.length;i++) {
+      console.log("*** doing row: " + i + " with cells.length = " + rows[i].cells.length);
       profile = [];
       for (var j=0;j<rows[i].cells.length-1;j++) {
+        console.log("*** doing cell: " + j);
         setpoint = {};
-        target = document.getElementById("sp" + i + "_" + j).value;
+        try {
+          target = document.getElementById("sp" + i + "_" + j).value;
+        }
+        catch(err) {
+          console.log("*** Caught error: " + err);
+          console.log("*** Setting target as 1.0");
+          target = "1.0";
+        }
+        console.log("*** target = " + target);
         if (tempType == 'F') {
           target = ((target - 32.0)* 5) / 9;
         }
