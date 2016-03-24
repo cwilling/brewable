@@ -12,7 +12,10 @@ DEVICE_DIR = '/sys/bus/w1/devices/w1_bus_master1/w1_master_slaves'
 PROFILE_DATA_FILE='profileData.txt'
 JOB_DATA_FILE='jobData.txt'
 JOB_HISTORY_DIR='history'
-_TESTING_=True
+try:
+    _TESTING_ = os.environ['TESTING']
+except:
+    _TESTING_ = False
 
 # Output relay
 from sainsmartrelay import Relay
@@ -51,6 +54,9 @@ class GPIOProcess(multiprocessing.Process):
         self.runningJobs = []
 
     def run(self):
+
+        if _TESTING_:
+            print "_TESTING_ is True"
 
         # Setup
         # First look for sensor devices
