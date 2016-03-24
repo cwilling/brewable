@@ -906,10 +906,12 @@ var runningJobsFunctions = {};
   function createRunningJobsList(data) {
     console.log("Reached createRunningJobsList(): " + data.length);
     var runningJobsHolder = document.getElementById("running_jobsHolder");
+    console.log("**** Reached createRunningJobsList(): " + data.length);
 
     // Clean out any existing stuff in the running_jobsHolder div.
     var last;
     while (last = runningJobsHolder.lastChild) runningJobsHolder.removeChild(last);
+    console.log("**** cleaned up runningJobsHolder");
 
     var job_i = 0;
     for (job_i=0;job_i<data.length;job_i++) {
@@ -923,7 +925,9 @@ var runningJobsFunctions = {};
         console.log("FOUND job history" + " (" + job['history'].length + ")");
         for (var i=0;i<job['history'].length;i++) {
           jobFunctions['history'].push(job['history'][i]);
+          console.log("**** pushed job " + i);
         }
+        console.log("**** FOUND job history" + " (" + job['history'].length + ")");
       } else {
         console.log("NO job history found");
       }
@@ -933,11 +937,14 @@ var runningJobsFunctions = {};
       adiv.id = job.jobName
       adiv.appendChild(document.createTextNode('Running Job ' + job_i));
       runningJobsHolder.appendChild(adiv);
+      console.log("**** appended adiv to runningJobsHolder");
 
       var runningJobsGraphMargin = {top: 60, right: 20, bottom: 50, left: 80},
           runningJobsGraphWidth = 1800 - runningJobsGraphMargin.left - runningJobsGraphMargin.right,
           runningJobsGraphHeight = 300 - runningJobsGraphMargin.top - runningJobsGraphMargin.bottom;
+      console.log("**** created runningJobsGraphMargin");
       jobFunctions['runningJobsGraphMargin'] = runningJobsGraphMargin;
+      console.log("**** saved runningJobsGraphMargin in jobFunctions");
 
       var runningJobsGraphHolder = d3.select("#" + job.jobName).append("svg")
                         .attr("id", "running_job_" + job.jobName)
@@ -945,23 +952,23 @@ var runningJobsFunctions = {};
                         .attr("width", runningJobsGraphWidth + runningJobsGraphMargin.right + runningJobsGraphMargin.left)
                         .attr("height", runningJobsGraphHeight + runningJobsGraphMargin.top + runningJobsGraphMargin.bottom)
                         .style("border", "1px solid black")
+      console.log("**** created runningJobsGraphHolder");
 
       // Collect profile data into local array (lineData[])
       var profileData = job.jobProfile
-      //console.log("createRunningJobsList(): name: " + job.jobName + " " + profileData.length);
-
       var nextStep = 0.0;
       var lineData = [];
       var setpoint = {};
       for (var sp=0;sp<profileData.length;sp++) {
-        //console.log("rundata A: " + profileData[sp]["duration"] + " : " + profileData[sp]["target"] + " (" + nextStep + ")");
+        console.log("**** rundata A: " + profileData[sp]["duration"] + " : " + profileData[sp]["target"] + " (" + nextStep + ")");
         setpoint = {"x":nextStep,
                     "y":profileData[sp]["target"]};
         lineData.push(setpoint);
-        //console.log("rundata B: " + setpoint["x"] + " : " + setpoint["y"]);
+        console.log("**** rundata B: " + setpoint["x"] + " : " + setpoint["y"]);
 
         nextStep += parseFloat(profileData[sp]["duration"]);
       }
+      console.log("**** made lineData OK");
 
       // Find extent of values in lineData
       var maxTime = 0.0;
@@ -973,7 +980,7 @@ var runningJobsFunctions = {};
       if ( min < minDataPoint ) minDataPoint = min;
       if ( max > maxDataPoint ) maxDataPoint = max;
       if ( maxt > maxTime ) maxTime = maxt;
-      console.log("minData = " + minDataPoint + ", maxData = " + maxDataPoint + ", maxTime = " + maxTime + "  " + typeof(maxt));
+      console.log("**** minData = " + minDataPoint + ", maxData = " + maxDataPoint + ", maxTime = " + maxTime + "  " + typeof(maxt));
 
       // Scale & display axes
       //var linearScaleY = d3.scale.linear()
@@ -992,6 +999,7 @@ var runningJobsFunctions = {};
                         .attr("transform",
                               "translate(" + runningJobsGraphMargin.left + "," + runningJobsGraphMargin.top + ")")
                         .call(yAxis);
+      console.log("**** did linearScaleY OK");
       //var linearScaleX = d3.scale.linear()
        //                 .domain([0,maxTime])
        //                 .range([0,runningJobsGraphWidth]);
@@ -1005,10 +1013,12 @@ var runningJobsFunctions = {};
                         .attr("transform",
                               "translate(" + runningJobsGraphMargin.left + "," + (runningJobsGraphHeight + runningJobsGraphMargin.top) + ")")
                         .call(xAxis);
+      console.log("**** did linearScaleX OK");
 
       // Keep jobFunctions beyond this function for a rainy day
       // e.g. periodic updates about this job from the server
       runningJobsFunctions[job.jobName] = jobFunctions;
+      console.log("**** saved jobFunctions as runningJobsFunctions[job.jobName]");
 
       // Axis Labels
       var yaxistext = runningJobsGraphHolder.append("g")
@@ -1021,6 +1031,7 @@ var runningJobsFunctions = {};
                                 .attr("dy", "-2.4em")
                                 .style("text-anchor", "middle")
                                 .text("Temperature (C)");
+      console.log("**** did yaxistext");
       var xaxistext = runningJobsGraphHolder.append("g")
                             .attr("id", "xaxistext_" + job.jobName)
                             .attr("class", "axistext")
@@ -1030,6 +1041,7 @@ var runningJobsFunctions = {};
                                 .attr("dy", "-0.35em")
                                 .style("text-anchor", "middle")
                                 .text("Elapsed Time");
+      console.log("**** did xaxistext");
       var titletext = runningJobsGraphHolder.append("g")
                             .attr("id", "xaxistext_" + job.jobName)
                             .attr("class", "axistext")
@@ -1039,6 +1051,7 @@ var runningJobsFunctions = {};
                                 .attr("dy", "-1em")
                                 .style("text-anchor", "middle")
                                 .text("Job: " + job.jobName);
+      console.log("**** did titletext");
 
 
       // Scale data
@@ -1049,6 +1062,7 @@ var runningJobsFunctions = {};
                              "y":runningJobsFunctions[job.jobName].linearScaleY(lineData[sp].y)});
                              //"y":jobFunctions['linearScaleY'](lineData[sp].y)});
       }
+      console.log("**** filled scaledLineData");
       // Draw the graph
       var runningJobsLineFunction = d3.svg.line()
                                 .x(function(d) { return d.x; })
@@ -1061,9 +1075,11 @@ var runningJobsFunctions = {};
                                 .attr("stroke", "gray")
                                 .attr("stroke-width", 2)
                                 .attr("fill", "none");
+      console.log("**** drew lineGraph");
 
       // Send a dummy update to trigger immediate redraw of temperature trace
       updateRunningJob({'jobName':job.jobName,'type':'dummy'});
+      console.log("**** sent dummy update");
     }
 
   }
