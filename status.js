@@ -946,7 +946,8 @@ var runningJobsFunctions = {};
       jobFunctions['runningJobsGraphMargin'] = runningJobsGraphMargin;
       console.log("**** saved runningJobsGraphMargin in jobFunctions");
 
-      var runningJobsGraphHolder = d3.select("#" + job.jobName).append("svg")
+      //var runningJobsGraphHolder = d3.select("#" + job.jobName).append("svg")
+      var runningJobsGraphHolder = d3.select(adiv).append("svg")
                         .attr("id", "running_job_" + job.jobName)
                         .attr("class", "running_job")
                         .attr("width", runningJobsGraphWidth + runningJobsGraphMargin.right + runningJobsGraphMargin.left)
