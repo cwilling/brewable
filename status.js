@@ -48,6 +48,10 @@ function resolveGraphTimeValue(rawval) {
   return result;
 }
 
+var isNumeric = function (n) {
+  return !isNaN(parseFloat(n)) && isFinite(n);
+};
+
 $(document).ready( function(){
 
   var profilesLoadedEvent = new Event('profilesLoadedEvent');
@@ -351,6 +355,7 @@ $(document).ready( function(){
                           }
                           updateProfileGraph();
                         };
+    if ( cellNumber == (profilesTableColumns - 1) ) timeInput.readOnly = true;
     row.appendChild(timeInput);
 
     durUnit = document.createElement('SPAN');
@@ -434,6 +439,48 @@ $(document).ready( function(){
     var table = document.getElementById("profilesTable");
     var rows = table.rows;
     for (var i=0;i<rows.length;i++) {
+      // Replace blank & non-numeric durations with a zero
+      // Replace blank & non-numeric temp values with a zero (or 32)
+      for (var k=rows[i].cells.length-2;k>=0;k--) {
+        var dhCell = document.getElementById("dh" + i + "_" + k);
+        var spCell = document.getElementById("sp" + i + "_" + k);
+        var cellDur = dhCell.value.trim();
+        var cellVal = spCell.value.trim();
+        if ( (!isNumeric(cellDur)) || (parseFloat(cellDur) < 0.0)  ) {
+          dhCell.value = 0;
+        }
+        if ( !isNumeric(cellVal) ) {
+          if (tempType == 'F') {
+            spCell.value = 32;
+          } else {
+            spCell.value = 0;
+          }
+        }
+      }
+
+      // Massage final entry to produce vertical cliff denoting end of profile.
+      for (var k=rows[i].cells.length-2;k>0;k--) {
+        var dhCell = document.getElementById('dh' + i + '_' + k);
+        var dhCellPrev = document.getElementById('dh' + i + '_' + (k-1));
+        var dur = parseFloat(dhCell.value.trim());
+        var durPrev = parseFloat(dhCellPrev.value.trim());
+        if ( dur > 0 ) break;
+        if ( durPrev == 0 ) continue;
+        // By now we have a cell with zero duration
+        // while previous cell has nonzero duration
+        console.log("AT: " + 'dh' + i + '_' + k + ", prev = " + durPrev);
+        var spCell = document.getElementById('sp' + i + '_' + k);
+        var spCellPrev = document.getElementById('sp' + i + '_' + (k-1));
+        var cellVal = parseFloat(spCell.value.trim());
+        if ( cellVal == 0 ) {
+          var cellValPrev = parseFloat(spCellPrev.value.trim());
+          spCell.value = cellValPrev;
+        }
+      }
+    }
+
+    // Collect profile graph data to return
+    for (var i=0;i<rows.length;i++) {
       profile = [];
       for (var j=0;j<rows[i].cells.length-1;j++) {
         setpoint = {};
@@ -454,6 +501,7 @@ $(document).ready( function(){
       }
       profileSet.push(profile);
     }
+
     return profileSet;
   }
 

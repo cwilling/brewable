@@ -450,8 +450,13 @@ class JobProcessor(GPIOProcess):
         print "elapsed_time = ", elapsed_time
         #print "steps: ", control_steps
 
-        # If we're past the last step, return the last temperature target
+        # If we're past the last step, return the last valid temperature target
         if elapsed_time > control_steps[-1][2]:
+            for x in reversed(control_steps):
+                if float(x[1]) > 0:
+                    print "target_temperature() DONE", x[1] 
+                    return (True, x[1])
+            # case == basket
             print "target_temperature() DONE", control_steps[-1][1]
             return (True, control_steps[-1][1])
 
