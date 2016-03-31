@@ -1018,6 +1018,9 @@ var runningJobsFunctions = {};
       if ( min < minDataPoint ) minDataPoint = min;
       if ( max > maxDataPoint ) maxDataPoint = max;
       if ( maxt > maxTime ) maxTime = maxt;
+      // Sanity check
+      minDataPoint = (minDataPoint<0)?minDataPoint:0;
+      maxDataPoint = (maxDataPoint>30)?maxDataPoint:30;
       //console.log("**** minData = " + minDataPoint + ", maxData = " + maxDataPoint + ", maxTime = " + maxTime + "  " + typeof(maxt));
 
       // Scale & display axes
