@@ -211,6 +211,15 @@ $(document).ready( function(){
       setpoint = {target:target, duration:duration};
       saveJobProfile.push(setpoint);
     }
+    // Add a "zero,zero" setpoint.
+    if (tempType == 'F') {
+        setpoint = {target:32.0, duration:'0.0'};
+    } else {
+        setpoint = {target:0.0, duration:'0.0'};
+    }
+    saveJobProfile.push(setpoint);
+    console.log("Added setpoint " + setpoint);
+
 
     // Collect which sensor(s) to use
     var table = document.getElementById("jobSensorsTable");
@@ -413,10 +422,24 @@ $(document).ready( function(){
           target = ((target - 32.0)* 5) / 9;
         }
         duration = document.getElementById("dh" + i + "_" + j).value;
-        console.log("Element has val = " + target + " and " + duration);
+        //console.log("Element has val = " + target + " and " + duration);
         setpoint = {target:target, duration:duration};
         profile.push(setpoint);
       }
+      // Add a "zero,zero" setpoint.
+      if (tempType == 'F') {
+          if ( profile[(profile.length-1)].target != 32 ) {
+            setpoint = {target:32.0, duration:'0.0'};
+            profile.push(setpoint);
+          }
+      } else {
+          if ( profile[(profile.length-1)].target != 0 ) {
+            //console.log("Adding tail setpoint to profile");
+            setpoint = {target:0.0, duration:'0.0'};
+            profile.push(setpoint);
+          }
+      }
+
       profileSet.push(profile);
     }
 
@@ -499,6 +522,14 @@ $(document).ready( function(){
         setpoint = {target:target, duration:duration};
         profile.push(setpoint);
       }
+      // Add a "zero,zero" setpoint.
+      if (tempType == 'F') {
+          setpoint = {target:32.0, duration:'0.0'};
+      } else {
+          setpoint = {target:0.0, duration:'0.0'};
+      }
+      profile.push(setpoint);
+
       profileSet.push(profile);
     }
 
