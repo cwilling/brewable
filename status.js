@@ -1120,6 +1120,10 @@ var runningJobsFunctions = {};
         var asensor = document.createElement("DIV");
         asensor.id = elementName;
         asensor.className = 'sensor_update';
+        asensor.oncontextmenu = function(e) { return false; };
+        asensor.onmousedown = function(e) {
+          console.log("Pressed button " + e.button + " at " + this.id);
+        };
         sensor_updateHolder.appendChild(asensor);
       }
       document.getElementById(elementName).textContent = sensor_state[i].temperature;
@@ -1131,8 +1135,16 @@ var runningJobsFunctions = {};
         var arelay = document.createElement("DIV");
         arelay.id = elementName;
         arelay.className = 'relay_update';
-        arelay.onclick = function() {
-          send_relay_cmd(parseInt(this.id.charAt(this.id.length-1)) + 1);
+        arelay.oncontextmenu = function(e) { return false; };
+        arelay.onmousedown = function(e) {
+          switch (e.button) {
+            case 0:
+              send_relay_cmd(parseInt(this.id.charAt(this.id.length-1)) + 1);
+              break;
+            default:
+              console.log("Pressed button " + e.button + " at " + this.id);
+              break;
+          }
         };
         relay_updateHolder.appendChild(arelay);
       }
@@ -1143,6 +1155,11 @@ var runningJobsFunctions = {};
       }
     }
   }
+
+  function sensorClickHandler(ev) {
+    console.log("Pressed button " + ev.button);
+  }
+
 
 
 });
