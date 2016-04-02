@@ -342,7 +342,13 @@ class JobProcessor(GPIOProcess):
         #       SIMPLE_COOL             # single relay to cooler
         #       SIMPLE_COOL_HEAT        # 2 relays, 1 for cool & 1 for heater
         #       SIMPLE_HEAT             # single relay to heater
-        self.processType = "SIMPLE_COOL_HEAT"
+        relaysInJob = len(self.jobRelays)
+        if relaysInJob == 1:
+            self.processType = "SIMPLE_COOL"
+        elif relaysInJob == 2:
+            self.processType = "SIMPLE_COOL_HEAT"
+        else:
+            print "Unknown process type for more than 2 relays"
         self.relay = Relay()
 
         self.history = []
@@ -517,7 +523,24 @@ class JobProcessor(GPIOProcess):
             relayIds.append(int(relay.split()[1]))
         #print "Relays:", relayIds
         if self.processType == "SIMPLE_COOL":
-            print "Using SIMPLE_COOL method to temperatureAdjust: ", target
+            # Assume a single sensor for a SIMPLE method
+            temp = st.get_temp(self.jobSensors[0])
+            print "Temp: %s for target: %s" % (temp, target)
+
+            # Single relay for COOL method
+            coolerRelay = relayIds[0]
+
+            # If temp == target, leave it alone
+            if float(temp) > float(target):
+                # Turn on the cooler relay.
+                self.relay.ON(coolerRelay)
+                print "Start COOLING"
+            elif float(temp) < float(target):
+                # Turn off the cooler relay.
+                self.relay.OFF(coolerRelay)
+                print "Stop COOLING"
+            else:
+                self.relay.OFF(coolerRelay)
         elif self.processType == "SIMPLE_COOL_HEAT":
             # Assume a single sensor for a SIMPLE method
             temp = st.get_temp(self.jobSensors[0])
