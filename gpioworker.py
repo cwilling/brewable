@@ -241,25 +241,22 @@ class GPIOProcess(multiprocessing.Process):
             # Data/info from sensor device
             data = "generic %d" % count
             try:
-                for sensor in self.sensorDevices:
-                    data = st.get_temp(sensor.getId())
-                    jdata = json.dumps({'sensorId':sensor.getId(),
-                                    'type':'live_update',
-                                    'data':data})
-                    #print "XXX", jdata
-                    #self.output_queue.put(jdata)
+                sensor_state = list({'sensorId':sensor.getId(),'temperature':st.get_temp(sensor.getId())} for sensor in self.sensorDevices)
             except:
-                jdata = json.dumps({'sensorId':'dummy_123',
-                                    'type':'live_update',
-                                    'data':21})
-                #print "XXX", jdata
-                #self.output_queue.put(jdata)
+                sensor_state = []
+            #print "sensor_state: ", sensor_state
 
             # Data/info from relay device
-            relay_state = list(self.relay.isOn(i+1) for i in range(len(self.relay.state())))
+            try:
+                relay_state = list(self.relay.isOn(i+1) for i in range(len(self.relay.state())))
+            except:
+                relay_state = []
             #print "relay_state: ", relay_state
-            jdata = json.dumps({'type':'relay_state',
-                                'data':relay_state})
+
+            # Send live_update (= sensor_state + relay_state)
+            jdata = json.dumps({'type':'live_update',
+                                'sensor_state':sensor_state,
+                                'relay_state':relay_state})
             self.output_queue.put(jdata)
 
             # Send a heartbeat (in absence of any sensors)

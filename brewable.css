@@ -81,13 +81,44 @@ td {
 #sent { width:	500px; }
 
 div#live_updateHolder {
-    position:	relative;
+    width:	100%;
+    height:	64px;
+    float:	left;
+    border:	2px solid black;
 }
-svg#live_update {
-    position:   absolute;
-/*    top:        50%; */
-    transform:  translateY(40%);
-    background:	#fff;
+div#sensor_updateHolder {
+    width:	256px;
+    height:	60px;
+    float:	left;
+    margin-left: 256px;
+    border:	2px solid black;
+}
+.sensor_update {
+    position:   relative;
+    width:	50%;
+    height:	60px;
+    line-height: 60px;
+    float:	left;
+    text-align: center;
+}
+div#relay_updateHolder {
+    width:	512px;
+    height:	60px;
+    float:	left;
+    margin-left: 128px;
+    border:	2px solid black;
+}
+.relay_update {
+    position:   relative;
+    width:	25%;
+    height:	60px;
+    line-height: 60px;
+    float:	left;
+    text-align: center;
+}
+.relay_update:hover {
+    background: #888;
+    cursor:     pointer;
 }
 
 div#navigation_holder {

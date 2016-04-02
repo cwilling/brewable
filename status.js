@@ -81,12 +81,6 @@ $(document).ready( function(){
     console.log("EDIT job button clicked");
   }
 
-  // Run job button
-  var runJobButton = document.getElementById("run_job_button");
-  runJobButton.onclick = function () {
-    console.log("RUN job button clicked");
-  }
-
   // Delete job button
   var deleteJobButton = document.getElementById("delete_job_button");
   deleteJobButton.onclick = function () {
@@ -715,9 +709,7 @@ $(document).ready( function(){
         received.append(jmsg.data);
         received.append($('<br/>'));
       } else if (jmsg.type === 'live_update' ) {
-        add_live_data(jmsg.sensorId, jmsg.data);
-      } else if (jmsg.type === 'relay_state' ) {
-        update_relay_state(jmsg.data);
+        add_live_data(jmsg.sensor_state, jmsg.relay_state);
       } else {
         console.log('Unknown json messsage type: ' + jmsg.type);
       }
@@ -788,73 +780,6 @@ $(document).ready( function(){
     sendMessage({data:JSON.stringify(msgobj)});
   }
 
-
-/* Initial graph for testing. Can be removed!
-var margin = {top: 100, right: 20, bottom: 30, left: 80},
-    width = 600 - margin.left - margin.right,
-    height = 400 - margin.top - margin.bottom;
-
-var minDataPoint = 20;
-var maxDataPoint = 80;
-var liveLinearScale = d3.scale.linear()
-	.domain([minDataPoint, maxDataPoint])
-	.range([height, 0]);
-var yAxis = d3.svg.axis()
-	.scale(liveLinearScale)
-	.orient("left").ticks(5);
-
-  function make_x_axis() {		
-      return d3.svg.axis()
-          .scale(x)
-          .orient("bottom")
-          .ticks(5)
-  }
-  function make_y_axis() {		
-      return d3.svg.axis()
-          .scale(y)
-          .orient("left")
-          .ticks(5)
-  }
-
-var svgContainer = d3.select("#live_updateHolder")
-    .append("svg")
-        .attr("id", "live_update")
-        .attr("width", width + margin.left + margin.right)
-        .attr("height", height + margin.top + margin.bottom)
-	.style("border", "1px solid black")
-    .append("g")
-	.attr("class", "yaxisticks")
-        .attr("transform", 
-              "translate(" + margin.left + "," + margin.top + ")")
-        .call(yAxis);
-
-svgContainer.append("g")
-    .attr("class", "axistext")
-    .append("text")
-	.attr("transform", "rotate(-90)")
-	.attr("x", 0 - margin.top)
-	.attr("y", 0 - (margin.left/2))
-	.attr("dy", "1em")
-	.style("text-anchor", "middle")
-	.text("Temperature (C)");
-*/
-
-//var lineGraph = svgContainer.append("path");
-
-// Container for temperature arrays named by sensor id
-var liveTemps = {};
-
-var live_temps = [];
-var live_temps_scaled = [];
-
-var liveTempsLineData = {};
-var live_temps_lineData = [];
-var live_temps_lineData_scaled = [];
-
-var liveLineFunction = d3.svg.line()
-	.x(function(d) {return d.time})
-	.y(function(d) {return d.temp})
-	.interpolate("linear");
 
 // { job1; {}, job2: {}, .... jobn: {} }
 // where each job object's value is { linearScaleY: ..., linearScaleX: ..., history: [] }
@@ -1184,57 +1109,41 @@ var runningJobsFunctions = {};
                               .attr("fill", "none");
   }
 
-  function add_live_data(sensor, data) {
-    return;
-  }
-  // Initially used for testing - can probably be removed
-  function add_live_data_OLD(sensor, data) {
-    //svgContainer.selectAll("#"+sensor).remove();
-    var liveLineColours = ["green", "blue", "red", "yellow"];
-    if ( !(sensor in liveTemps) ) {
-      liveTemps[sensor] = [];
-      liveTempsLineData[sensor] = [];
-      //console.log("add_live_data(): added entry for " + sensor);
-    }
+  function add_live_data(sensor_state, relay_state) {
+    //console.log("live_update: " + sensor_state + ", " + relay_state);
 
-    var dataLength = liveTemps[sensor].push(liveLinearScale(data));
-
-    for (var i=0;i<dataLength;i++) {
-      liveTempsLineData[sensor][i] = {time:i,temp:liveTemps[sensor][i]};
-    }
-
-    var sensor_keys = Object.keys(liveTemps);
-    for (var i=0;i<sensor_keys.length;i++) {
-      var sensor_key = sensor_keys[i];
-      //svgContainer.selectAll("#"+sensor_key).remove();
-      //console.log("sensor_key = " + i + " = " + sensor_key);
-      var lineGraph = svgContainer.append("path")
-            .attr("id", sensor_key)
-            .attr("d", liveLineFunction(liveTempsLineData[sensor_key]))
-            .attr("stroke", liveLineColours[i])
-            .attr("stroke-width", 3)
-            .attr("fill", "none");
-      if ( dataLength > 500 ) {
-        liveTemps[sensor_key].shift();
+    for (var i=0;i<sensor_state.length;i++) {
+      //console.log("sensor_state: " + sensor_state[i].sensorId + " = " + sensor_state[i].temperature);
+      var elementName = 'sensor_update_' + sensor_state[i].sensorId;
+      if ( ! document.body.contains(document.getElementById(elementName)) ) {
+        sensor_updateHolder = document.getElementById('sensor_updateHolder');
+        var asensor = document.createElement("DIV");
+        asensor.id = elementName;
+        asensor.className = 'sensor_update';
+        sensor_updateHolder.appendChild(asensor);
       }
+      document.getElementById(elementName).textContent = sensor_state[i].temperature;
     }
-
-  }
-
-  function update_relay_state(data) {
-    var x = 0;
-
-/* Testing (works)
-    for ( var i=0;i<data.length;i++ ) {
-      if ( data[i] ) {
-        console.log("update_relay_state(): Relay " + (i+1) + " = ON");
+    for (var i=0;i<relay_state.length;i++) {
+      var elementName = 'relay_update_' + i;
+      if ( ! document.body.contains(document.getElementById(elementName)) ) {
+        relay_updateHolder = document.getElementById('relay_updateHolder');
+        var arelay = document.createElement("DIV");
+        arelay.id = elementName;
+        arelay.className = 'relay_update';
+        arelay.onclick = function() {
+          send_relay_cmd(parseInt(this.id.charAt(this.id.length-1)) + 1);
+        };
+        relay_updateHolder.appendChild(arelay);
+      }
+      if ( relay_state[i] ) {
+        document.getElementById(elementName).textContent = 'ON';
       } else {
-        console.log("update_relay_state(): Relay " + (i+1) + " = OFF");
+        document.getElementById(elementName).textContent = 'OFF';
       }
     }
-*/
-
   }
+
 
 });
 
