@@ -12,19 +12,20 @@
 
     <div id="navigation_holder">
     <ul id="navigation" class="status_navigation">
-      <li><a href="#content_1" class="status_navigation">Status 1</a></li>
+      <li><a href="#content_1" class="status_navigation">Status</a></li>
       <li><a href="#content_2" id="open_jobs" class="status_navigation">Jobs</a></li>
       <li><a href="#content_4" id="open_profiles" class="status_navigation">Profiles</a></li>
-      <li><a href="#content_5" class="status_navigation">Maintenance</a></li>
     </ul>
     </div>
 
     <div id="main_content">
       <div id="content_1">
-        <div id="live_updateHolder">
-          <div id="sensor_updateHolder">
-          </div>
-          <div id="relay_updateHolder">
+        <div id="live_updateHolderContainer">
+          <div id="live_updateHolder">
+            <div id="sensor_updateHolder">
+            </div>
+            <div id="relay_updateHolder">
+            </div>
           </div>
         </div>
         <div id="running_jobsHolder">
@@ -79,9 +80,6 @@
           </div>
         </div>
       </div>
-      <div id="content_3">
-        Content 3
-      </div>
       <div id="content_4">
         <div id="profilesTableHolder">
           <table id="profilesTable" class="profilesTable" align="center">
@@ -96,25 +94,6 @@
         <div id="profilesGraphHolder">
         profilesGraphHolder
         </div>
-      </div>
-      <div id="content_5">
-        <div id="received"></div>
-        <button id="clear">Clear</button>
-
-        <p>Send data to device server</p>
-        <form id="sent">
-          <input type="text" id="cmd_value">
-          <button id="cmd_send">Send</button>
-        </form>
-
-
-        <section class="relay_buttons">
-          <h1>Relay Buttons</h1>
-          <button id="relay_btn_1" type="button" >Relay 1</button>
-          <button id="relay_btn_2" type="button" >Relay 2</button>
-          <button id="relay_btn_3" type="button" >Relay 3</button>
-          <button id="relay_btn_4" type="button" >Relay 4</button>
-        </section>
       </div>
     </div>
 

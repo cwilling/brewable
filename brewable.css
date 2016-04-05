@@ -21,8 +21,8 @@ body.profiles {
 }
 
 #profilesTableHolder {
-    overflow-y: hidden;
-    overflow-x: auto;
+    /*overflow-y: hidden;*/
+    /*overflow-x: auto;*/
 }
 #profilesTable {
     font-family: ariel;
@@ -80,38 +80,57 @@ td {
 
 #sent { width:	500px; }
 
-div#live_updateHolder {
+div#live_updateHolderContainer {
     width:	100%;
+    height:	96px;
+    margin:     auto;
+    transform-style: preserve-3d;
+}
+div#live_updateHolder {
+    /* To centre this div horizontally requires fixed width + margin:auto.
+       However width is not known - it depends on number of sensors & relays.
+       Therefore don't specify width here but set it programmatically at
+       run time. See add_live_data().
+    */
+    margin:     auto;
     height:	64px;
-    float:	left;
-    border:	2px solid black;
+    border-top:    2px solid black;
+    border-bottom: 2px solid black;
+
+    /* Centre vertically within container */
+    position:   relative;
+    top:        50%;
+    transform:  translateY(-50%);
 }
 div#sensor_updateHolder {
-    width:	256px;
-    height:	60px;
+    height:	64px;
     float:	left;
-    margin-left: 256px;
-    border:	2px solid black;
+    margin:     auto;
+    border-left:  2px solid black;
+    border-right: 2px solid black;
+}
+#sensor_update_title:hover {
+    background: #888;
+    cursor:     pointer;
 }
 .sensor_update {
     position:   relative;
-    width:	50%;
-    height:	60px;
+    height:	64px;
     line-height: 60px;
     float:	left;
     text-align: center;
 }
 div#relay_updateHolder {
-    width:	512px;
-    height:	60px;
+    height:	64px;
     float:	left;
-    margin-left: 128px;
-    border:	2px solid black;
+    /*margin-left: 128px;*/
+    margin:     auto;
+    /*border-left:  2px solid black;*/
+    border-right: 2px solid black;
 }
 .relay_update {
     position:   relative;
-    width:	25%;
-    height:	60px;
+    height:	64px;
     line-height: 60px;
     float:	left;
     text-align: center;
@@ -167,6 +186,7 @@ div#content_1 {
     height:	100%;
     background:	#c99;
     color:	#fff;
+    overflow-y: auto;
 }
 div#content_2 {
     display:    block;
@@ -174,6 +194,7 @@ div#content_2 {
     height:	100%;
     background:	#699;
     color:	#fff;
+    overflow-y: auto;
 }
 div#content_3 {
     display:    block;
@@ -188,6 +209,7 @@ div#content_4 {
     height:	100%;
     background:	#448;
     color:	#fff;
+    overflow:   auto;
 }
 div#content_5 {
     display:    block;

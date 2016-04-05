@@ -56,7 +56,6 @@ $(document).ready( function(){
 
   var profilesLoadedEvent = new Event('profilesLoadedEvent');
 
-  var received = $('#received');
 
 /***********************  Jobs Configuration page  ***************************/
   // Refresh job list button ('Jobs' page'
@@ -669,9 +668,7 @@ $(document).ready( function(){
     try {
       jmsg = JSON.parse(message.data);
       if ( jmsg.type === 'info' ) {
-        received.append('INFO: ');
-        received.append(jmsg.data);
-        received.append($('<br/>'));
+        console.log('INFO: ' + jmsg.data);
       } else if (jmsg.type === 'sensor_list' ) {
         // Keep a copy for later
         availableSensors = [];
@@ -697,17 +694,13 @@ $(document).ready( function(){
         updateRunningJob(jmsg.data);
       } else if (jmsg.type === 'loaded_profiles' ) {
         if ( jmsg.data.length == 0 ) {
-          received.append('RCVD: EMPTY profiles data');
+          console.log('RCVD: EMPTY profiles data');
         } else {
-          received.append('RCVD: OK profiles data');
+          console.log('RCVD: OK profiles data');
         }
-        received.append($('<br/>'));
-        //updateProfilesTableData(jmsg.data);
         createProfileTableFunction(jmsg.data);
       } else if (jmsg.type === 'heartbeat' ) {
-        received.append('HEARTBEAT: ');
-        received.append(jmsg.data);
-        received.append($('<br/>'));
+        console.log('HEARTBEAT: ' + jmsg.data);
       } else if (jmsg.type === 'live_update' ) {
         add_live_data(jmsg.sensor_state, jmsg.relay_state);
       } else {
@@ -716,11 +709,6 @@ $(document).ready( function(){
     }
     catch(err ) {
       console.log('Non-json msg: ' + message.data);
-      //received.append(message.data);
-      //received.append($('<br/>'));
-    }
-    finally {
-      received.scrollTop(received.prop('scrollHeight'));
     }
 
   };
@@ -744,35 +732,6 @@ $(document).ready( function(){
     socket.send(message.data);
   };
 
-  // send a command to the serial port
-  $("#cmd_send").click(function(ev){
-    ev.preventDefault();
-    var cmd = $('#cmd_value').val();
-    sendMessage({ 'data' : cmd});
-    $('#cmd_value').val("");
-  });
-
-  $('#clear').click(function(){
-    received.empty();
-  });
-
-
-  $("#relay_btn_1").click(function(ev){
-    ev.preventDefault();
-    send_relay_cmd(1);
-  });
-  $("#relay_btn_2").click(function(ev){
-    ev.preventDefault();
-    send_relay_cmd(2);
-  });
-  $("#relay_btn_3").click(function(ev){
-    ev.preventDefault();
-    send_relay_cmd(3);
-  });
-  $("#relay_btn_4").click(function(ev){
-    ev.preventDefault();
-    send_relay_cmd(4);
-  });
 
   function send_relay_cmd(data) {
     var cmd = ["toggle_relay",data]
@@ -934,7 +893,6 @@ var runningJobsFunctions = {};
       // Create a div in which to display data
       var adiv = document.createElement("DIV");
       adiv.id = job.jobName
-      adiv.appendChild(document.createTextNode('Running Job ' + job_i));
       runningJobsHolder.appendChild(adiv);
 
       var runningJobsGraphMargin = {top: 60, right: 20, bottom: 50, left: 80},
@@ -1112,6 +1070,35 @@ var runningJobsFunctions = {};
   function add_live_data(sensor_state, relay_state) {
     //console.log("live_update: " + sensor_state + ", " + relay_state);
 
+    var elementName = 'sensor_update_title';
+    if ( ! document.body.contains(document.getElementById(elementName)) ) {
+      sensor_updateHolder = document.getElementById('sensor_updateHolder');
+      var asensor = document.createElement("DIV");
+      asensor.id = elementName;
+      asensor.className = 'sensor_update';
+      asensor.style.width = '128px';
+      asensor.setAttribute('tempScale', 'C');
+      asensor.oncontextmenu = function(e) { return false; };
+      asensor.onmousedown = function(e) {
+        switch (e.button) {
+          case 0:
+            if (this.getAttribute('tempScale') == 'C') {
+              this.setAttribute('tempScale', 'F');
+            } else {
+              this.setAttribute('tempScale', 'C');
+            }
+            break;
+          default:
+            console.log("Pressed button " + e.button + " at " + this.id);
+            break;
+        }
+      };
+      sensor_updateHolder.appendChild(asensor);
+    }
+    var el = document.getElementById(elementName);
+    var tempScale = el.getAttribute('tempScale');
+    el.textContent = 'Temp. (' + tempScale + '):';
+
     for (var i=0;i<sensor_state.length;i++) {
       //console.log("sensor_state: " + sensor_state[i].sensorId + " = " + sensor_state[i].temperature);
       var elementName = 'sensor_update_' + sensor_state[i].sensorId;
@@ -1119,15 +1106,45 @@ var runningJobsFunctions = {};
         sensor_updateHolder = document.getElementById('sensor_updateHolder');
         var asensor = document.createElement("DIV");
         asensor.id = elementName;
+        asensor.title = sensor_state[i].sensorId;
         asensor.className = 'sensor_update';
+        asensor.style.width = '128px';
         asensor.oncontextmenu = function(e) { return false; };
         asensor.onmousedown = function(e) {
           console.log("Pressed button " + e.button + " at " + this.id);
         };
         sensor_updateHolder.appendChild(asensor);
       }
-      document.getElementById(elementName).textContent = sensor_state[i].temperature;
+      if (tempScale == 'F') {
+        document.getElementById(elementName).textContent = ((parseFloat(sensor_state[i].temperature) * 9 / 5 ) + 32).toFixed(2);
+      } else {
+        document.getElementById(elementName).textContent = (sensor_state[i].temperature).toFixed(2);
+      }
     }
+    // Set width of bounding box
+    document.getElementById('sensor_updateHolder').style.width = (128 + 128*sensor_state.length) + "px";
+
+    // Label for Relays
+    elementName = 'relay_update_title';
+    if ( ! document.body.contains(document.getElementById(elementName)) ) {
+      relay_updateHolder = document.getElementById('relay_updateHolder');
+      var arelay = document.createElement("DIV");
+      arelay.id = elementName;
+      arelay.className = 'relay_update';
+      arelay.style.width = '128px';
+      arelay.oncontextmenu = function(e) { return false; };
+      arelay.onmousedown = function(e) {
+        switch (e.button) {
+          default:
+            console.log("Pressed button " + e.button + " at " + this.id);
+            break;
+        }
+      };
+      relay_updateHolder.appendChild(arelay);
+    }
+    document.getElementById(elementName).textContent = 'Relays:';
+
+    // Status of Relays
     for (var i=0;i<relay_state.length;i++) {
       var elementName = 'relay_update_' + i;
       if ( ! document.body.contains(document.getElementById(elementName)) ) {
@@ -1135,6 +1152,7 @@ var runningJobsFunctions = {};
         var arelay = document.createElement("DIV");
         arelay.id = elementName;
         arelay.className = 'relay_update';
+        arelay.style.width = '128px';
         arelay.oncontextmenu = function(e) { return false; };
         arelay.onmousedown = function(e) {
           switch (e.button) {
@@ -1154,6 +1172,15 @@ var runningJobsFunctions = {};
         document.getElementById(elementName).textContent = 'OFF';
       }
     }
+    // Set width of bounding box
+    document.getElementById('relay_updateHolder').style.width = (128 + 128*relay_state.length) + "px";
+
+    // Set size of live_updateHolder so it can be centered in its container
+    //document.getElementById('live_updateHolder').style.width = '1200px'; 
+    var sensorWidth = parseInt(document.getElementById('sensor_updateHolder').style.width.replace(/\D+/g, ''));
+    var relayWidth = parseInt(document.getElementById('relay_updateHolder').style.width.replace(/\D+/g, ''));
+    document.getElementById('live_updateHolder').style.width =
+        (sensorWidth + relayWidth + 6 /* borders fudge factor*/) + 'px'; 
   }
 
   function sensorClickHandler(ev) {
