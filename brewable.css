@@ -192,16 +192,9 @@ div#content_2 {
     display:    block;
     width:	100%;
     height:	100%;
-    background:	#699;
+    background:	#366;
     color:	#fff;
     overflow-y: auto;
-}
-div#content_3 {
-    display:    block;
-    width:	100%;
-    height:	100%;
-    background:	#040;
-    color:	#fff;
 }
 div#content_4 {
     display:    block;
@@ -211,32 +204,20 @@ div#content_4 {
     color:	#fff;
     overflow:   auto;
 }
-div#content_5 {
-    display:    block;
-    width:	100%;
-    height:	100%;
-    background:	#8f8;
-    color:	#000;
-}
 
 
-
-div#jobComposer {
-    margin:	0;
-    padding:	0;
-    list-style-type: none;
-    background:	#636;
-    float:	left;
-    width:	100%;
-    top:	0;
-    border:	5px solid red;
-}
 #jobSaveButton {
     float:	left;
-    margin:     0;
+    margin-right: 5px;
     padding:	0;
     text-decoration: none;
     background:	#000;
+    width:      72px;
+    border:	1px solid white;
+    /* Centre vertically within container */
+    position:   relative;
+    top:        50%;
+    transform:  translateY(-50%);
 }
 #jobSaveButton a {
     display:    block;
@@ -244,7 +225,7 @@ div#jobComposer {
     color:	#fff;
     background:	#036;
     margin:     0;
-    padding:	1em;
+    padding:	16px;
 }
 #jobSaveButton a:hover {
     color:      #000;
@@ -253,46 +234,59 @@ div#jobComposer {
 #jobNameHolder {
     text-align: center;
     float:	left;
-    width:      14em;
-    margin:	0;
-    padding:	4px;
+    width:      226px;
+    margin-right: 5px;
+    padding-top: 10px;
     border:	1px solid white;
+    /* Centre vertically within container */
+    position:   relative;
+    top:        50%;
+    transform:  translateY(-50%);
 }
 #jobName {
     padding:	0;
 }
 #jobPreHeat {
     float:	left;
-    margin:	0;
-    padding:	1em;
-    background:	#333;
-    background:	#000;
+    margin-right: 5px;
+    padding-top: 15px;
+    width:      172px;
+    height:     36px;
+    text-align: center;
+    border:	1px solid white;
+    /* Centre vertically within container */
+    position:   relative;
+    top:        50%;
+    transform:  translateY(-50%);
 }
 #jobProfileHolder {
     float:	left;
     padding:	0;
-    margin:	0;
-    background:	#666;
+    margin-right: 5px;
+    height:     51px;
+    border:	1px solid white;
+    /* Centre vertically within container */
+    position:   relative;
+    top:        50%;
+    transform:  translateY(-50%);
 }
 #jobProfileSelector {
     float:	left;
-    width:      12em;
+    width:      192px;
     padding:	0;
-    margin:	1em 2em;
+    margin:	14px 28px;
     background:	#aaa;
-}
-#jobDevicesHolder {
-    float:	left;
-    margin:	0;
-    padding:	0;
 }
 #jobSensorsHolder {
     float:	left;
-    width:      12em;
-    margin:	0;
+    width:      192px;
+    margin-right: 5px;
     padding:	0;
-    background:	#555;
     border:	1px solid white;
+    /* Centre vertically within container */
+    position:   relative;
+    top:        50%;
+    transform:  translateY(-50%);
 }
 #jobSensorsTable.jobSensorsTable {
     font-family: ariel;
@@ -305,11 +299,14 @@ div#jobComposer {
 }
 #jobRelaysHolder {
     float:	left;
-    width:      12em;
+    width:      192px;
     margin:	0;
     padding:	0;
-    background:	#888;
     border:	1px solid white;
+    /* Centre vertically within container */
+    position:   relative;
+    top:        50%;
+    transform:  translateY(-50%);
 }
 #jobRelaysTable.jobRelaysTable {
     font-family: ariel;
@@ -320,33 +317,30 @@ div#jobComposer {
     font-size:  120%;
     font-weight: bold;
 }
+
 #jobsListHolder {
-    border:	5px solid red;
-    margin-top: 100px;
+    border-bottom:	5px solid red;
     float:      left;
     width:      100%;
-    height:     50%;
+    height:     360px;
 }
 #jobsListTitle {
     font-family: ariel;
     font-size:  120%;
     font-weight: bold;
     text-align: center;
-    background:	#777;
+    background:	#555;
     padding:    1em;
 }
 #jobsListButtonsHolder {
-    background:	#666;
-    padding:    2em;
 }
 ul#jobsListButtons {
-    margin:	auto;
+    margin:	24px;
     padding:	0;
     min-width:	40%;
     list-style: none;
     text-align: center;
-    background:	#330;
-    border:	2px solid green;
+    /*border:	2px solid green;*/
 }
 ul#jobsListButtons li {
     display:	inline;
@@ -366,16 +360,58 @@ ul#jobsListButtons a:hover {
     color:	#000;
     background:	#69c;
 }
+#jobsListJobsHolder {
+    height:     218px;
+    overflow-y: auto;
+    direction:  rtl;
+    margin-block-start: 5px;
+    margin-block-end:   5px;
+}
 #jobsListJobs {
-    background:	#555;
+    /*background:	#366;*/
     margin-top: 0px;
     padding:    0;
     width:      100%;
-    height:     40%;
-}
-#jobsListJobs {
     font-family: "Lucida Console", Monaco, monospace;
+    /*height:     256px;*/
     font-size:  80%;
+    direction:  ltr;
+}
+div#jobComposer {
+    margin:	0;
+    padding:	0;
+    list-style-type: none;
+    float:	left;
+    width:	100%;
+    top:	0;
+    border-bottom: 5px solid red;
+    display:    none;
+}
+#jobComposerTitle {
+    font-family: ariel;
+    font-size:  120%;
+    font-weight: bold;
+    text-align: center;
+    background:	#555;
+    padding:    1em;
+}
+#jobItemsHolder {
+    margin:     auto;
+    transform-style: preserve-3d;
+}
+#jobsHistoryHolder {
+    border-bottom:	5px solid red;
+    float:      left;
+    width:      100%;
+    height:     50%;
+}
+#jobsHistoryTitle {
+    font-family: ariel;
+    font-size:  120%;
+    font-weight: bold;
+    text-align: center;
+    background:	#555;
+    padding:    1em;
 }
 
 .running_job {

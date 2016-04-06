@@ -2,7 +2,6 @@
 <html>
   <head>
     <link rel="stylesheet" href="static/brewable.css" type="text/css" media="screen">
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
     <script src="http://d3js.org/d3.v3.min.js"></script>
     <script type="text/javascript" src="static/status.js"></script>
 
@@ -32,35 +31,6 @@
         </div>
       </div>
       <div id="content_2">
-        Content 2
-        <div id="jobComposer">
-          <div id="jobSaveButton">
-            <a href="#">Save</a>
-          </div>
-          <div id="jobNameHolder">
-            <label for="jobName">Job Name</label>
-            <input type="text" id="jobName">
-          </div>
-          <div id="jobPreHeat">
-            <label for="selectPreHeat">Pre Heat/Cool</label>
-              <input type="checkbox" name="selectPreHeat" id="selectPreHeat"><br>
-          </div>
-          <div id="jobProfileHolder">
-            <select id="jobProfileSelector"></select>
-          </div>
-          <div id="jobDevicesHolder">
-            <div id="jobSensorsHolder">
-              <table id="jobSensorsTable" class="jobSensorsTable" align="center">
-                <caption id="jobSensorsTableCaption">Sensors</caption>
-              </table>
-            </div>
-            <div id="jobRelaysHolder">
-              <table id="jobRelaysTable" class="jobRelaysTable" align="center">
-                <caption id="jobRelaysTableCaption">Relays</caption>
-              </table>
-            </div>
-          </div>
-        </div>
         <div id="jobsListHolder">
           <div id="jobsListTitle">
             Jobs
@@ -69,7 +39,6 @@
             <ul id="jobsListButtons" class="jobsListButtons">
               <li><a href="#" id="refresh_job_button">Refresh</a></li>
               <li><a href="#" id="new_job_button">New</a></li>
-              <li><a href="#" id="edit_job_button">Edit</a></li>
               <li><a href="#" id="delete_job_button" >Delete</a></li>
               <li><a href="#" id="run_job_button" >Run</a></li>
             </ul>
@@ -77,6 +46,42 @@
           <div id="jobsListJobsHolder">
             <table id="jobsListJobs" class="jobsListJobs">
             </table>
+          </div>
+        </div>
+        <div id="jobComposer">
+          <div id="jobComposerTitle">
+            Job Composer
+          </div>
+          <div id="jobItemsHolder">
+            <div id="jobSaveButton">
+              <a href="#">Save</a>
+            </div>
+            <div id="jobNameHolder">
+              <label for="jobName">Job Name</label>
+              <input type="text" id="jobName">
+            </div>
+            <div id="jobPreHeat">
+              <label for="selectPreHeat">Pre Heat/Cool</label>
+                <input type="checkbox" name="selectPreHeat" id="selectPreHeat"><br>
+            </div>
+            <div id="jobProfileHolder">
+              <select id="jobProfileSelector"></select>
+            </div>
+              <div id="jobSensorsHolder">
+                <table id="jobSensorsTable" class="jobSensorsTable" align="center">
+                  <caption id="jobSensorsTableCaption">Sensors</caption>
+                </table>
+              </div>
+              <div id="jobRelaysHolder">
+                <table id="jobRelaysTable" class="jobRelaysTable" align="center">
+                  <caption id="jobRelaysTableCaption">Relays</caption>
+                </table>
+              </div>
+          </div>
+        </div>
+        <div id="jobsHistoryHolder">
+          <div id="jobsHistoryTitle">
+            Job History
           </div>
         </div>
       </div>
@@ -89,7 +94,6 @@
         <div id="profilesControls" class="profilesControls" style="overflow: hidden; position: relative;">
           <select id="temperatureScaleSelector" style="position: relative; width:20%; float: left;"></select>
           <button id="saveProfiles" style="position: relative; width:20%; float: left;">Save</button>
-          <button id="updateProfileGraph" style="position: relative; width:20%; float: left;">Update Graph</button>
         </div>
         <div id="profilesGraphHolder">
         profilesGraphHolder

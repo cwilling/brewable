@@ -52,7 +52,13 @@ var isNumeric = function (n) {
   return !isNaN(parseFloat(n)) && isFinite(n);
 };
 
-$(document).ready( function(){
+var domReady = function(callback) {
+  document.readyState === "interactive" ||
+  document.readyState === "complete" ? callback() : document.addEventListener("DOMContentLoaded", callback);
+};
+
+domReady( function(){
+//$(document).ready( function(){
 
   var profilesLoadedEvent = new Event('profilesLoadedEvent');
 
@@ -72,12 +78,29 @@ $(document).ready( function(){
   var newJobButton = document.getElementById("new_job_button");
   newJobButton.onclick = function () {
     console.log("NEW job button clicked");
-  }
+    var jobComposer = document.getElementById("jobComposer");
+    if ( jobComposer.style.display == 'block') {
+      jobComposer.style.display = 'none';
+    } else {
+      jobComposer.style.display = 'block';
+      console.log("YYY");
+      var c = document.getElementById("jobItemsHolder").children;
+      var itemsWidth = 0;
+      var tallest = 0;
+      for (var i=0;i<c.length;i++) {
+        console.log("child: " + c[i].id + " has width = " + parseInt(window.getComputedStyle(c[i]).width.replace(/\D+/g, '')));
+        itemsWidth += parseInt(window.getComputedStyle(c[i]).width.replace(/\D+/g, ''));
+        console.log("At child: " + c[i].id + ", itemsWidth = " + itemsWidth);
+        var itemHeight = parseInt(window.getComputedStyle(c[i]).height.replace(/\D+/g, ''));
+        if (itemHeight > tallest ) tallest = itemHeight;
+      }
+      var jobItemsHolder = document.getElementById('jobItemsHolder');
+      jobItemsHolder.style.width = (38 + itemsWidth) + 'px';
 
-  // Edit job button
-  var editJobButton = document.getElementById("edit_job_button");
-  editJobButton.onclick = function () {
-    console.log("EDIT job button clicked");
+      // Use height of tallest item to set height of jobItemsHolder
+      jobItemsHolder.style.height = (30 + tallest) + 'px';
+
+    }
   }
 
   // Delete job button
@@ -278,10 +301,6 @@ $(document).ready( function(){
   var saveProfilesButton = document.getElementById("saveProfiles");
   saveProfilesButton.onclick = function() {
     saveProfiles();
-  }
-  var updateProfileGraphButton = document.getElementById("updateProfileGraph");
-  updateProfileGraphButton.onclick = function() {
-    updateProfileGraph();
   }
 
   // Profiles temperature scale
