@@ -202,6 +202,9 @@ class GPIOProcess(multiprocessing.Process):
                             self.output_queue.put(jdata)
                         else:
                             print "No jobs running"
+                            jdata = json.dumps({'type':'running_jobs',
+                                                'data':[]})
+                            self.output_queue.put(jdata)
                     elif jmsg['type'].startswith('save_profiles'):
                         with open(PROFILE_DATA_FILE, 'w') as json_file:
                             json.dump({'profiles_data':jmsg['data']}, json_file)

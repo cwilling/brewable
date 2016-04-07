@@ -70,6 +70,7 @@ td {
     stroke-width: 0;
 }
 
+/*
 #received {
     width: 300px;
     height: 300px;
@@ -79,6 +80,21 @@ td {
 	
 
 #sent { width:	500px; }
+*/
+
+
+#no_running_jobs {
+    width:	50%;
+    height:	96px;
+    margin:     auto;
+    margin-top: 50px;
+    text-align: center;
+    border:	6px solid black;
+    display:    none;
+    padding-top: 70px;
+    font-size:  120%;
+    font-weight: bold;
+}
 
 div#live_updateHolderContainer {
     width:	100%;
@@ -109,6 +125,9 @@ div#sensor_updateHolder {
     border-left:  2px solid black;
     border-right: 2px solid black;
 }
+#sensor_update_title {
+    font-weight: bold;
+}
 #sensor_update_title:hover {
     background: #888;
     cursor:     pointer;
@@ -127,6 +146,9 @@ div#relay_updateHolder {
     margin:     auto;
     /*border-left:  2px solid black;*/
     border-right: 2px solid black;
+}
+#relay_update_title {
+    font-weight: bold;
 }
 .relay_update {
     position:   relative;

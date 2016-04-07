@@ -885,6 +885,11 @@ var runningJobsFunctions = {};
   // Generate a display listing of running jobs on front Status page
   function createRunningJobsList(data) {
     console.log("Reached createRunningJobsList(): " + data.length);
+    if ( data.length < 1 ) {
+      document.getElementById("no_running_jobs").style.display = 'block';
+    } else {
+      document.getElementById("no_running_jobs").style.display = 'none';
+    }
     var runningJobsHolder = document.getElementById("running_jobsHolder");
 
     // Clean out any existing stuff in the running_jobsHolder div.
