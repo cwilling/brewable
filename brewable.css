@@ -1,3 +1,4 @@
+
 title.main {
     text-align: center;
     font-family: ariel;
@@ -55,6 +56,13 @@ td {
     fill: rgb(100, 100, 100);
 }
 
+/*.title_text text {*/
+.title_Text {
+    font-size: 130%;
+    text-decoration: underline;
+    fill: rgb(0, 0, 0);
+    font-weight: bold;
+}
 .axistext text {
     font-size: 125%;
     text-decoration: underline;
@@ -70,31 +78,6 @@ td {
     stroke-width: 0;
 }
 
-/*
-#received {
-    width: 300px;
-    height: 300px;
-    border: 1px solid #dedede;
-    overflow-y: scroll;
-}
-	
-
-#sent { width:	500px; }
-*/
-
-
-#no_running_jobs {
-    width:	50%;
-    height:	96px;
-    margin:     auto;
-    margin-top: 50px;
-    text-align: center;
-    border:	6px solid black;
-    display:    none;
-    padding-top: 70px;
-    font-size:  120%;
-    font-weight: bold;
-}
 
 div#live_updateHolderContainer {
     width:	100%;
@@ -227,6 +210,57 @@ div#content_4 {
     overflow:   auto;
 }
 
+
+/* running jobs */
+#no_running_jobs {
+    width:	50%;
+    height:	96px;
+    margin:     auto;
+    margin-top: 50px;
+    text-align: center;
+    border:	6px solid black;
+    display:    none;
+    padding-top: 70px;
+    font-size:  120%;
+    font-weight: bold;
+    background-color: bisque;
+    color:      black;
+}
+
+.running_job {
+    background-color: bisque;
+}
+
+.context-menu {
+    position:	absolute;
+    display:	none;
+    /*background-color: #f2f2f2; */
+    background:	#c99;
+    border-radius: 4px;
+    font-family: Arial, sans-serif;
+    font-size:	16px;
+    min-width:	150px;
+    /*border: 1px solid #d4d4d4;*/
+    color:      white;
+    border:	1px solid white;
+    z-index:    1200;
+}
+
+.context-menu ul {
+    list-style-type: none;
+    margin: 4px 0px;
+    padding: 0px;
+    cursor: default;
+}
+
+.context-menu ul li {
+    padding: 4px 16px;
+}
+
+.context-menu ul li:hover {
+    background-color: #4677f8;
+    color: #fefefe;
+}
 
 #jobSaveButton {
     float:	left;
@@ -434,10 +468,6 @@ div#jobComposer {
     text-align: center;
     background:	#555;
     padding:    1em;
-}
-
-.running_job {
-    background-color: bisque;
 }
 
 /* ex:set ai shiftwidth=4 inputtab=spaces smarttab noautotab: */

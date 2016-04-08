@@ -932,6 +932,50 @@ var runningJobsFunctions = {};
                         .attr("height", runningJobsGraphHeight + runningJobsGraphMargin.top + runningJobsGraphMargin.bottom)
                         .style("border", "1px solid black")
 
+      // Popup menu
+      var menu = [{
+        title: 'Item #1',
+        action: function() {
+          console.log('menu item #1');
+        }
+      }, {
+        title: 'Item #2',
+        action: function() {
+          console.log('menu item #2');
+        }
+      }];
+
+      d3.select('#running_job_' + job.jobName).on("contextmenu", function(d,i) {
+        // create the div element that will hold the context menu
+        d3.selectAll('.context-menu').data([1])
+          .enter()
+          .append('div')
+          .attr('class', 'context-menu');
+
+          //close menu
+          d3.select('body').on('click.context-menu', function() {
+            d3.select('.context-menu').style('display', 'none');
+          });
+
+          // this gets executed when a contextmenu event occurs
+          d3.selectAll('.context-menu')
+            .html('')
+            .append('ul')
+            .selectAll('li')
+            .data(menu).enter()
+            .append('li')
+            .on('click' , function(d) { console.log('XXXXX ' + d); return d; })
+            .text(function(d) { return d.title; });
+          d3.select('.context-menu').style('display', 'none');
+
+          // show the context menu
+          d3.select('.context-menu')
+            .style('left', (d3.event.pageX - 2) + 'px')
+            .style('top', (d3.event.pageY - 2) + 'px')
+            .style('display', 'block');
+          d3.event.preventDefault();
+      });
+
       // Collect profile data into local array (lineData[])
       var profileData = job.jobProfile
       var nextStep = 0.0;
@@ -1017,12 +1061,13 @@ var runningJobsFunctions = {};
                                 .style("text-anchor", "middle")
                                 .text("Elapsed Time");
       var titletext = runningJobsGraphHolder.append("g")
-                            .attr("id", "xaxistext_" + job.jobName)
-                            .attr("class", "axistext")
+                            .attr("id", "title_text_" + job.jobName)
+                            .attr("class", "title_text")
                             .append("text")
                             .attr("transform",
                                 "translate(" + (runningJobsGraphWidth - runningJobsGraphMargin.left)/2 + "," + runningJobsGraphMargin.top + ")")
                                 .attr("dy", "-1em")
+                                .attr("class", "title_Text")
                                 .style("text-anchor", "middle")
                                 .text("Job: " + job.jobName);
 
@@ -1047,6 +1092,7 @@ var runningJobsFunctions = {};
                                 .attr("stroke", "gray")
                                 .attr("stroke-width", 2)
                                 .attr("fill", "none");
+
 
       // Send a dummy update to trigger immediate redraw of temperature trace
       updateRunningJob({'jobName':job.jobName,'type':'dummy'});
