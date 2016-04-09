@@ -3,6 +3,7 @@ import multiprocessing
 import json
 import copy
 import os, errno
+import weakref
 
 # Input temperature sensor - choose one of these to be 'st'
 #import systemtemp as st
@@ -99,7 +100,7 @@ class GPIOProcess(multiprocessing.Process):
 
 
         # Now check the relays
-        self.relay_test()
+        #self.relay_test()
 
         # Start with all relays off
         self.relay.ALLOFF()
@@ -147,7 +148,6 @@ class GPIOProcess(multiprocessing.Process):
                         # First check that this job isn't already running
                         isRunning = False
                         for job in self.runningJobs:
-                            print "AAAA ", job.name()
                             if job.name() == self.jobs[jmsg['data']['index']]['name']:
                                 print "Job %s already running" % job.name()
                                 isRunning = True
@@ -205,6 +205,13 @@ class GPIOProcess(multiprocessing.Process):
                             jdata = json.dumps({'type':'running_jobs',
                                                 'data':[]})
                             self.output_queue.put(jdata)
+                    elif jmsg['type'].startswith('stop_running_job'):
+                        print "Rcvd request to STOP RUNNING JOB"
+                        for job in self.runningJobs:
+                            print "AAAA ", job.name()
+                            if job.name() == jmsg['data']['jobName']:
+                                print "Job %s running - ready to stop" % job.name()
+                                job.stop()
                     elif jmsg['type'].startswith('save_profiles'):
                         with open(PROFILE_DATA_FILE, 'w') as json_file:
                             json.dump({'profiles_data':jmsg['data']}, json_file)
@@ -289,7 +296,7 @@ class GPIOProcess(multiprocessing.Process):
 
     def setupJobRun(self, jobIndex):
         try:
-            self.runningJobs.append(JobProcessor(copy.copy(self.jobs[jobIndex]),self.output_queue))
+            self.runningJobs.append(JobProcessor(self.runningJobs,copy.copy(self.jobs[jobIndex]),self.output_queue))
             return True
         except:
             print "JOB CREATE FAIL!"
@@ -332,7 +339,10 @@ class GPIOProcess(multiprocessing.Process):
 
 class JobProcessor(GPIOProcess):
 
-    def __init__(self, rawJobInfo, output_queue):
+    def __init__(self, runningJobs, rawJobInfo, output_queue):
+        #self.parent     = weakref.ref(parent)
+        #self.parent     = parent
+        self.runningJobs = runningJobs
         self.output_queue = output_queue
         self.jobName    = rawJobInfo['name']
         self.jobPreheat = rawJobInfo['preheat']
@@ -499,6 +509,19 @@ class JobProcessor(GPIOProcess):
                 job_status[relay] = 'OFF'
 
         return job_status
+
+    def stop(self):
+        print "Stopping job: ", self.jobName
+        try:
+            for job in self.runningJobs:
+                print "---- ", job.name()
+            for i in range(len(self.runningJobs)):
+                if self.runningJobs[i].name() == self.jobName:
+                    print "FOUND job to stop running"
+                    del self.runningJobs[i]
+                    break
+        except Exception as e:
+            print e
 
     def process(self):
         accumulatedTime = 0.0

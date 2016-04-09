@@ -941,6 +941,8 @@ var runningJobsFunctions = {};
         title: 'STOP job',
         action: function(elm, data, index) {
           console.log('menu item #1 from ' + elm.id + " " + data + " " + index);
+          msgobj = {type:'stop_running_job', data:{'jobName':elm.id.replace('running_job_', '')}};
+          sendMessage({data:JSON.stringify(msgobj)});
         }
       }, {
         title: 'SAVE job',
