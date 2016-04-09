@@ -41,7 +41,7 @@ class Relay():
         gpio.setmode(PIN_NUMBERING_MODE);
         gpio.setup(RelayPins.values(), gpio.OUT)
         self.delayset = []
-        for i in range(len(RelayPins)):
+        for i in range(RELAY_COUNT):
             self.delayset.append(copy.copy(DEFAULT_DELAYSET))
         print "Relay setup done"
 
@@ -103,17 +103,18 @@ class Relay():
         self.setDelay(id)
 
     def state(self):
+        return list((gpio.input(RelayPins['PIN_RELAY_{}'.format(i+1)]),self.isDelayed(i+1)) for i in range(self.device_count()))
+
+    def state_ORIG(self):
         mystate = []
         for dev in range(self.device_count()):
             this_dev = RelayPins['PIN_RELAY_{}'.format(dev+1)]
-            #print "dev #", this_dev
             mystate.append(gpio.input(this_dev))
-        #print "state: ", mystate
         return mystate
 
 
     def isOn(self, id):
-        if self.state()[id-1] == 0:
+        if self.state()[id-1][0] == 0:
             #print '{} is ON'.format(id)
             return True
         else:
@@ -130,7 +131,7 @@ class Relay():
 
     def unsetDelay(self, id):
         self.delayset[id-1]['isset'] = False
-        print "Relay %d delay now unset" % id
+        #print "Relay %d delay now unset" % id
 
 
 if __name__=="__main__":

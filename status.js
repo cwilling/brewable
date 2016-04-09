@@ -1247,10 +1247,18 @@ var runningJobsFunctions = {};
         };
         relay_updateHolder.appendChild(arelay);
       }
-      if ( relay_state[i] ) {
+      // relay_state is a list of tuples each with 2 True/False entries
+      // 1st True/False indicates whether relay is On/Off
+      if ( relay_state[i][0] ) {
         document.getElementById(elementName).textContent = 'ON';
       } else {
         document.getElementById(elementName).textContent = 'OFF';
+      }
+      // 2nd True/False indicates whether relay switching is Delayed/notDelayed
+      if ( relay_state[i][1] ) {
+        document.getElementById(elementName).style.background = '#777';
+      } else {
+        document.getElementById(elementName).style.background = '';
       }
     }
     // Set width of bounding box

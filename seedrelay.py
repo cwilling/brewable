@@ -10,6 +10,8 @@ try:
 except:
     _TESTING_ = False
 
+RELAY_COUNT = 4
+
 bus = smbus.SMBus(1)    # 0 = /dev/i2c-0 (port I2C0), 1 = /dev/i2c-1 (port I2C1)
 
 # The default delay is 300 seconds (5 mins)
@@ -26,7 +28,7 @@ class Relay():
         self.DEVICE_REG_DATA = 0xff
         bus.write_byte_data(self.DEVICE_ADDRESS, self.DEVICE_REG_MODE1, self.DEVICE_REG_DATA)
         self.delayset = []
-        for i in range(4):
+        for i in range(RELAY_COUNT):
             self.delayset.append(copy.copy(DEFAULT_DELAYSET))
         print "Relay setup done"
              
@@ -78,7 +80,7 @@ class Relay():
         bus.write_byte_data(self.DEVICE_ADDRESS, self.DEVICE_REG_MODE1, self.DEVICE_REG_DATA)
 
     def device_count(self):
-        return 4
+        return RELAY_COUNT
 
     def ON(self, id):
         if self.isDelayed(id):
@@ -107,10 +109,13 @@ class Relay():
         self.setDelay(id)
 
     def state(self):
+        return list((self.isOn(i+1),self.isDelayed(i+1)) for i in range(RELAY_COUNT))
+
+    def state_ORIG(self):
         return bus.read_byte_data(self.DEVICE_ADDRESS, self.DEVICE_REG_MODE1)
 
     def isOn(self, id):
-        rstate = self.state()
+        rstate = bus.read_byte_data(self.DEVICE_ADDRESS, self.DEVICE_REG_MODE1)
         if rstate & (0x1<<(id-1)) == 0:
             return True
         else:

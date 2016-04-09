@@ -99,7 +99,7 @@ class GPIOProcess(multiprocessing.Process):
 
 
         # Now check the relays
-        #self.relay_test()
+        self.relay_test()
 
         # Start with all relays off
         self.relay.ALLOFF()
@@ -257,7 +257,7 @@ class GPIOProcess(multiprocessing.Process):
 
             # Data/info from relay device
             try:
-                relay_state = list(self.relay.isOn(i+1) for i in range(len(self.relay.state())))
+                relay_state = list((self.relay.isOn(i+1),self.relay.isDelayed(i+1)) for i in range(self.relay.device_count()))
             except:
                 relay_state = []
             #print "relay_state: ", relay_state
@@ -492,7 +492,6 @@ class JobProcessor(GPIOProcess):
         for sensor in self.jobSensors:
             job_status['sensors'].append(sensor)
             job_status[sensor] = st.get_temp(sensor)
-        relay_state = list(self.relay.isOn(i+1) for i in range(len(self.relay.state())))
         for relay in self.jobRelays:
             if self.relay.isOn(int(relay.split()[1])):
                 job_status[relay] = 'ON'
