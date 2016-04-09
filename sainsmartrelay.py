@@ -4,6 +4,13 @@ import os, sys
 import RPi.GPIO as gpio
 import signal
 import time
+import copy
+from threading import Timer
+
+try:
+    _TESTING_ = os.environ['TESTING']
+except:
+    _TESTING_ = False
 
 PIN_NUMBERING_MODE = gpio.BCM
 
@@ -19,6 +26,11 @@ RELAY_COUNT = len(RelayPins)
 RELAY_ON = False;
 RELAY_OFF = (not RELAY_ON);
 
+# The default delay is 300 seconds (5 mins)
+if _TESTING_:
+    DEFAULT_DELAYSET = {'duration':10, 'isset':False}
+else:
+    DEFAULT_DELAYSET = {'duration':300, 'isset':False}
 
 class Relay():
     def __init__(self):
@@ -28,6 +40,9 @@ class Relay():
         print "RPI INFO: ", self.rpi_info
         gpio.setmode(PIN_NUMBERING_MODE);
         gpio.setup(RelayPins.values(), gpio.OUT)
+        self.delayset = []
+        for i in range(len(RelayPins)):
+            self.delayset.append(copy.copy(DEFAULT_DELAYSET))
         print "Relay setup done"
 
     def ALLON(self):
@@ -75,10 +90,17 @@ class Relay():
         return RELAY_COUNT
 
     def ON(self, id):
+        if self.isDelayed(id):
+            return
         gpio.output(RelayPins['PIN_RELAY_{}'.format(id)], RELAY_ON);
+        self.setDelay(id)
+
 
     def OFF(self, id):
+        if self.isDelayed(id):
+            return
         gpio.output(RelayPins['PIN_RELAY_{}'.format(id)], RELAY_OFF);
+        self.setDelay(id)
 
     def state(self):
         mystate = []
@@ -97,6 +119,18 @@ class Relay():
         else:
             #print '{} is OFF'.format(id)
             return False
+
+    def isDelayed(self, id):
+        return self.delayset[id-1]['isset']
+
+    def setDelay(self, id):
+        Timer(self.delayset[id-1]['duration'], self.unsetDelay, [id]).start()
+        self.delayset[id-1]['isset'] = True
+        #print "Relay %d delayed for %s" % (id, self.delayset[id-1]['duration'])
+
+    def unsetDelay(self, id):
+        self.delayset[id-1]['isset'] = False
+        print "Relay %d delay now unset" % id
 
 
 if __name__=="__main__":

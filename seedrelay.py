@@ -2,9 +2,21 @@ import time
 import smbus
 import signal
 import sys
+import copy
+from threading import Timer
+
+try:
+    _TESTING_ = os.environ['TESTING']
+except:
+    _TESTING_ = False
 
 bus = smbus.SMBus(1)    # 0 = /dev/i2c-0 (port I2C0), 1 = /dev/i2c-1 (port I2C1)
 
+# The default delay is 300 seconds (5 mins)
+if _TESTING_:
+    DEFAULT_DELAYSET = {'duration':10, 'isset':False}
+else:
+    DEFAULT_DELAYSET = {'duration':300, 'isset':False}
 
 class Relay():	
     global bus
@@ -13,6 +25,10 @@ class Relay():
         self.DEVICE_REG_MODE1 = 0x06
         self.DEVICE_REG_DATA = 0xff
         bus.write_byte_data(self.DEVICE_ADDRESS, self.DEVICE_REG_MODE1, self.DEVICE_REG_DATA)
+        self.delayset = []
+        for i in range(4):
+            self.delayset.append(copy.copy(DEFAULT_DELAYSET))
+        print "Relay setup done"
              
     def ON_1(self):
         print 'ON_1...'
@@ -65,6 +81,8 @@ class Relay():
         return 4
 
     def ON(self, id):
+        if self.isDelayed(id):
+            return
         if id == 1:
             self.ON_1()
         elif id == 2:
@@ -73,8 +91,11 @@ class Relay():
             self.ON_3()
         elif id == 4:
             self.ON_4()
+        self.setDelay(id)
 
     def OFF(self, id):
+        if self.isDelayed(id):
+            return
         if id == 1:
             self.OFF_1()
         elif id == 2:
@@ -83,6 +104,7 @@ class Relay():
             self.OFF_3()
         elif id == 4:
             self.OFF_4()
+        self.setDelay(id)
 
     def state(self):
         return bus.read_byte_data(self.DEVICE_ADDRESS, self.DEVICE_REG_MODE1)
@@ -93,6 +115,19 @@ class Relay():
             return True
         else:
             return False
+
+    def isDelayed(self, id):
+        return self.delayset[id-1]['isset']
+
+    def setDelay(self, id):
+        Timer(self.delayset[id-1]['duration'], self.unsetDelay, [id]).start()
+        self.delayset[id-1]['isset'] = True
+        #print "Relay %d delayed for %s" % (id, self.delayset[id-1]['duration'])
+
+    def unsetDelay(self, id):
+        self.delayset[id-1]['isset'] = False
+        print "Relay %d delay now unset" % id
+
 
 if __name__=="__main__":
     relay = Relay()

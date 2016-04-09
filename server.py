@@ -79,7 +79,7 @@ def checkQueue():
 		message = output_queue.get()
 		for c in clients:
 			c.write_message(message)
-			print "YYY " + message
+			#print "YYY " + message
 
 
 if __name__ == '__main__':
