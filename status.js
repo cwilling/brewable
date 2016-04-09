@@ -138,6 +138,10 @@ domReady( function(){
       // Request job run
       msgobj = {type:'run_job', data:{ index: jobIndex }};
       sendMessage({data:JSON.stringify(msgobj)});
+
+      // Now go to status page to view job progress
+      document.getElementById("no_running_jobs").innerHTML = "Waiting for job " + jobName + " to start";
+      location.href = "#content_1";
     } else {
       return;
     }
@@ -934,38 +938,45 @@ var runningJobsFunctions = {};
 
       // Popup menu
       var menu = [{
-        title: 'Item #1',
-        action: function() {
-          console.log('menu item #1');
+        title: 'STOP job',
+        action: function(elm, data, index) {
+          console.log('menu item #1 from ' + elm.id + " " + data + " " + index);
         }
       }, {
-        title: 'Item #2',
-        action: function() {
-          console.log('menu item #2');
+        title: 'SAVE job',
+        action: function(elm, data, index) {
+          console.log('menu item #2 from ' + elm.id + " " + data.title + " " + index);
         }
       }];
 
-      d3.select('#running_job_' + job.jobName).on("contextmenu", function(d,i) {
+      d3.select('#running_job_' + job.jobName)
+        .on("contextmenu", function(data, index) {
+        var elm = this;
+
         // create the div element that will hold the context menu
         d3.selectAll('.context-menu').data([1])
           .enter()
           .append('div')
           .attr('class', 'context-menu');
 
-          //close menu
+          // an ordinary click anywhere closes menu
           d3.select('body').on('click.context-menu', function() {
             d3.select('.context-menu').style('display', 'none');
           });
 
-          // this gets executed when a contextmenu event occurs
+          // this is executed when a contextmenu event occurs
           d3.selectAll('.context-menu')
             .html('')
             .append('ul')
             .selectAll('li')
             .data(menu).enter()
             .append('li')
-            .on('click' , function(d) { console.log('XXXXX ' + d); return d; })
-            .text(function(d) { return d.title; });
+            .on('click', function(d) {
+                            console.log('XXXXX ' + d.title);
+                            d.action(elm, d, i);
+                            d3.select('.context-menu').style('display', 'none');
+                            return d; })
+            .text(function(d) {return d.title;});
           d3.select('.context-menu').style('display', 'none');
 
           // show the context menu
