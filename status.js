@@ -70,7 +70,7 @@ domReady( function(){
     console.log("REFRESH job button clicked");
 
     // Request job data
-    msgobj = {type:'load_jobs', data:[]};
+    var msgobj = {type:'load_jobs', data:[]};
     sendMessage({data:JSON.stringify(msgobj)});
   }
 
@@ -114,7 +114,7 @@ domReady( function(){
 
     // Request job deletion
     //var jobData = { index: jobIndex };
-    msgobj = {type:'delete_job', data:{ index: jobIndex }};
+    var msgobj = {type:'delete_job', data:{ index: jobIndex }};
     sendMessage({data:JSON.stringify(msgobj)});
   }
 
@@ -136,7 +136,7 @@ domReady( function(){
       //alert("You pressed OK");
 
       // Request job run
-      msgobj = {type:'run_job', data:{ index: jobIndex }};
+      var msgobj = {type:'run_job', data:{ index: jobIndex }};
       sendMessage({data:JSON.stringify(msgobj)});
 
       // Now go to status page to view job progress
@@ -166,7 +166,7 @@ domReady( function(){
     updateProfileGraph();
 
     // Since profiles are available, ask for available sensors & relays too
-    msgobj = {type:'list_sensors', data:[]};
+    var msgobj = {type:'list_sensors', data:[]};
     sendMessage({data:JSON.stringify(msgobj)});
 
     msgobj = {type:'list_relays', data:[]};
@@ -677,7 +677,7 @@ domReady( function(){
     console.log("sss connected"); 
 
     // Load any running jobs from server; to show on Status page
-    msgobj = {type:'load_running_jobs', data:[]};
+    var msgobj = {type:'load_running_jobs', data:[]};
     sendMessage({data:JSON.stringify(msgobj)});
 
     // Request profiles data
@@ -726,6 +726,10 @@ domReady( function(){
         console.log('HEARTBEAT: ' + jmsg.data);
       } else if (jmsg.type === 'live_update' ) {
         add_live_data(jmsg.sensor_state, jmsg.relay_state);
+      } else if (jmsg.type === 'stopped_job' ) {
+        jobStopped(jmsg.data);
+      } else if (jmsg.type === 'removed_job' ) {
+        jobRemoved(jmsg.data);
       } else {
         console.log('Unknown json messsage type: ' + jmsg.type);
       }
@@ -937,20 +941,47 @@ var runningJobsFunctions = {};
                         .style("border", "1px solid black")
 
       // Popup menu
-      var menu = [{
+      var runningJobPopupMenu = [{
         title: 'STOP job',
         action: function(elm, data, index) {
-          console.log('menu item #1 from ' + elm.id + " " + data + " " + index);
-          msgobj = {type:'stop_running_job', data:{'jobName':elm.id.replace('running_job_', '')}};
+          console.log('menu item #1 from ' + elm.id + " " + data.title + " " + index);
+          //var nodeName = elm.id.replace('running_job_', '');
+          var nodeName = elm.id.replace('title_text_', '');
+          var msgobj = {type:'stop_running_job', data:{'jobName':nodeName}};
           sendMessage({data:JSON.stringify(msgobj)});
+
+          // Update status
+          d3.select('#title_text_' + nodeName).text("Job: " + nodeName + " (stopping)");
+        }
+      }, {
+        title: 'REMOVE job',
+        action: function(elm, data, index) {
+          console.log('menu item #2 from ' + elm.id + " " + data.title + " " + index);
+          //var nodeName = elm.id.replace('running_job_', '');
+          var nodeName = elm.id.replace('title_text_', '');
+          var confirmRemove = confirm("Remove job " + nodeName + "?");
+          if ( confirmRemove == true ) {
+            // OK button pressed
+            var msgobj = {type:'remove_running_job', data:{'jobName':nodeName}};
+            sendMessage({data:JSON.stringify(msgobj)});
+            // Update status
+            d3.select('#title_text_' + nodeName).text("Job: " + nodeName + " (removing)");
+          }
         }
       }, {
         title: 'SAVE job',
         action: function(elm, data, index) {
-          console.log('menu item #2 from ' + elm.id + " " + data.title + " " + index);
+          console.log('menu item #3 from ' + elm.id + " " + data.title + " " + index);
+          //var nodeName = elm.id.replace('running_job_', '');
+          var nodeName = elm.id.replace('title_text_', '');
+          var msgobj = {type:'save_running_job', data:{'jobName':nodeName}};
+          sendMessage({data:JSON.stringify(msgobj)});
+          // Update status
+          d3.select('#title_text_' + nodeName).text("Job: " + nodeName + " (saving)");
         }
       }];
 
+/*
       d3.select('#running_job_' + job.jobName)
         .on("contextmenu", function(data, index) {
         var elm = this;
@@ -987,7 +1018,11 @@ var runningJobsFunctions = {};
             .style('top', (d3.event.pageY - 2) + 'px')
             .style('display', 'block');
           d3.event.preventDefault();
+
+        //d3.event.stopPropagation();
       });
+*/
+
 
       // Collect profile data into local array (lineData[])
       var profileData = job.jobProfile
@@ -1073,15 +1108,60 @@ var runningJobsFunctions = {};
                                 .attr("dy", "-0.35em")
                                 .style("text-anchor", "middle")
                                 .text("Elapsed Time");
-      var titletext = runningJobsGraphHolder.append("g")
-                            .attr("id", "title_text_" + job.jobName)
-                            .attr("class", "title_text")
+
+/*
+                                .on("click", function() {
+                                  onRunningJobTitleClick(this.id)
+                                }
+*/
+      var titletext = runningJobsGraphHolder
                             .append("text")
                             .attr("transform",
                                 "translate(" + (runningJobsGraphWidth - runningJobsGraphMargin.left)/2 + "," + runningJobsGraphMargin.top + ")")
                                 .attr("dy", "-1em")
+                                .attr("id", "title_text_" + job.jobName)
                                 .attr("class", "title_Text")
                                 .style("text-anchor", "middle")
+                                .on("click", function(data, index) {
+                                var elm = this;
+
+                                // create the div element that will hold the context menu
+                                d3.selectAll('.context-menu').data([1])
+                                  .enter()
+                                  .append('div')
+                                  .attr('class', 'context-menu');
+
+                                  // an ordinary click anywhere closes menu
+                                  d3.select('body').on('click.context-menu', function() {
+                                    d3.select('.context-menu').style('display', 'none');
+                                  });
+
+                                  // this is executed when a contextmenu event occurs
+                                  d3.selectAll('.context-menu')
+                                    .html('')
+                                    .append('ul')
+                                    .selectAll('li')
+                                    .data(runningJobPopupMenu).enter()
+                                    .append('li')
+                                    .on('click',function(d) {
+                                                  console.log('popup selected: ' + d.title);
+                                                  d.action(elm, d, i);
+                                                  d3.select('.context-menu')
+                                                    .style('display', 'none');
+                                                  return d;
+                                                })
+                                    .text(function(d) {return d.title;});
+                                  d3.select('.context-menu').style('display', 'none');
+
+                                  // show the context menu
+                                  d3.select('.context-menu')
+                                    .style('left', (d3.event.pageX - 2) + 'px')
+                                    .style('top', (d3.event.pageY - 2) + 'px')
+                                    .style('display', 'block');
+                                  d3.event.preventDefault();
+
+                                  d3.event.stopPropagation();
+                                })
                                 .text("Job: " + job.jobName);
 
 
@@ -1256,6 +1336,7 @@ var runningJobsFunctions = {};
       } else {
         document.getElementById(elementName).textContent = 'OFF';
       }
+      //console.log("Relay state of " + i + ": " + relay_state[i]);
       // 2nd True/False indicates whether relay switching is Delayed/notDelayed
       if ( relay_state[i][1] ) {
         document.getElementById(elementName).style.background = '#777';
@@ -1278,7 +1359,39 @@ var runningJobsFunctions = {};
     console.log("Pressed button " + ev.button);
   }
 
+  function jobStopped(data) {
+    var jobName = data['jobName']
+    console.log("Received stopped_job message " + jobName);
+    d3.select('#title_text_' + jobName).text("Job: " + jobName + " (stopped)");
+  }
 
+  function jobRemoved(data) {
+    var jobName = data['jobName']
+    console.log("Received removed_job message " + jobName);
+    d3.select('#title_text_' + jobName).text("Job: " + jobName + " (removed)");
+
+    var jobDiv = document.getElementById(jobName);
+    while (jobDiv.firstChild) {
+      jobDiv.removeChild(jobDiv.firstChild);
+    }
+    jobDiv.remove();
+
+    // If no more running jobs, reinstate "No running jobs" status
+    var running_jobsHolder = document.getElementById('running_jobsHolder');
+    if ( running_jobsHolder.children.length == 0 ) {
+      var no_running_jobs = document.getElementById("no_running_jobs");
+      no_running_jobs.innerHTML = "No jobs are currently running";
+      no_running_jobs.style.display = 'block';
+    }
+
+  }
+
+  function onRunningJobTitleClick(id) {
+    var textName = id.replace('title_text_', '');
+    console.log("CLICK " + textName);
+
+      //d3.event.stopPropagation();
+  }
 
 });
 

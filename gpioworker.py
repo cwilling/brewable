@@ -53,6 +53,7 @@ class GPIOProcess(multiprocessing.Process):
         self.jobs = []
         # List of JobProcessor instances
         self.runningJobs = []
+        self.stoppedJobs = []
 
     def run(self):
 
@@ -207,11 +208,53 @@ class GPIOProcess(multiprocessing.Process):
                             self.output_queue.put(jdata)
                     elif jmsg['type'].startswith('stop_running_job'):
                         print "Rcvd request to STOP RUNNING JOB"
+                        job_found = False
                         for job in self.runningJobs:
-                            print "AAAA ", job.name()
                             if job.name() == jmsg['data']['jobName']:
-                                print "Job %s running - ready to stop" % job.name()
+                                job_found = True
+                                #print "Job %s running - ready to stop" % job.name()
+                                while job.processing:
+                                    # Wait for any current processing to complete
+                                    print "spinning ..."
+                                    time.sleep(0.05)
                                 job.stop()
+                                break
+                        if not job_found:
+                            # Perhaps the job was already stopped?
+                            for job in self.stoppedJobs:
+                                if job.name() == jmsg['data']['jobName']:
+                                    #print "Job %s already stopped" % job.name()
+                                    jdata = json.dumps({'type':'stopped_job',
+                                                        'data':{'jobName':job.name()}})
+                                    self.output_queue.put(jdata)
+                                    break
+                    elif jmsg['type'].startswith('remove_running_job'):
+                        print "Rcvd request to REMOVE JOB"
+                        jobName = jmsg['data']['jobName']
+                        # Unsure whether running or stopped so just try stopping it first
+                        for job in self.runningJobs:
+                            if job.name() == jobName:
+                                while job.processing:
+                                    # Wait for any current processing to complete
+                                    print "spinning ..."
+                                    time.sleep(0.05)
+                                job.stop()
+                                print "Job %s was running - MOVED to stoppedJobs" % jobName
+                                break
+                        # Whether previously running or not, it should now be in stoppedJobs
+                        job_found = False
+                        for i in range(len(self.stoppedJobs)):
+                            if self.stoppedJobs[i].name() == jobName:
+                                job_found = True
+                                del self.stoppedJobs[i]
+                                print "Job %s removed from stoppedJobs" % jobName
+                                jdata = json.dumps({'type':'removed_job',
+                                                    'data':{'jobName':jobName}})
+                                self.output_queue.put(jdata)
+                                break
+                        if not job_found:
+                            # This shouldn't be possible
+                            print "Job to remove NOT FOUND! ", jobName
                     elif jmsg['type'].startswith('save_profiles'):
                         with open(PROFILE_DATA_FILE, 'w') as json_file:
                             json.dump({'profiles_data':jmsg['data']}, json_file)
@@ -256,24 +299,9 @@ class GPIOProcess(multiprocessing.Process):
 
             # Data/info from sensor device
             data = "generic %d" % count
-            try:
-                sensor_state = list({'sensorId':sensor.getId(),'temperature':st.get_temp(sensor.getId())} for sensor in self.sensorDevices)
-            except:
-                sensor_state = []
-            #print "sensor_state: ", sensor_state
 
-            # Data/info from relay device
-            try:
-                relay_state = list((self.relay.isOn(i+1),self.relay.isDelayed(i+1)) for i in range(self.relay.device_count()))
-            except:
-                relay_state = []
-            #print "relay_state: ", relay_state
-
-            # Send live_update (= sensor_state + relay_state)
-            jdata = json.dumps({'type':'live_update',
-                                'sensor_state':sensor_state,
-                                'relay_state':relay_state})
-            self.output_queue.put(jdata)
+            # Send update of sensors & relay state
+            self.liveUpdate()
 
             # Send a heartbeat (in absence of any sensors)
             if len(self.sensorDevices) == 0:
@@ -294,9 +322,31 @@ class GPIOProcess(multiprocessing.Process):
             #time.sleep(1)
 
 
+    def liveUpdate(self):
+        # Data/info from sensor devices
+        try:
+            sensor_state = list({'sensorId':sensor.getId(),'temperature':st.get_temp(sensor.getId())} for sensor in self.sensorDevices)
+        except:
+            sensor_state = []
+        #print "sensor_state: ", sensor_state
+
+        # Data/info from relay device
+        try:
+            relay_state = list((self.relay.isOn(i+1),self.relay.isDelayed(i+1)) for i in range(self.relay.device_count()))
+        except:
+            relay_state = []
+        #print "relay_state: ", relay_state
+
+        # Send live_update (= sensor_state + relay_state)
+        jdata = json.dumps({'type':'live_update',
+                            'sensor_state':sensor_state,
+                            'relay_state':relay_state})
+        self.output_queue.put(jdata)
+        #print "relay_state jdata: ", jdata
+
     def setupJobRun(self, jobIndex):
         try:
-            self.runningJobs.append(JobProcessor(self.runningJobs,copy.copy(self.jobs[jobIndex]),self.output_queue))
+            self.runningJobs.append(JobProcessor(copy.copy(self.jobs[jobIndex]),self.output_queue,self.runningJobs,self.stoppedJobs,self.relay,self.sensorDevices))
             return True
         except:
             print "JOB CREATE FAIL!"
@@ -322,14 +372,16 @@ class GPIOProcess(multiprocessing.Process):
         else:
             print "relay %d is off; switching on" % channel
             self.relay.ON(channel)
-        print "STATE: ", self.relay.state()
-        if self.relay.isOn(channel):
-            data = 'relay ' + str(channel) + ' now ON'
-        else:
-            data = 'relay ' + str(channel) + ' now OFF'
-        jdata = json.dumps({'type':'info',
-                            'data':data})
-        self.output_queue.put(jdata)
+        self.liveUpdate()
+        #print "STATE: ", self.relay.state()
+        #if self.relay.isOn(channel):
+        #    data = 'relay ' + str(channel) + ' now ON'
+        #else:
+        #    data = 'relay ' + str(channel) + ' now OFF'
+        #jdata = json.dumps({'type':'info',
+        #                    'data':data})
+        #self.output_queue.put(jdata)
+        #print "STATE: ", jdata
 
     def run_command(self, command):
         if command[0].startswith('toggle_relay'):
@@ -339,10 +391,13 @@ class GPIOProcess(multiprocessing.Process):
 
 class JobProcessor(GPIOProcess):
 
-    def __init__(self, runningJobs, rawJobInfo, output_queue):
+    #def __init__(self, runningJobs, rawJobInfo, output_queue):
+    def __init__(self, rawJobInfo, output_queue, runningJobs, stoppedJobs, relay, sensorDevices):
         #self.parent     = weakref.ref(parent)
         #self.parent     = parent
+        #self.runningJobs = runningJobs
         self.runningJobs = runningJobs
+        self.stoppedJobs = stoppedJobs
         self.output_queue = output_queue
         self.jobName    = rawJobInfo['name']
         self.jobPreheat = rawJobInfo['preheat']
@@ -350,9 +405,11 @@ class JobProcessor(GPIOProcess):
         self.jobSensors = self.validateSensors(rawJobInfo['sensors'])
         self.jobRelays  = rawJobInfo['relays']
         self.startTime  = time.time()
+        self.instanceId = time.strftime("%Y%m%d_%H%M%S",time.localtime(self.startTime))
         self.historyFileName = (self.name()  + "-"
-                                            + time.strftime("%Y%m%d_%H%M%S")
+                                            + self.instanceId
                                             + ".txt")
+        self.processing  = False
 
         # In future, make this settable in the job itself
         # e.g.self.jobProcessType = rawJobInfo['process_type']
@@ -368,7 +425,8 @@ class JobProcessor(GPIOProcess):
             self.processType = "SIMPLE_COOL_HEAT"
         else:
             print "Unknown process type for more than 2 relays"
-        self.relay = Relay()
+        self.relay = relay
+        self.sensorDevices = sensorDevices
 
         self.history = []
 
@@ -378,6 +436,7 @@ class JobProcessor(GPIOProcess):
         print "historyFileName: ", self.historyFileName
         header = {'type':'header',
                   'jobName':self.jobName,
+                  'jobInstance':self.instanceId,
                   'jobPreheat':self.jobPreheat,
                   'jobProfile':self.jobProfile,
                   'jobSensors':self.jobSensors,
@@ -387,7 +446,7 @@ class JobProcessor(GPIOProcess):
                  }
         print "header ", header
 
-        # Its _not_ a json file,
+        # NB. Its _not_ a json file,
         # rather text file with individually json encoded entry per line
         self.history.append(str(header))
         # Add an initial temperature report
@@ -495,9 +554,9 @@ class JobProcessor(GPIOProcess):
 
     def jobStatus(self, nowTime):
         job_status = {'jobName' :self.jobName,
-                  'type'    :'status',
-                  'elapsed' : nowTime - self.startTime,
-                  'sensors' : []
+                  'type'        :'status',
+                  'elapsed'     : nowTime - self.startTime,
+                  'sensors'     : []
                  }
         for sensor in self.jobSensors:
             job_status['sensors'].append(sensor)
@@ -513,17 +572,21 @@ class JobProcessor(GPIOProcess):
     def stop(self):
         print "Stopping job: ", self.jobName
         try:
-            for job in self.runningJobs:
-                print "---- ", job.name()
             for i in range(len(self.runningJobs)):
                 if self.runningJobs[i].name() == self.jobName:
                     print "FOUND job to stop running"
+                    # Move from runningJobs to stoppedJobs
+                    self.stoppedJobs.append(self.runningJobs[i])
                     del self.runningJobs[i]
+                    jdata = json.dumps({'type':'stopped_job',
+                                        'data':{'jobName':self.jobName}})
+                    self.output_queue.put(jdata)
                     break
         except Exception as e:
             print e
 
     def process(self):
+        self.processing  = True
         accumulatedTime = 0.0
         print "Processing job; ", self.jobName
         now = time.time()
@@ -543,6 +606,7 @@ class JobProcessor(GPIOProcess):
         self.history.append(status)
         with open(os.path.join(JOB_HISTORY_DIR, self.historyFileName), 'a') as f:
              f.write(str(status) + '\n')
+        self.processing  = False
 
     def report(self):
         print "REPORT time"
@@ -564,14 +628,20 @@ class JobProcessor(GPIOProcess):
             # If temp == target, leave it alone
             if float(temp) > float(target):
                 # Turn on the cooler relay.
-                self.relay.ON(coolerRelay)
+                if not self.relay.isOn(coolerRelay):
+                    self.relay.ON(coolerRelay)
+                    self.liveUpdate()
                 print "Start COOLING"
             elif float(temp) < float(target):
                 # Turn off the cooler relay.
-                self.relay.OFF(coolerRelay)
+                if self.relay.isOn(coolerRelay):
+                    self.relay.OFF(coolerRelay)
+                    self.liveUpdate()
                 print "Stop COOLING"
             else:
-                self.relay.OFF(coolerRelay)
+                if self.relay.isOn(coolerRelay):
+                    self.relay.OFF(coolerRelay)
+                    self.liveUpdate()
         elif self.processType == "SIMPLE_COOL_HEAT":
             # Assume a single sensor for a SIMPLE method
             temp = st.get_temp(self.jobSensors[0])
@@ -589,19 +659,31 @@ class JobProcessor(GPIOProcess):
             # If temp == target, leave it alone
             if float(temp) > float(target):
                 # Turn on the cooler relay.
-                self.relay.ON(coolerRelay)
+                if not self.relay.isOn(coolerRelay):
+                    self.relay.ON(coolerRelay)
+                    self.liveUpdate()
                 # Turn off the heater relay
-                self.relay.OFF(heaterRelay)
+                if self.relay.isOn(heaterRelay):
+                    self.relay.OFF(heaterRelay)
+                    self.liveUpdate()
                 print "Start COOLING"
             elif float(temp) < float(target):
                 # Turn off the cooler relay.
-                self.relay.OFF(coolerRelay)
+                if self.relay.isOn(coolerRelay):
+                    self.relay.OFF(coolerRelay)
+                    self.liveUpdate()
                 # Turn on the heater relay
-                self.relay.ON(heaterRelay)
+                if not self.relay.isOn(heaterRelay):
+                    self.relay.ON(heaterRelay)
+                    self.liveUpdate()
                 print "Start HEATING"
             else:
-                self.relay.OFF(coolerRelay)
-                self.relay.OFF(heaterRelay)
+                if self.relay.isOn(coolerRelay):
+                    self.relay.OFF(coolerRelay)
+                    self.liveUpdate()
+                if self.relay.isOn(heaterRelay):
+                    self.relay.OFF(heaterRelay)
+                    self.liveUpdate()
         elif self.processType == "SIMPLE_HEAT":
             print "Using SIMPLE_HEAT method to temperatureAdjust: ", target
 
