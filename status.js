@@ -730,6 +730,8 @@ domReady( function(){
         jobStopped(jmsg.data);
       } else if (jmsg.type === 'removed_job' ) {
         jobRemoved(jmsg.data);
+      } else if (jmsg.type === 'saved_job' ) {
+        jobSaved(jmsg.data);
       } else {
         console.log('Unknown json messsage type: ' + jmsg.type);
       }
@@ -894,7 +896,7 @@ var runningJobsFunctions = {};
   function createRunningJobsList(data) {
     console.log("Reached createRunningJobsList(): " + data.length);
     if ( data.length < 1 ) {
-      document.getElementById("no_running_jobs").style.display = 'block';
+      document.getElementById("no_running_jobs").style.display = 'flex';
     } else {
       document.getElementById("no_running_jobs").style.display = 'none';
     }
@@ -1380,10 +1382,31 @@ var runningJobsFunctions = {};
     var running_jobsHolder = document.getElementById('running_jobsHolder');
     if ( running_jobsHolder.children.length == 0 ) {
       var no_running_jobs = document.getElementById("no_running_jobs");
-      no_running_jobs.innerHTML = "No jobs are currently running";
-      no_running_jobs.style.display = 'block';
+      no_running_jobs.innerHTML = "<p>No jobs are currently running</p>";
+      no_running_jobs.style.display = 'flex';
     }
 
+  }
+
+  function jobSaved(data) {
+    var jobName = data['jobName']
+    console.log("Received saved_job message " + jobName);
+    d3.select('#title_text_' + jobName).text("Job: " + jobName + " (saved)");
+
+    var jobDiv = document.getElementById(jobName);
+    while (jobDiv.firstChild) {
+      jobDiv.removeChild(jobDiv.firstChild);
+    }
+    jobDiv.remove();
+
+    var running_jobsHolder = document.getElementById('running_jobsHolder');
+    if ( running_jobsHolder.children.length == 0 ) {
+      var no_running_jobs = document.getElementById("no_running_jobs");
+      //no_running_jobs.innerHTML = "No jobs are currently running";
+      no_running_jobs.innerHTML = "<center>" + jobName + " was saved to <a href=#content_2 >Job History</a> <br>No other jobs are currently running</center>";
+      no_running_jobs.style.display = 'flex';
+      //no_running_jobs.style.padding = '10px';
+    }
   }
 
   function onRunningJobTitleClick(id) {

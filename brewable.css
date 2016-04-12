@@ -229,10 +229,11 @@ div#content_4 {
     height:	96px;
     margin:     auto;
     margin-top: 50px;
-    text-align: center;
+    justify-content: center;
+    align-items:     center;
     border:	6px solid black;
     display:    none;
-    padding-top: 70px;
+    padding:    70px;
     font-size:  120%;
     font-weight: bold;
     background-color: bisque;
