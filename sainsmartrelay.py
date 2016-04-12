@@ -28,9 +28,9 @@ RELAY_OFF = (not RELAY_ON);
 
 # The default delay is 480 seconds (8 mins)
 if _TESTING_:
-    DEFAULT_DELAYSET = {'duration':10, 'isset':False}
+    DEFAULT_DELAYSET = {'on_time':3, 'off_time':12, 'isset':False}
 else:
-    DEFAULT_DELAYSET = {'duration':480, 'isset':False}
+    DEFAULT_DELAYSET = {'on_time':180, 'off_time':480, 'isset':False}
 
 class Relay():
     def __init__(self):
@@ -49,68 +49,68 @@ class Relay():
         print 'ALLON ...'
         gpio.output(RelayPins.values(), RELAY_ON)
         for i in range(self.device_count()):
-            self.setDelay(i+1)
+            self.setOnDelay(i+1)
 
     def ALLOFF(self):
         print 'ALLOFF...'
         gpio.output(RelayPins.values(), RELAY_OFF)
         #for i in range(self.device_count()):
-        #    self.setDelay(i+1)
+        #    self.setOffDelay(i+1)
 
     def ON_1(self):
         if self.isDelayed(1):
             return
         gpio.output(RelayPins['PIN_RELAY_1'], RELAY_ON);
-        self.setDelay(1);
+        self.setOnDelay(1);
         print "Relay 1 on ", gpio.input(RelayPins['PIN_RELAY_1'])
 
     def ON_2(self):
         if self.isDelayed(2):
             return
         gpio.output(RelayPins['PIN_RELAY_2'], RELAY_ON);
-        self.setDelay(2);
+        self.setOnDelay(2);
         print "Relay 2 on ", gpio.input(RelayPins['PIN_RELAY_2'])
 
     def ON_3(self):
         if self.isDelayed(3):
             return
         gpio.output(RelayPins['PIN_RELAY_3'], RELAY_ON);
-        self.setDelay(3);
+        self.setOnDelay(3);
         print "Relay 3 on ", gpio.input(RelayPins['PIN_RELAY_3'])
 
     def ON_4(self):
         if self.isDelayed(4):
             return
         gpio.output(RelayPins['PIN_RELAY_4'], RELAY_ON);
-        self.setDelay(4);
+        self.setOnDelay(4);
         print "Relay 4 on ", gpio.input(RelayPins['PIN_RELAY_4'])
 
     def OFF_1(self):
         if self.isDelayed(1):
             return
         gpio.output(RelayPins['PIN_RELAY_1'], RELAY_OFF);
-        self.setDelay(1);
+        self.setOffDelay(1);
         print "Relay 1 off ", gpio.input(RelayPins['PIN_RELAY_1'])
 
     def OFF_2(self):
         if self.isDelayed(2):
             return
         gpio.output(RelayPins['PIN_RELAY_2'], RELAY_OFF);
-        self.setDelay(2);
+        self.setOffDelay(2);
         print "Relay 2 off ", gpio.input(RelayPins['PIN_RELAY_2'])
 
     def OFF_3(self):
         if self.isDelayed(3):
             return
         gpio.output(RelayPins['PIN_RELAY_3'], RELAY_OFF);
-        self.setDelay(3);
+        self.setOffDelay(3);
         print "Relay 3 off ", gpio.input(RelayPins['PIN_RELAY_3'])
 
     def OFF_4(self):
         if self.isDelayed(4):
             return
         gpio.output(RelayPins['PIN_RELAY_4'], RELAY_OFF);
-        self.setDelay(3);
+        self.setOffDelay(3);
         print "Relay 4 off ", gpio.input(RelayPins['PIN_RELAY_4'])
 
 
@@ -121,14 +121,14 @@ class Relay():
         if self.isDelayed(id):
             return
         gpio.output(RelayPins['PIN_RELAY_{}'.format(id)], RELAY_ON);
-        self.setDelay(id)
+        self.setOnDelay(id)
 
 
     def OFF(self, id):
         if self.isDelayed(id):
             return
         gpio.output(RelayPins['PIN_RELAY_{}'.format(id)], RELAY_OFF);
-        self.setDelay(id)
+        self.setOffDelay(id)
 
     def state(self):
         return list((gpio.input(RelayPins['PIN_RELAY_{}'.format(i+1)]),self.isDelayed(i+1)) for i in range(self.device_count()))
@@ -152,8 +152,12 @@ class Relay():
     def isDelayed(self, id):
         return self.delayset[id-1]['isset']
 
-    def setDelay(self, id):
-        Timer(int(self.delayset[id-1]['duration']), self.unsetDelay, [id]).start()
+    def setOnDelay(self, id):
+        Timer(int(self.delayset[id-1]['on_time']), self.unsetDelay, [id]).start()
+        self.delayset[id-1]['isset'] = True
+
+    def setOffDelay(self, id):
+        Timer(int(self.delayset[id-1]['off_time']), self.unsetDelay, [id]).start()
         self.delayset[id-1]['isset'] = True
 
     def unsetDelay(self, id):
