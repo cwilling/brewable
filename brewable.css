@@ -66,6 +66,7 @@ td {
     text-decoration: underline;
     fill: rgb(0, 0, 0);
     font-weight: bold;
+    cursor:     pointer;
 }
 .axistext text {
     font-size: 125%;

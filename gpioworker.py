@@ -169,29 +169,14 @@ class GPIOProcess(multiprocessing.Process):
                                 print "Couldn't start job"
                             else:
                                 print "Started job ", jmsg['data']['index']
-                                # Return running jobs list to client
-                                print "started_job jdata: X"
-                                #jdata = json.dumps({'type':'started_job',
-                                #                    'data':self.runningJobs})
-                                #print "started_job jdata: ", jdata
-                                #self.output_queue.put(jdata)
-                                #running_jobs = []
-                                #for j in self.runningJobs:
-                                #    print "started_job jdata: Y", j.jobInfo()
-                                #    running_jobs.append(j.jobInfo())
-                                #print "started_job jdata: Z", running_jobs
-                                #jdata = json.dumps({'type':'running_jobs',
-                                #                    'data':running_jobs})
-                                #self.output_queue.put(jdata)
                         if len(self.runningJobs) > 0:
                             running_jobs = []
                             for j in self.runningJobs:
                                 job_info = j.jobInfo()
                                 job_info['history'] = j.history[1:]
-                                print "list running job: ", job_info
+                                #print "list running job: ", job_info
                                 running_jobs.append(job_info)
-                            print "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-                            print "running_jobs list: ", running_jobs
+                            #print "running_jobs list: ", running_jobs
                             jdata = json.dumps({'type':'running_jobs',
                                                 'data':running_jobs})
                             self.output_queue.put(jdata)
@@ -383,7 +368,7 @@ class GPIOProcess(multiprocessing.Process):
 
     def setupJobRun(self, jobIndex):
         try:
-            self.runningJobs.append(JobProcessor(copy.copy(self.jobs[jobIndex]),self.output_queue,self.runningJobs,self.stoppedJobs,self.relay,self.sensorDevices))
+            self.runningJobs.append(JobProcessor(copy.deepcopy(self.jobs[jobIndex]),self.output_queue,self.runningJobs,self.stoppedJobs,self.relay,self.sensorDevices))
             return True
         except:
             print "JOB CREATE FAIL!"
@@ -522,13 +507,13 @@ class JobProcessor(GPIOProcess):
         return sensors
 
     # Convert profile's duration fields into seconds
-    # To speed testing, assume duration filed are minutes.seconds
+    # To speed testing, assume duration fields are minutes.seconds
     # whereas real version will have hours.minutes
     def convertProfileTimes(self, profile):
+        hrs = mins = secs = '0';
+        durSecs = durMins = 0;
         for sp in profile:
-            hrs = mins = secs = '0'
             if _TESTING_:
-                durSecs = 0
                 (mins,dot,secs) = sp['duration'].partition('.')
                 if len(mins) > 0:
                     durSecs = 60 * int(mins)
@@ -538,7 +523,6 @@ class JobProcessor(GPIOProcess):
                     durSecs += int(secs)
                 sp['duration'] = str(durSecs)
             else:
-                durMins = 0
                 (hrs,dot,mins) = sp['duration'].partition('.')
                 if len(hrs) > 0:
                     durMins = 60 * int(hrs)
