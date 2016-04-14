@@ -296,6 +296,96 @@ domReady( function(){
 
   }
 
+  function updateJobHistoryData(data) {
+      // data should consist of  two arrays,
+      // 1st with just the job header and 2nd with an array of status updates
+      console.log("Received msg: saved_job_data " + data);
+      var header = data['header'];
+      var updates = data['updates'];
+
+/* Examples of extracting various fields
+      console.log("updateJobHistoryData() jobName: " + header[0]['jobName'] + " " + header.length);
+      console.log("updateJobHistoryData() updates: " + updates + " " + updates.length);
+      for (var i=0;i<updates.length;i++) {
+        console.log("updateJobHistoryData() temp at " + parseFloat(updates[i]['elapsed']).toFixed(2) + " = " + updates[i][updates[i]['sensors']]);
+      }
+*/
+
+
+  }
+
+  function updateJobHistory(data) {
+      console.log("Received msg: saved_jobs_list");
+      var historyfiles = data['historyfiles']
+      var historyListJobsHolder = document.getElementById("historyListJobsHolder");
+      var pattern = /[0-9]{8}_[0-9]{6}/;
+
+      // First remove existing items
+      while ( historyListJobsHolder.hasChildNodes() ) {
+        historyListJobsHolder.removeChild(historyListJobsHolder.firstChild);
+      }
+
+
+      for (var i=0;i<historyfiles.length;i++) {
+        //console.log("              " + historyfiles[i]);
+        // Extract some identifiers from the filename
+        var jobInstance = pattern.exec(historyfiles[i]);
+        var jobName = historyfiles[i].slice(0,(historyfiles[i].indexOf(jobInstance)-1));
+
+        var historyElement = document.createElement('DIV');
+        historyElement.id = 'historyElement_' + jobName + '-' + jobInstance;
+        historyElement.className = 'historyElement';
+
+        var historyElementGraph = document.createElement('DIV');
+        historyElementGraph.id = 'historyElementGraph_' + jobName + '-' + jobInstance;
+        historyElementGraph.className = 'historyElementGraph';
+        /*
+        historyElement.onclick = function() {
+          var historyElementGraphName = 'historyElementGraph_' +
+                                  this.id.slice('historyElementGraph_'.length);
+          console.log('historyElementGraphName = ' + historyElementGraphName);
+          var historyElementGraph = document.getElementById(historyElementGraphName);
+          if ( historyElementGraph.style.display == 'block') {
+            historyElementGraph.style.display = 'none';
+          } else {
+            historyElementGraph.style.display = 'block';
+          }
+        }
+        */
+
+        var historyItemName = document.createElement('DIV');
+        historyItemName.id = 'historyItemName' + i;
+        historyItemName.className = 'historyItemName';
+        historyItemName.innerHTML = "<html>" + jobName + "</html>"
+
+        var historyItemInstance = document.createElement('DIV');
+        historyItemInstance.id = 'historyItemInstance_' + jobName + '-' + jobInstance;
+        historyItemInstance.className = 'historyItemInstance';
+        historyItemInstance.innerHTML = "<html>" + jobInstance + "</html>"
+        historyItemInstance.onclick = function() {
+          var historyElementGraphName = 'historyElementGraph_' +
+                                  this.id.slice('historyElementGraph_'.length);
+          console.log('historyElementGraphName = ' + historyElementGraphName);
+          var historyElementGraph = document.getElementById(historyElementGraphName);
+          if ( historyElementGraph.style.display == 'block') {
+            historyElementGraph.style.display = 'none';
+          } else {
+            historyElementGraph.style.display = 'block';
+
+            msgobj = {type:'load_saved_job_data', data:{'fileName':historyElementGraphName.slice('historyElementGraph_'.length)}};
+            console.log("msgobj: " + msgobj);
+            sendMessage({data:JSON.stringify(msgobj)});
+          }
+        }
+
+        historyElement.appendChild(historyItemName);
+        historyElement.appendChild(historyItemInstance);
+        historyListJobsHolder.appendChild(historyElement);
+        historyListJobsHolder.appendChild(historyElementGraph);
+      }
+
+  }
+
 
 
 
@@ -680,6 +770,10 @@ domReady( function(){
     var msgobj = {type:'load_running_jobs', data:[]};
     sendMessage({data:JSON.stringify(msgobj)});
 
+    // Load saved jobs history
+    msgobj = {type:'load_saved_jobs', data:[]};
+    sendMessage({data:JSON.stringify(msgobj)});
+
     // Request profiles data
     msgobj = {type:'load_profiles', data:[]};
     sendMessage({data:JSON.stringify(msgobj)});
@@ -732,6 +826,10 @@ domReady( function(){
         jobRemoved(jmsg.data);
       } else if (jmsg.type === 'saved_job' ) {
         jobSaved(jmsg.data);
+      } else if (jmsg.type === 'saved_jobs_list' ) {
+        updateJobHistory(jmsg.data);
+      } else if (jmsg.type === 'saved_job_data' ) {
+        updateJobHistoryData(jmsg.data);
       } else {
         console.log('Unknown json messsage type: ' + jmsg.type);
       }

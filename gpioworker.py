@@ -3,7 +3,6 @@ import multiprocessing
 import json
 import copy
 import os, errno
-import weakref
 
 # Input temperature sensor - choose one of these to be 'st'
 #import systemtemp as st
@@ -204,10 +203,14 @@ class GPIOProcess(multiprocessing.Process):
                             self.output_queue.put(jdata)
                     elif jmsg['type'].startswith('stop_running_job'):
                         self.stopRunningJob(jmsg)
-                    elif jmsg['type'].startswith('save_running_job'):
-                        self.saveRunningJob(jmsg)
                     elif jmsg['type'].startswith('remove_running_job'):
                         self.removeRunningJob(jmsg)
+                    elif jmsg['type'].startswith('save_running_job'):
+                        self.saveRunningJob(jmsg)
+                    elif jmsg['type'] == 'load_saved_jobs':
+                        self.loadSavedJobs(jmsg)
+                    elif jmsg['type'] == 'load_saved_job_data':
+                        self.loadSavedJobData(jmsg)
                     elif jmsg['type'].startswith('save_profiles'):
                         with open(PROFILE_DATA_FILE, 'w') as json_file:
                             json.dump({'profiles_data':jmsg['data']}, json_file)
@@ -274,6 +277,39 @@ class GPIOProcess(multiprocessing.Process):
 
             #time.sleep(1)
 
+
+    def loadSavedJobData(self, jmsg):
+        print "Rcvd request to LOAD SAVED JOB DATA ", jmsg['data']['fileName'] + '.txt'
+
+        fileName = jmsg['data']['fileName'] + '.txt'
+        print "fileName: ", fileName
+        filepath = os.path.join(CWD, JOB_HISTORY_DIR, fileName)
+        print "loading data from file: ", filepath
+        try:
+            #lines = [line.strip() for line in open(filepath)]
+            with open(filepath) as f:
+                lines = [json.loads(line) for line in f]
+            print "lines: ", lines
+            jdata = {'type':'saved_job_data', 'data':{'header':lines[0:1],'updates':lines[1:]}}
+        except:
+                print "Couldn't load saved job data"
+                jdata = json.dumps({'type':'saved_job_data',
+                                    'data':[]})
+        finally:
+            self.output_queue.put(jdata)
+
+
+    def loadSavedJobs(self, jmsg):
+        print "Rcvd request to LOAD SAVED JOBS"
+        try:
+            historyfiles = [f for f in os.listdir(os.path.join(CWD, JOB_HISTORY_DIR)) if os.path.isfile(os.path.join(CWD, JOB_HISTORY_DIR, f))]
+            #print "files: ", historyfiles
+            jdata = json.dumps({'type':'saved_jobs_list',
+                                'data':{'historyfiles':historyfiles}})
+            self.output_queue.put(jdata)
+            print "file list sent: ", jdata
+        except Exception as e:
+            print "error loadSavedJobs(); ", e
 
     def removeRunningJob(self, jmsg):
         print "Rcvd request to REMOVE JOB"
@@ -415,9 +451,7 @@ class JobProcessor(GPIOProcess):
 
     #def __init__(self, runningJobs, rawJobInfo, output_queue):
     def __init__(self, rawJobInfo, output_queue, runningJobs, stoppedJobs, relay, sensorDevices):
-        #self.parent     = weakref.ref(parent)
         #self.parent     = parent
-        #self.runningJobs = runningJobs
         self.runningJobs = runningJobs
         self.stoppedJobs = stoppedJobs
         self.output_queue = output_queue
@@ -468,16 +502,18 @@ class JobProcessor(GPIOProcess):
                  }
         print "header ", header
 
-        # NB. Its _not_ a json file,
+        # NB. Its _not_ quite a fully json file,
         # rather text file with individually json encoded entry per line
         self.history.append(str(header))
         # Add an initial temperature report
         status = self.jobStatus(self.startTime)
         status['running'] = 'startup'
         self.history.append(status)
-        with open(os.path.join(JOB_RUN_DIR, self.historyFileName), 'w') as f:
-             f.write(str(header) + '\n')
-             f.write(str(status) + '\n')
+        with open(os.path.join(JOB_RUN_DIR, self.historyFileName), 'a') as f:
+            json.dump(header, f)
+            f.write(os.linesep)
+            json.dump(status, f)
+            f.write(os.linesep)
 
 
     def jobInfo(self):
@@ -613,7 +649,8 @@ class JobProcessor(GPIOProcess):
 
                     self.history.append(status)
                     with open(os.path.join(JOB_RUN_DIR, self.historyFileName), 'a') as f:
-                         f.write(str(status) + '\n')
+                        json.dump(status, f)
+                        f.write(os.linesep)
 
                     break
         except Exception as e:
@@ -639,7 +676,8 @@ class JobProcessor(GPIOProcess):
         self.output_queue.put(jdata)
         self.history.append(status)
         with open(os.path.join(JOB_RUN_DIR, self.historyFileName), 'a') as f:
-             f.write(str(status) + '\n')
+            json.dump(status, f)
+            f.write(os.linesep)
         self.processing  = False
 
     def report(self):
