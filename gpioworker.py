@@ -3,6 +3,7 @@ import multiprocessing
 import json
 import copy
 import os, errno
+from collections import deque
 
 # Input temperature sensor - choose one of these to be 'st'
 #import systemtemp as st
@@ -300,15 +301,23 @@ class GPIOProcess(multiprocessing.Process):
 
     def loadSavedJobs(self, jmsg):
         #print "Rcvd request to LOAD SAVED JOBS"
+        goodhistoryfiles = []
         try:
             historyfiles = [f for f in os.listdir(os.path.join(CWD, JOB_HISTORY_DIR)) if os.path.isfile(os.path.join(CWD, JOB_HISTORY_DIR, f))]
-            #print "files: ", historyfiles
-            jdata = json.dumps({'type':'saved_jobs_list',
-                                'data':{'historyfiles':historyfiles}})
-            self.output_queue.put(jdata)
-            #print "file list sent: ", jdata
         except Exception as e:
             print "error loadSavedJobs(); ", e
+        for file in historyfiles:
+            try:
+                lastline = json.loads(deque(open(os.path.join(CWD, JOB_HISTORY_DIR, file)), 1).pop())
+                if lastline['running'] == 'stopped':
+                    goodhistoryfiles.append(file)
+            except Exception as e:
+                print "wrong file format in loadSavedJobs(); ", file, e
+        print "good history files: ", goodhistoryfiles
+        jdata = json.dumps({'type':'saved_jobs_list',
+                            'data':{'historyfiles':goodhistoryfiles}})
+        self.output_queue.put(jdata)
+        #print "file list sent: ", jdata
 
     def removeRunningJob(self, jmsg):
         #print "Rcvd request to REMOVE JOB"
