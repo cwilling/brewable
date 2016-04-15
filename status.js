@@ -929,6 +929,7 @@ console.log("updateJobHistoryData() END");
       } else if (jmsg.type === 'loaded_profiles' ) {
         if ( jmsg.data.length == 0 ) {
           console.log('RCVD: EMPTY profiles data');
+        }
         createProfileTableFunction(jmsg.data);
       } else if (jmsg.type === 'heartbeat' ) {
         console.log('HEARTBEAT: ' + jmsg.data);
