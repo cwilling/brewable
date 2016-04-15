@@ -357,6 +357,8 @@ class GPIOProcess(multiprocessing.Process):
                                 'data':{'jobName':jobName}})
             self.output_queue.put(jdata)
 
+        self.loadSavedJobs(json.dumps({'type':'load_saved_jobs','data':[]}))
+
     def stopRunningJob(self, jmsg):
         print "Rcvd request to STOP RUNNING JOB"
         job_found = False

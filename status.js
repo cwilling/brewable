@@ -77,7 +77,6 @@ domReady( function(){
   // New jobs button
   var newJobButton = document.getElementById("new_job_button");
   newJobButton.onclick = function () {
-    console.log("NEW job button clicked");
     var jobComposer = document.getElementById("jobComposer");
     if ( jobComposer.style.display == 'block') {
       jobComposer.style.display = 'none';
@@ -88,9 +87,7 @@ domReady( function(){
       var itemsWidth = 0;
       var tallest = 0;
       for (var i=0;i<c.length;i++) {
-        console.log("child: " + c[i].id + " has width = " + parseInt(window.getComputedStyle(c[i]).width.replace(/\D+/g, '')));
         itemsWidth += parseInt(window.getComputedStyle(c[i]).width.replace(/\D+/g, ''));
-        console.log("At child: " + c[i].id + ", itemsWidth = " + itemsWidth);
         var itemHeight = parseInt(window.getComputedStyle(c[i]).height.replace(/\D+/g, ''));
         if (itemHeight > tallest ) tallest = itemHeight;
       }
@@ -297,28 +294,41 @@ domReady( function(){
   }
 
   function updateJobHistoryData(data) {
-      // data should consist of  two arrays,
-      // 1st with just the job header and 2nd with an array of status updates
-      console.log("Received msg: saved_job_data " + data);
-      var header = data['header'];
-      var updates = data['updates'];
+    // data should consist of  two arrays,
+    // 1st with just the job header and 2nd with an array of status updates
+    console.log("Received msg: saved_job_data " + data);
+    var header = data['header'];
+    var updates = data['updates'];
+    var longName = header[0]['jobName'] + '-' + header[0]['jobInstance'];
+    console.log("longName: " + longName);
 
 /* Examples of extracting various fields
-      console.log("updateJobHistoryData() jobName: " + header[0]['jobName'] + " " + header.length);
-      console.log("updateJobHistoryData() updates: " + updates + " " + updates.length);
-      for (var i=0;i<updates.length;i++) {
-        console.log("updateJobHistoryData() temp at " + parseFloat(updates[i]['elapsed']).toFixed(2) + " = " + updates[i][updates[i]['sensors']]);
-      }
+    console.log("updateJobHistoryData() jobName: " + header[0]['jobName'] + " " + header.length);
+    console.log("updateJobHistoryData() updates: " + updates + " " + updates.length);
+    for (var i=0;i<updates.length;i++) {
+      console.log("updateJobHistoryData() temp at " + parseFloat(updates[i]['elapsed']).toFixed(2) + " = " + updates[i][updates[i]['sensors']]);
+    }
 */
+    var runningJobsGraphMargin = {top: 60, right: 20, bottom: 50, left: 80},
+        runningJobsGraphWidth = 1800 - runningJobsGraphMargin.left - runningJobsGraphMargin.right,
+        runningJobsGraphHeight = 256 - runningJobsGraphMargin.top - runningJobsGraphMargin.bottom;
+
+    // Draw the graph of job history
+    var runningJobsGraphHolder = d3.select("#historyElementGraph_" + longName).append("svg")
+                      .attr("id", "history_" + longName)
+                      .attr("class", "history_job")
+                      .attr("width", runningJobsGraphWidth + runningJobsGraphMargin.right + runningJobsGraphMargin.left)
+                      .attr("height", runningJobsGraphHeight + runningJobsGraphMargin.top + runningJobsGraphMargin.bottom)
+                      .style("border", "1px solid black")
 
 
   }
 
-  function updateJobHistory(data) {
+  function updateJobHistoryList(data) {
       console.log("Received msg: saved_jobs_list");
       var historyfiles = data['historyfiles']
       var historyListJobsHolder = document.getElementById("historyListJobsHolder");
-      var pattern = /[0-9]{8}_[0-9]{6}/;
+      var instancePattern = /[0-9]{8}_[0-9]{6}/;
 
       // First remove existing items
       while ( historyListJobsHolder.hasChildNodes() ) {
@@ -329,7 +339,7 @@ domReady( function(){
       for (var i=0;i<historyfiles.length;i++) {
         //console.log("              " + historyfiles[i]);
         // Extract some identifiers from the filename
-        var jobInstance = pattern.exec(historyfiles[i]);
+        var jobInstance = instancePattern.exec(historyfiles[i]);
         var jobName = historyfiles[i].slice(0,(historyfiles[i].indexOf(jobInstance)-1));
 
         var historyElement = document.createElement('DIV');
@@ -827,8 +837,10 @@ domReady( function(){
       } else if (jmsg.type === 'saved_job' ) {
         jobSaved(jmsg.data);
       } else if (jmsg.type === 'saved_jobs_list' ) {
-        updateJobHistory(jmsg.data);
+        // Just the list of saved jobs - not any job data
+        updateJobHistoryList(jmsg.data);
       } else if (jmsg.type === 'saved_job_data' ) {
+        // Data for a particular saved job
         updateJobHistoryData(jmsg.data);
       } else {
         console.log('Unknown json messsage type: ' + jmsg.type);
@@ -1158,8 +1170,9 @@ var runningJobsFunctions = {};
        //                 .domain([minDataPoint,maxDataPoint])
        //                 .range([runningJobsGraphHeight,0]);
       // We want to access this same scale later (for asynchronous temperature update reports)
-      // so keep in an object (jobJunctions) which will be stored in a global object (runningJobsFuctions)
-      // according to the jobName (since different jobs will have different scales).
+      // so keep in an object (jobJunctions) which will be stored in some
+      // global object i.e. runningJobsFuctions, according to the jobName
+      // (since different jobs will have different scales).
       jobFunctions['linearScaleY'] = d3.scale.linear()
                         .domain([minDataPoint,maxDataPoint])
                         .range([runningJobsGraphHeight,0]);
