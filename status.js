@@ -118,7 +118,7 @@ domReady( function(){
   // Run job button
   var runJobButton = document.getElementById("run_job_button");
   runJobButton.onclick = function () {
-    console.log("RUN job button clicked");
+    //console.log("RUN job button clicked");
     var jobIndex = selectedJobIndex();
     if ( jobIndex < 0 )
         return;
@@ -296,7 +296,7 @@ domReady( function(){
   function updateJobHistoryData(data) {
     // data should consist of  two arrays,
     // 1st with just the job header and 2nd with an array of status updates
-    console.log("Received msg: saved_job_data " + data);
+    //console.log("Received msg: saved_job_data " + data);
     var header = data['header'];
     var updates = data['updates'];
     var longName = header[0]['jobName'] + '-' + header[0]['jobInstance'];
@@ -435,7 +435,7 @@ console.log("updateJobHistoryData() END");
   }
 
   function updateJobHistoryList(data) {
-      console.log("Received msg: saved_jobs_list");
+      //console.log("Received msg: saved_jobs_list");
       var historyfiles = data['historyfiles']
       var historyListJobsHolder = document.getElementById("historyListJobsHolder");
       var instancePattern = /[0-9]{8}_[0-9]{6}/;
@@ -678,7 +678,7 @@ console.log("updateJobHistoryData() END");
 
   /* Profile Graph */
   function getProfileData() {
-    console.log("At: getProfileData()");
+    //console.log("At: getProfileData()");
 
     var setpoint = {};
     var profile = [], profileSet = [];
@@ -763,7 +763,7 @@ console.log("updateJobHistoryData() END");
   }
 
   function updateProfileGraph() {
-    console.log("At: updateProfileGraph()");
+    //console.log("At: updateProfileGraph()");
     var profileData = getProfileData(); // raw data from Profiles Editor
     var profileDisplayData = [];        // "processed" data for display
     var setpoint = {};
@@ -914,7 +914,6 @@ console.log("updateJobHistoryData() END");
         }
         createSensorTableFunction();
       } else if (jmsg.type === 'relay_list' ) {
-        console.log("Received relay_list " + jmsg.data);
         // Keep a copy for later
         availableRelays = [];
         for (var i=0;i<jmsg.data.length;i++) {
@@ -922,19 +921,14 @@ console.log("updateJobHistoryData() END");
         }
         createRelayTableFunction();
       } else if (jmsg.type === 'loaded_jobs' ) {
-        console.log("Received loaded_jobs " + jmsg.data);
         createStoredJobsList(jmsg.data);
       } else if (jmsg.type === 'running_jobs' ) {
-        console.log("Received started_job " + jmsg.data);
         createRunningJobsList(jmsg.data);
       } else if (jmsg.type === 'running_job_status' ) {
         updateRunningJob(jmsg.data);
       } else if (jmsg.type === 'loaded_profiles' ) {
         if ( jmsg.data.length == 0 ) {
           console.log('RCVD: EMPTY profiles data');
-        } else {
-          console.log('RCVD: OK profiles data');
-        }
         createProfileTableFunction(jmsg.data);
       } else if (jmsg.type === 'heartbeat' ) {
         console.log('HEARTBEAT: ' + jmsg.data);
@@ -996,7 +990,7 @@ var runningJobsFunctions = {};
 
   // Create a table of sensors based on data  from server (availableSensors)
   function createSensorTableFunction() {
-    console.log("Reached createSensorTableFunction() " + availableSensors);
+    //console.log("Reached createSensorTableFunction() " + availableSensors);
 
     var table = document.getElementById("jobSensorsTable");
 
@@ -1020,7 +1014,7 @@ var runningJobsFunctions = {};
   }
   // Create a table of relays based on data  from server (availableRelays)
   function createRelayTableFunction() {
-    console.log("Reached createRelayTableFunction() " + availableRelays);
+    //console.log("Reached createRelayTableFunction() " + availableRelays);
 
     var table = document.getElementById("jobRelaysTable");
 
@@ -1045,7 +1039,7 @@ var runningJobsFunctions = {};
 
   // Generate a listing of stored jobs
   function createStoredJobsList(data) {
-    console.log("Reached createStoredJobsList()");
+    //console.log("Reached createStoredJobsList()");
     var table = document.getElementById("jobsListJobs");
 
     // First remove existing list elements
@@ -1063,7 +1057,7 @@ var runningJobsFunctions = {};
         preheat = "Preheat  ON";
       }
       description = description + "    " + preheat + "    " + thisJob['profile'] + "    " + thisJob['sensors'] + "    " + thisJob['relays'];
-      console.log("loading job: " + description);
+      //console.log("loading job: " + description);
 
       var row = table.insertRow(i);
       var radioLabel = document.createElement("LABEL");
@@ -1114,7 +1108,7 @@ var runningJobsFunctions = {};
 
   // Generate a display listing of running jobs on front Status page
   function createRunningJobsList(data) {
-    console.log("Reached createRunningJobsList(): " + data.length);
+    //console.log("Reached createRunningJobsList(): " + data.length);
     if ( data.length < 1 ) {
       document.getElementById("no_running_jobs").style.display = 'flex';
     } else {
@@ -1135,11 +1129,10 @@ var runningJobsFunctions = {};
 
       // If available, save any job history that has been sent
       if ( 'history' in job ) {
-        console.log("FOUND job history" + " (" + job['history'].length + ")");
+        //console.log("FOUND job history" + " (" + job['history'].length + ")");
         for (var i=0;i<job['history'].length;i++) {
           jobFunctions['history'].push(job['history'][i]);
         }
-        console.log("FOUND job history" + " (" + job['history'].length + ")");
       } else {
         console.log("NO job history found");
       }
@@ -1543,13 +1536,13 @@ var runningJobsFunctions = {};
 
   function jobStopped(data) {
     var jobName = data['jobName']
-    console.log("Received stopped_job message " + jobName);
+    //console.log("Received stopped_job message " + jobName);
     d3.select('#title_text_' + jobName).text("Job: " + jobName + " (stopped)");
   }
 
   function jobRemoved(data) {
     var jobName = data['jobName']
-    console.log("Received removed_job message " + jobName);
+    //console.log("Received removed_job message " + jobName);
     d3.select('#title_text_' + jobName).text("Job: " + jobName + " (removed)");
 
     var jobDiv = document.getElementById(jobName);
@@ -1570,7 +1563,7 @@ var runningJobsFunctions = {};
 
   function jobSaved(data) {
     var jobName = data['jobName']
-    console.log("Received saved_job message " + jobName);
+    //console.log("Received saved_job message " + jobName);
     d3.select('#title_text_' + jobName).text("Job: " + jobName + " (saved)");
 
     var jobDiv = document.getElementById(jobName);

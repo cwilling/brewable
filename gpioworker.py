@@ -69,9 +69,9 @@ class GPIOProcess(multiprocessing.Process):
             sensor_file.close
             for sensorId in sensors.split():
                 self.sensorDevices.append(SensorDevice(sensorId))
-                print sensorId
-            for sensor in self.sensorDevices:
-                print "SENSOR", sensor.getId()
+                #print sensorId
+            #for sensor in self.sensorDevices:
+            #    print "SENSOR", sensor.getId()
         except:
             print "No sensors connected?"
 
@@ -104,7 +104,7 @@ class GPIOProcess(multiprocessing.Process):
                 #print "Job data: ", json_data['job_data']
                 for job in json_data['job_data']:
                     self.jobs.append(job)
-                print "Job data: ", self.jobs
+                #print "Job data: ", self.jobs
         except Exception as e:
             # Can't open job file - either corrupted or doesn't exist
             print e
@@ -123,13 +123,13 @@ class GPIOProcess(multiprocessing.Process):
             if not self.input_queue.empty():
                 data = self.input_queue.get()
                 # Do something with it
-                print "data 0: ", data
-                print "data 0 length: ", len(data)
+                #print "data 0: ", data
+                #print "data 0 length: ", len(data)
                 try:
                     jmsg = json.loads(data.strip())
                     if jmsg['type'].startswith('save_job'):
                         # Update local version, then save to file
-                        print("gpio found save_job msg")
+                        #print("gpio found save_job msg")
                         self.jobs.append(jmsg['data'])
                         # print("self.jobs: ", self.jobs)
                         with open(JOB_DATA_FILE, 'w') as json_file:
@@ -139,7 +139,7 @@ class GPIOProcess(multiprocessing.Process):
                                             'data':self.jobs})
                         self.output_queue.put(jdata)
                     elif jmsg['type'].startswith('load_jobs'):
-                        print("gpio found load_jobs msg")
+                        #print("gpio found load_jobs msg")
                         jdata = json.dumps({'type':'loaded_jobs',
                                             'data':self.jobs})
                         self.output_queue.put(jdata)
@@ -155,7 +155,7 @@ class GPIOProcess(multiprocessing.Process):
                                             'data':self.jobs})
                         self.output_queue.put(jdata)
                     elif jmsg['type'].startswith('run_job'):
-                        print("gpio received run_job msg");
+                        #print("gpio received run_job msg");
                         # First check that this job isn't already running
                         isRunning = False
                         for job in self.runningJobs:
@@ -180,7 +180,7 @@ class GPIOProcess(multiprocessing.Process):
                                                 'data':running_jobs})
                             self.output_queue.put(jdata)
                     elif jmsg['type'].startswith('load_running_jobs'):
-                        print "Rcvd request to LOAD RUNNING JOBS"
+                        #print "Rcvd request to LOAD RUNNING JOBS"
                         # We send "public" job info (since client doesn't
                         # need stuff like local file name etc.
                         # Also send collected status reports
@@ -190,9 +190,9 @@ class GPIOProcess(multiprocessing.Process):
                             for j in self.runningJobs:
                                 job_info = j.jobInfo()
                                 job_info['history'] = j.history[1:]
-                                print "list running job: ", job_info
+                                #print "list running job: ", job_info
                                 running_jobs.append(job_info)
-                            print "running_jobs list: ", running_jobs
+                            #print "running_jobs list: ", running_jobs
                             jdata = json.dumps({'type':'running_jobs',
                                                 'data':running_jobs})
                             self.output_queue.put(jdata)
@@ -218,7 +218,7 @@ class GPIOProcess(multiprocessing.Process):
                         try:
                             with open(PROFILE_DATA_FILE) as json_file:
                                 json_data = json.load(json_file)
-                                print(json_data['profiles_data'])
+                                #print(json_data['profiles_data'])
                                 jdata = json.dumps({'type':'loaded_profiles',
                                                     'data':json_data['profiles_data']})
                         except:
@@ -279,17 +279,16 @@ class GPIOProcess(multiprocessing.Process):
 
 
     def loadSavedJobData(self, jmsg):
-        print "Rcvd request to LOAD SAVED JOB DATA ", jmsg['data']['fileName'] + '.txt'
+        #print "Rcvd request to LOAD SAVED JOB DATA ", jmsg['data']['fileName'] + '.txt'
 
         fileName = jmsg['data']['fileName'] + '.txt'
-        print "fileName: ", fileName
+        #print "fileName: ", fileName
         filepath = os.path.join(CWD, JOB_HISTORY_DIR, fileName)
-        print "loading data from file: ", filepath
+        #print "loading data from file: ", filepath
         try:
-            #lines = [line.strip() for line in open(filepath)]
             with open(filepath) as f:
                 lines = [json.loads(line) for line in f]
-            print "lines: ", lines
+            #print "lines: ", lines
             jdata = {'type':'saved_job_data', 'data':{'header':lines[0:1],'updates':lines[1:]}}
         except:
                 print "Couldn't load saved job data"
@@ -300,19 +299,19 @@ class GPIOProcess(multiprocessing.Process):
 
 
     def loadSavedJobs(self, jmsg):
-        print "Rcvd request to LOAD SAVED JOBS"
+        #print "Rcvd request to LOAD SAVED JOBS"
         try:
             historyfiles = [f for f in os.listdir(os.path.join(CWD, JOB_HISTORY_DIR)) if os.path.isfile(os.path.join(CWD, JOB_HISTORY_DIR, f))]
             #print "files: ", historyfiles
             jdata = json.dumps({'type':'saved_jobs_list',
                                 'data':{'historyfiles':historyfiles}})
             self.output_queue.put(jdata)
-            print "file list sent: ", jdata
+            #print "file list sent: ", jdata
         except Exception as e:
             print "error loadSavedJobs(); ", e
 
     def removeRunningJob(self, jmsg):
-        print "Rcvd request to REMOVE JOB"
+        #print "Rcvd request to REMOVE JOB"
         jobName = jmsg['data']['jobName']
         self.stopRunningJob(jmsg)
 
@@ -322,7 +321,7 @@ class GPIOProcess(multiprocessing.Process):
             if self.stoppedJobs[i].name() == jobName:
                 job_found = True
                 del self.stoppedJobs[i]
-                print "Job %s removed from stoppedJobs" % jobName
+                #print "Job %s removed from stoppedJobs" % jobName
                 jdata = json.dumps({'type':'removed_job',
                                     'data':{'jobName':jobName}})
                 self.output_queue.put(jdata)
@@ -332,7 +331,7 @@ class GPIOProcess(multiprocessing.Process):
             print "Job to remove NOT FOUND! ", jobName
 
     def saveRunningJob(self, jmsg):
-        print "Rcvd request to SAVE RUNNING JOB"
+        #print "Rcvd request to SAVE RUNNING JOB"
         jobName = jmsg['data']['jobName']
         self.stopRunningJob(jmsg)
 
@@ -360,7 +359,7 @@ class GPIOProcess(multiprocessing.Process):
         self.loadSavedJobs(json.dumps({'type':'load_saved_jobs','data':[]}))
 
     def stopRunningJob(self, jmsg):
-        print "Rcvd request to STOP RUNNING JOB"
+        #print "Rcvd request to STOP RUNNING JOB"
         job_found = False
         for job in self.runningJobs:
             if job.name() == jmsg['data']['jobName']:
@@ -414,7 +413,7 @@ class GPIOProcess(multiprocessing.Process):
 
 
     def relay_test(self):
-        print "Relay count = ", self.relay.device_count()
+        #print "Relay count = ", self.relay.device_count()
         for i in range(self.relay.device_count()):
             self.relay.ON(i+1)
             time.sleep(1)
@@ -427,10 +426,10 @@ class GPIOProcess(multiprocessing.Process):
 
     def toggle_relay_command(self, channel):
         if self.relay.isOn(channel):
-            print "relay %d is already on; switching off" % channel
+            #print "relay %d is already on; switching off" % channel
             self.relay.OFF(channel)
         else:
-            print "relay %d is off; switching on" % channel
+            #print "relay %d is off; switching on" % channel
             self.relay.ON(channel)
         self.liveUpdate()
         #print "STATE: ", self.relay.state()
@@ -491,7 +490,7 @@ class JobProcessor(GPIOProcess):
         # Start a history file
         # We'll periodically append updates
         # (see "status" element in process())
-        print "historyFileName: ", self.historyFileName
+        #print "historyFileName: ", self.historyFileName
         header = {'type':'header',
                   'jobName':self.jobName,
                   'jobInstance':self.instanceId,
@@ -502,7 +501,7 @@ class JobProcessor(GPIOProcess):
                   'startTime':self.startTime,
                   'historyFileName':self.historyFileName
                  }
-        print "header ", header
+        #print "header ", header
 
         # NB. Its _not_ quite a fully json file,
         # rather text file with individually json encoded entry per line
@@ -539,7 +538,7 @@ class JobProcessor(GPIOProcess):
     # Confirm specififed sensors exist in the system
     def validateSensors(self, sensors):
         for sensor in sensors:
-            print "VALIDATE:", sensor
+            #print "VALIDATE:", sensor
             if not st.isValidTempDevice(sensor):
                 raise Exception()
         return sensors
@@ -587,24 +586,24 @@ class JobProcessor(GPIOProcess):
             cumulative_time += entry[0]
 
         elapsed_time = current_time - self.startTime
-        print "elapsed_time = ", elapsed_time
+        #print "elapsed_time = ", elapsed_time
         #print "steps: ", control_steps
 
         # If we're past the last step, return the last valid temperature target
         if elapsed_time > control_steps[-1][2]:
             for x in reversed(control_steps):
                 if float(x[1]) > 0:
-                    print "target_temperature() DONE", x[1] 
+                    #print "target_temperature() DONE", x[1] 
                     return (True, x[1])
             # case == basket
-            print "target_temperature() DONE", control_steps[-1][1]
+            #print "target_temperature() DONE", control_steps[-1][1]
             return (True, control_steps[-1][1])
 
         previous_setpoint = control_steps[0]
         #print "previous_setpoint: ", previous_setpoint
         for step in control_steps:
             if step[2] > elapsed_time:
-                print "At %f, next setpoint at: %f" % (elapsed_time, step[2])
+                #print "At %f, next setpoint at: %f" % (elapsed_time, step[2])
                 slope = (step[1] - previous_setpoint[1])/(step[2] - previous_setpoint[2])
                 intercept = step[1] - slope*step[2]
                 target = slope*elapsed_time + intercept
@@ -629,11 +628,11 @@ class JobProcessor(GPIOProcess):
         return job_status
 
     def stop(self):
-        print "Stopping job: ", self.jobName
+        #print "Stopping job: ", self.jobName
         try:
             for i in range(len(self.runningJobs)):
                 if self.runningJobs[i].name() == self.jobName:
-                    print "FOUND job to stop running"
+                    #print "FOUND job to stop running"
                     # Move from runningJobs to stoppedJobs
                     self.stoppedJobs.append(self.runningJobs[i])
                     del self.runningJobs[i]
@@ -661,7 +660,7 @@ class JobProcessor(GPIOProcess):
     def process(self):
         self.processing  = True
         accumulatedTime = 0.0
-        print "Processing job; ", self.jobName
+        #print "Processing job; ", self.jobName
         now = time.time()
 
         (job_done, target) = self.target_temperature(now)
@@ -694,7 +693,7 @@ class JobProcessor(GPIOProcess):
         if self.processType == "SIMPLE_COOL":
             # Assume a single sensor for a SIMPLE method
             temp = st.get_temp(self.jobSensors[0])
-            print "Temp: %s for target: %s" % (temp, target)
+            #print "Temp: %s for target: %s" % (temp, target)
 
             # Single relay for COOL method
             coolerRelay = relayIds[0]
@@ -705,13 +704,13 @@ class JobProcessor(GPIOProcess):
                 if not self.relay.isOn(coolerRelay):
                     self.relay.ON(coolerRelay)
                     self.liveUpdate()
-                print "Start COOLING"
+                #print "Start COOLING"
             elif float(temp) < float(target):
                 # Turn off the cooler relay.
                 if self.relay.isOn(coolerRelay):
                     self.relay.OFF(coolerRelay)
                     self.liveUpdate()
-                print "Stop COOLING"
+                #print "Stop COOLING"
             else:
                 if self.relay.isOn(coolerRelay):
                     self.relay.OFF(coolerRelay)
@@ -719,11 +718,11 @@ class JobProcessor(GPIOProcess):
         elif self.processType == "SIMPLE_COOL_HEAT":
             # Assume a single sensor for a SIMPLE method
             temp = st.get_temp(self.jobSensors[0])
-            print "Temp: %s for target: %s" % (temp, target)
+            #print "Temp: %s for target: %s" % (temp, target)
 
             # Assume 2 relays for COOL_HEAT method
             if len(relayIds) < 2:
-                print "Need 2 relays for COOL_HEAT method"
+                #print "Need 2 relays for COOL_HEAT method"
                 # Cancel job somehow?
                 return
             # Assume 1st is the cooler relay, 2nd is the heater
@@ -740,7 +739,7 @@ class JobProcessor(GPIOProcess):
                 if self.relay.isOn(heaterRelay):
                     self.relay.OFF(heaterRelay)
                     self.liveUpdate()
-                print "Start COOLING"
+                #print "Start COOLING"
             elif float(temp) < float(target):
                 # Turn off the cooler relay.
                 if self.relay.isOn(coolerRelay):
@@ -750,7 +749,7 @@ class JobProcessor(GPIOProcess):
                 if not self.relay.isOn(heaterRelay):
                     self.relay.ON(heaterRelay)
                     self.liveUpdate()
-                print "Start HEATING"
+                #print "Start HEATING"
             else:
                 if self.relay.isOn(coolerRelay):
                     self.relay.OFF(coolerRelay)
