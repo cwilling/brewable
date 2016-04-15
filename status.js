@@ -303,25 +303,135 @@ domReady( function(){
     console.log("longName: " + longName);
 
 /* Examples of extracting various fields
+    console.log("updateJobHistoryData() jobProfile: " + header[0]['jobProfile'] + " " + header[0]['jobProfile'].length);
     console.log("updateJobHistoryData() jobName: " + header[0]['jobName'] + " " + header.length);
     console.log("updateJobHistoryData() updates: " + updates + " " + updates.length);
     for (var i=0;i<updates.length;i++) {
-      console.log("updateJobHistoryData() temp at " + parseFloat(updates[i]['elapsed']).toFixed(2) + " = " + updates[i][updates[i]['sensors']]);
+      console.log("updateJobHistoryData() temp at " + parseFloat(updates[i]['elapsed']).toFixed(2) + " = " + updates[i][updates[i]['sensors'][0]]);
     }
 */
-    var runningJobsGraphMargin = {top: 60, right: 20, bottom: 50, left: 80},
-        runningJobsGraphWidth = 1800 - runningJobsGraphMargin.left - runningJobsGraphMargin.right,
-        runningJobsGraphHeight = 256 - runningJobsGraphMargin.top - runningJobsGraphMargin.bottom;
+    var historyJobsGraphMargin = {top: 20, right: 20, bottom: 50, left: 60},
+        historyJobsGraphWidth = 1800 - historyJobsGraphMargin.left - historyJobsGraphMargin.right,
+        historyJobsGraphHeight = 256 - historyJobsGraphMargin.top - historyJobsGraphMargin.bottom;
 
     // Draw the graph of job history
-    var runningJobsGraphHolder = d3.select("#historyElementGraph_" + longName).append("svg")
+    d3.select("#history_" + longName).remove();
+    var historyJobsGraphHolder = d3.select("#historyElementGraph_" + longName).append("svg")
                       .attr("id", "history_" + longName)
                       .attr("class", "history_job")
-                      .attr("width", runningJobsGraphWidth + runningJobsGraphMargin.right + runningJobsGraphMargin.left)
-                      .attr("height", runningJobsGraphHeight + runningJobsGraphMargin.top + runningJobsGraphMargin.bottom)
+                      .attr("width", historyJobsGraphWidth + historyJobsGraphMargin.right + historyJobsGraphMargin.left)
+                      .attr("height", historyJobsGraphHeight + historyJobsGraphMargin.top + historyJobsGraphMargin.bottom)
                       .style("border", "1px solid black")
 
+      // Extract profile & temperature data into local arrays
+      var profileData = header[0]['jobProfile'];
+      var profileLineData = [];
+      var temperatureLineData = []
+      var setpoint = {};
+      var nextStep = 0.0;
+      for (var sp=0;sp<profileData.length;sp++) {
+        setpoint = {"x":nextStep,
+                    "y":profileData[sp]["target"]};
+        profileLineData.push(setpoint);
+        nextStep += parseFloat(profileData[sp]["duration"]);
+        //console.log("**** updateJobHistoryData() profile: " + setpoint["x"] + " : " + setpoint["y"]);
+      }
+      // We assume (for now) only temperature data from a single sensor (sensors[0])
+      for (var i=0;i<updates.length;i++) {
+        setpoint = {"x":parseFloat(updates[i]['elapsed']).toFixed(2),
+                    "y":updates[i][updates[i]['sensors'][0]]};
+        temperatureLineData.push(setpoint);
+        //console.log("**** updateJobHistoryData() temperature: " + setpoint["x"] + " : " + setpoint["y"]);
+      }
 
+      // Find extent of values in both profileLineData & temperatureLineData
+      // N.B. could probably do this while populating the *LineData arrays
+      var maxTime = 0.0;
+      var maxDataPoint = 0.0;
+      var minDataPoint = 1000.0;
+      var minProfile = d3.min(profileLineData, function(d) {return parseFloat(d.y);});
+      var maxProfile = d3.max(profileLineData, function(d) {return parseFloat(d.y);}) + 1.0;
+      var maxProfileTime = d3.max(profileLineData, function(d) {return parseFloat(d.x);}) + 60;
+      var minTemp = d3.min(temperatureLineData, function(d) {return parseFloat(d.y);});
+      var maxTemp = d3.max(temperatureLineData, function(d) {return parseFloat(d.y);}) + 1.0;
+      var maxTempTime = d3.max(temperatureLineData, function(d) {return parseFloat(d.x);}) + 60;
+
+      if ( minProfile < minDataPoint ) minDataPoint = minProfile;
+      if ( maxProfile > maxDataPoint ) maxDataPoint = maxProfile;
+      if ( maxProfileTime > maxTime ) maxTime = maxProfileTime;
+      if ( minTemp < minDataPoint ) minDataPoint = minTemp;
+      if ( maxTemp > maxDataPoint ) maxDataPoint = maxTemp;
+      if ( maxTempTime > maxTime ) maxTime = maxTempTime;
+
+      // Sanity check
+      minDataPoint = (minDataPoint<0)?minDataPoint:0;
+      maxDataPoint = (maxDataPoint>30)?maxDataPoint:30;
+      console.log("**** minDataPoint = " + minDataPoint + ", maxDataPoint = " + maxDataPoint + ", maxTempTime = " + maxTempTime);
+
+
+      // Scale & axes
+      var historyLinearScaleY = d3.scale.linear()
+                        .domain([minDataPoint,maxDataPoint])
+                        .range([historyJobsGraphHeight,0]);
+      var historyYAxis = d3.svg.axis()
+                        .scale(historyLinearScaleY)
+                        .orient("left").ticks(4);
+      var historyYAxisGroup = historyJobsGraphHolder.append("g")
+                        .attr("transform",
+                              "translate(" + historyJobsGraphMargin.left + "," + historyJobsGraphMargin.top + ")")
+                        .call(historyYAxis);
+      var historyLinearScaleX = d3.scale.linear()
+                        .domain([0,maxTime])
+                        .range([0,historyJobsGraphWidth]);
+      var xAxis = d3.svg.axis()
+                        .scale(historyLinearScaleX)
+                        .orient("bottom").ticks(20);
+      var xAxisGroup = historyJobsGraphHolder.append("g")
+                        .attr("transform",
+                              "translate(" + historyJobsGraphMargin.left + "," + (historyJobsGraphHeight + historyJobsGraphMargin.top) + ")")
+                        .call(xAxis);
+
+      // Scale profile data
+      var scaledProfileLineData = [];
+      for ( var sp=0;sp<profileLineData.length;sp++) {
+        //console.log("scaled sp = " + profileLineData[sp].x + " : " + profileLineData[sp].y);
+        scaledProfileLineData.push({"x":historyLinearScaleX(profileLineData[sp].x),
+                             "y":historyLinearScaleY(profileLineData[sp].y)});
+      }
+      // Draw profile graph
+      var historyProfileLineFunction = d3.svg.line()
+                                .x(function(d) { return d.x; })
+                                .y(function(d) { return d.y; })
+                                .interpolate("linear");
+      var lineGraph = historyJobsGraphHolder.append("path")
+                                .attr("transform",
+                                      "translate(" + historyJobsGraphMargin.left + "," + historyJobsGraphMargin.top + ")")
+                                .attr("d", historyProfileLineFunction(scaledProfileLineData))
+                                .attr("stroke", "gray")
+                                .attr("stroke-width", 2)
+                                .attr("fill", "none");
+
+      // Scale temperature data
+      var scaledTemperatureLineData = [];
+      for ( var sp=0;sp<temperatureLineData.length;sp++) {
+        //console.log("scaled sp = " + temperatureLineData[sp].x + " : " + temperatureLineData[sp].y);
+        scaledTemperatureLineData.push({"x":historyLinearScaleX(temperatureLineData[sp].x),
+                             "y":historyLinearScaleY(temperatureLineData[sp].y)});
+      }
+      // Draw temperature graph
+      var historyTemperatureLineFunction = d3.svg.line()
+                                .x(function(d) { return d.x; })
+                                .y(function(d) { return d.y; })
+                                .interpolate("linear");
+      var lineGraph = historyJobsGraphHolder.append("path")
+                                .attr("transform",
+                                      "translate(" + historyJobsGraphMargin.left + "," + historyJobsGraphMargin.top + ")")
+                                .attr("d", historyTemperatureLineFunction(scaledTemperatureLineData))
+                                .attr("stroke", "blue")
+                                .attr("stroke-width", 2)
+                                .attr("fill", "none");
+
+console.log("updateJobHistoryData() END");
   }
 
   function updateJobHistoryList(data) {
@@ -1092,71 +1202,30 @@ var runningJobsFunctions = {};
           d3.select('#title_text_' + nodeName).text("Job: " + nodeName + " (saving)");
         }
       }];
-
-/*
-      d3.select('#running_job_' + job.jobName)
-        .on("contextmenu", function(data, index) {
-        var elm = this;
-
-        // create the div element that will hold the context menu
-        d3.selectAll('.context-menu').data([1])
-          .enter()
-          .append('div')
-          .attr('class', 'context-menu');
-
-          // an ordinary click anywhere closes menu
-          d3.select('body').on('click.context-menu', function() {
-            d3.select('.context-menu').style('display', 'none');
-          });
-
-          // this is executed when a contextmenu event occurs
-          d3.selectAll('.context-menu')
-            .html('')
-            .append('ul')
-            .selectAll('li')
-            .data(menu).enter()
-            .append('li')
-            .on('click', function(d) {
-                            console.log('XXXXX ' + d.title);
-                            d.action(elm, d, i);
-                            d3.select('.context-menu').style('display', 'none');
-                            return d; })
-            .text(function(d) {return d.title;});
-          d3.select('.context-menu').style('display', 'none');
-
-          // show the context menu
-          d3.select('.context-menu')
-            .style('left', (d3.event.pageX - 2) + 'px')
-            .style('top', (d3.event.pageY - 2) + 'px')
-            .style('display', 'block');
-          d3.event.preventDefault();
-
-        //d3.event.stopPropagation();
-      });
-*/
+      // End of popup menu
 
 
-      // Collect profile data into local array (lineData[])
+      // Collect profile data into local array (profileLineData[])
       var profileData = job.jobProfile
       var nextStep = 0.0;
-      var lineData = [];
+      var profileLineData = [];
       var setpoint = {};
       for (var sp=0;sp<profileData.length;sp++) {
         setpoint = {"x":nextStep,
                     "y":profileData[sp]["target"]};
-        lineData.push(setpoint);
+        profileLineData.push(setpoint);
         //console.log("**** rundata B: " + setpoint["x"] + " : " + setpoint["y"]);
 
         nextStep += parseFloat(profileData[sp]["duration"]);
       }
 
-      // Find extent of values in lineData
+      // Find extent of values in profileLineData
       var maxTime = 0.0;
       var maxDataPoint = 0.0;
       var minDataPoint = 1000.0;
-      var min = d3.min(lineData, function(d) {return parseFloat(d.y);});
-      var max = d3.max(lineData, function(d) {return parseFloat(d.y);}) + 1.0;
-      var maxt = d3.max(lineData, function(d) {return parseFloat(d.x);}) + 60;
+      var min = d3.min(profileLineData, function(d) {return parseFloat(d.y);});
+      var max = d3.max(profileLineData, function(d) {return parseFloat(d.y);}) + 1.0;
+      var maxt = d3.max(profileLineData, function(d) {return parseFloat(d.x);}) + 60;
       if ( min < minDataPoint ) minDataPoint = min;
       if ( max > maxDataPoint ) maxDataPoint = max;
       if ( maxt > maxTime ) maxTime = maxt;
@@ -1279,12 +1348,12 @@ var runningJobsFunctions = {};
 
 
       // Scale data
-      var scaledLineData = [];
-      for ( var sp=0;sp<lineData.length;sp++) {
-        //console.log("scaled sp = " + lineData[sp].x + " : " + lineData[sp].y);
-        scaledLineData.push({"x":runningJobsFunctions[job.jobName].linearScaleX(lineData[sp].x),
-                             "y":runningJobsFunctions[job.jobName].linearScaleY(lineData[sp].y)});
-                             //"y":jobFunctions['linearScaleY'](lineData[sp].y)});
+      var scaledProfileLineData = [];
+      for ( var sp=0;sp<profileLineData.length;sp++) {
+        //console.log("scaled sp = " + profileLineData[sp].x + " : " + profileLineData[sp].y);
+        scaledProfileLineData.push({"x":runningJobsFunctions[job.jobName].linearScaleX(profileLineData[sp].x),
+                             "y":runningJobsFunctions[job.jobName].linearScaleY(profileLineData[sp].y)});
+                             //"y":jobFunctions['linearScaleY'](profileLineData[sp].y)});
       }
       // Draw the graph
       var runningJobsLineFunction = d3.svg.line()
@@ -1294,7 +1363,7 @@ var runningJobsFunctions = {};
       var lineGraph = runningJobsGraphHolder.append("path")
                                 .attr("transform",
                                       "translate(" + runningJobsGraphMargin.left + "," + runningJobsGraphMargin.top + ")")
-                                .attr("d", runningJobsLineFunction(scaledLineData))
+                                .attr("d", runningJobsLineFunction(scaledProfileLineData))
                                 .attr("stroke", "gray")
                                 .attr("stroke-width", 2)
                                 .attr("fill", "none");
