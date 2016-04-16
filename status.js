@@ -459,19 +459,6 @@ console.log("updateJobHistoryData() END");
         var historyElementGraph = document.createElement('DIV');
         historyElementGraph.id = 'historyElementGraph_' + jobName + '-' + jobInstance;
         historyElementGraph.className = 'historyElementGraph';
-        /*
-        historyElement.onclick = function() {
-          var historyElementGraphName = 'historyElementGraph_' +
-                                  this.id.slice('historyElementGraph_'.length);
-          console.log('historyElementGraphName = ' + historyElementGraphName);
-          var historyElementGraph = document.getElementById(historyElementGraphName);
-          if ( historyElementGraph.style.display == 'block') {
-            historyElementGraph.style.display = 'none';
-          } else {
-            historyElementGraph.style.display = 'block';
-          }
-        }
-        */
 
         var historyItemName = document.createElement('DIV');
         historyItemName.id = 'historyItemName' + i;
@@ -492,9 +479,12 @@ console.log("updateJobHistoryData() END");
           } else {
             historyElementGraph.style.display = 'block';
 
-            msgobj = {type:'load_saved_job_data', data:{'fileName':historyElementGraphName.slice('historyElementGraph_'.length)}};
-            console.log("msgobj: " + msgobj);
-            sendMessage({data:JSON.stringify(msgobj)});
+            // Only download history data if we don't already have it
+            if ( (!historyElementGraph.hasChildNodes()) ) {
+              msgobj = {type:'load_saved_job_data', data:{'fileName':historyElementGraphName.slice('historyElementGraph_'.length)}};
+              console.log("msgobj: " + msgobj);
+              sendMessage({data:JSON.stringify(msgobj)});
+            }
           }
         }
 
