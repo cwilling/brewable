@@ -283,7 +283,6 @@ domReady( function(){
         relays:	useRelays
       };
       var msgobj = {type:'save_job', data:jobData};
-      console.log("msgobj: " + msgobj);
       sendMessage({data:JSON.stringify(msgobj)});
     } else {
       console.log("NOT OKtoSave");
@@ -300,7 +299,7 @@ domReady( function(){
     var header = data['header'];
     var updates = data['updates'];
     var longName = header[0]['jobName'] + '-' + header[0]['jobInstance'];
-    console.log("longName: " + longName);
+    //console.log("longName: " + longName);
 
 /* Examples of extracting various fields
     console.log("updateJobHistoryData() jobProfile: " + header[0]['jobProfile'] + " " + header[0]['jobProfile'].length);
@@ -366,7 +365,7 @@ domReady( function(){
       // Sanity check
       minDataPoint = (minDataPoint<0)?minDataPoint:0;
       maxDataPoint = (maxDataPoint>30)?maxDataPoint:30;
-      console.log("**** minDataPoint = " + minDataPoint + ", maxDataPoint = " + maxDataPoint + ", maxTempTime = " + maxTempTime);
+      //console.log("**** minDataPoint = " + minDataPoint + ", maxDataPoint = " + maxDataPoint + ", maxTempTime = " + maxTempTime);
 
 
       // Scale & axes
@@ -431,7 +430,6 @@ domReady( function(){
                                 .attr("stroke-width", 2)
                                 .attr("fill", "none");
 
-console.log("updateJobHistoryData() END");
   }
 
   function updateJobHistoryList(data) {
@@ -472,7 +470,7 @@ console.log("updateJobHistoryData() END");
         historyItemInstance.onclick = function() {
           var historyElementGraphName = 'historyElementGraph_' +
                                   this.id.slice('historyElementGraph_'.length);
-          console.log('historyElementGraphName = ' + historyElementGraphName);
+          //console.log('historyElementGraphName = ' + historyElementGraphName);
           var historyElementGraph = document.getElementById(historyElementGraphName);
           if ( historyElementGraph.style.display == 'block') {
             historyElementGraph.style.display = 'none';
@@ -482,7 +480,6 @@ console.log("updateJobHistoryData() END");
             // Only download history data if we don't already have it
             if ( (!historyElementGraph.hasChildNodes()) ) {
               msgobj = {type:'load_saved_job_data', data:{'fileName':historyElementGraphName.slice('historyElementGraph_'.length)}};
-              console.log("msgobj: " + msgobj);
               sendMessage({data:JSON.stringify(msgobj)});
             }
           }
@@ -660,7 +657,6 @@ console.log("updateJobHistoryData() END");
     }
 
     msgobj = {type:'save_profiles', data:profileSet};
-    console.log("msgobj: " + msgobj);
     //jmsg = JSON.stringify(msgobj);
     sendMessage({data:JSON.stringify(msgobj)});
 
