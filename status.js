@@ -1,4 +1,4 @@
-var _TESTING_ = true;
+var _TESTING_ = false;
 
 var availableSensors = [];
 var availableRelays = [];
@@ -703,7 +703,6 @@ domReady( function(){
         if ( durPrev == 0 ) continue;
         // By now we have a cell with zero duration
         // while previous cell has nonzero duration
-        console.log("AT: " + 'dh' + i + '_' + k + ", prev = " + durPrev);
         var spCell = document.getElementById('sp' + i + '_' + k);
         var spCellPrev = document.getElementById('sp' + i + '_' + (k-1));
         var cellVal = parseFloat(spCell.value.trim());
@@ -872,16 +871,8 @@ domReady( function(){
   socket.onopen = function(){  
     console.log("sss connected"); 
 
-    // Load any running jobs from server; to show on Status page
-    var msgobj = {type:'load_running_jobs', data:[]};
-    sendMessage({data:JSON.stringify(msgobj)});
-
-    // Load saved jobs history
-    msgobj = {type:'load_saved_jobs', data:[]};
-    sendMessage({data:JSON.stringify(msgobj)});
-
-    // Request profiles data
-    msgobj = {type:'load_profiles', data:[]};
+    // Ask for whatever is needed to startup
+    msgobj = {type:'load_startup_data', data:[]};
     sendMessage({data:JSON.stringify(msgobj)});
   };
 
@@ -890,7 +881,9 @@ domReady( function(){
     var jmsg;
     try {
       jmsg = JSON.parse(message.data);
-      if ( jmsg.type === 'info' ) {
+      if ( jmsg.type === 'startup_data' ) {
+        startupData(jmsg.data);
+      } else if (jmsg.type === 'info' ) {
         console.log('INFO: ' + jmsg.data);
       } else if (jmsg.type === 'sensor_list' ) {
         // Keep a copy for later
@@ -962,6 +955,22 @@ domReady( function(){
     socket.send(message.data);
   };
 
+  function startupData(data) {
+    var data_keys = Object.keys(data)
+    //console.log('STARTUP DATA keys: ' + data_keys);
+    for (var k in data_keys)  {
+      //console.log('             key : ' + data_keys[k] + " = " + data[data_keys[k]]);
+      if (data_keys[k] == 'testing') {
+        _TESTING_ = data[data_keys[k]]
+      } else if (data_keys[k] == 'the_end') {
+        var the_end_unused = data[data_keys[k]];
+      } else {
+        console.log("Unknown entry in startupData()! " + data_keys[k] + ":" + data[data_keys[k]]);
+      }
+
+    }
+    console.log("_TESTING_ is " + _TESTING_);
+  }
 
   function send_relay_cmd(data) {
     var cmd = ["toggle_relay",data]

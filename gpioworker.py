@@ -128,7 +128,7 @@ class GPIOProcess(multiprocessing.Process):
                 #print "data 0 length: ", len(data)
                 try:
                     jmsg = json.loads(data.strip())
-                    if jmsg['type'].startswith('save_job'):
+                    if jmsg['type'] == 'save_job':
                         # Update local version, then save to file
                         #print("gpio found save_job msg")
                         self.jobs.append(jmsg['data'])
@@ -139,12 +139,12 @@ class GPIOProcess(multiprocessing.Process):
                         jdata = json.dumps({'type':'loaded_jobs',
                                             'data':self.jobs})
                         self.output_queue.put(jdata)
-                    elif jmsg['type'].startswith('load_jobs'):
+                    elif jmsg['type'] == 'load_jobs':
                         #print("gpio found load_jobs msg")
                         jdata = json.dumps({'type':'loaded_jobs',
                                             'data':self.jobs})
                         self.output_queue.put(jdata)
-                    elif jmsg['type'].startswith('delete_job'):
+                    elif jmsg['type'] == 'delete_job':
                         # First check if index in range?
                         del self.jobs[jmsg['data']['index']]
 
@@ -155,7 +155,7 @@ class GPIOProcess(multiprocessing.Process):
                         jdata = json.dumps({'type':'loaded_jobs',
                                             'data':self.jobs})
                         self.output_queue.put(jdata)
-                    elif jmsg['type'].startswith('run_job'):
+                    elif jmsg['type'] == 'run_job':
                         #print("gpio received run_job msg");
                         # First check that this job isn't already running
                         isRunning = False
@@ -180,70 +180,41 @@ class GPIOProcess(multiprocessing.Process):
                             jdata = json.dumps({'type':'running_jobs',
                                                 'data':running_jobs})
                             self.output_queue.put(jdata)
-                    elif jmsg['type'].startswith('load_running_jobs'):
-                        #print "Rcvd request to LOAD RUNNING JOBS"
-                        # We send "public" job info (since client doesn't
-                        # need stuff like local file name etc.
-                        # Also send collected status reports
-                        # (history without "private" header)
-                        if len(self.runningJobs) > 0:
-                            running_jobs = []
-                            for j in self.runningJobs:
-                                job_info = j.jobInfo()
-                                job_info['history'] = j.history[1:]
-                                #print "list running job: ", job_info
-                                running_jobs.append(job_info)
-                            #print "running_jobs list: ", running_jobs
-                            jdata = json.dumps({'type':'running_jobs',
-                                                'data':running_jobs})
-                            self.output_queue.put(jdata)
-                        else:
-                            print "No jobs running"
-                            jdata = json.dumps({'type':'running_jobs',
-                                                'data':[]})
-                            self.output_queue.put(jdata)
-                    elif jmsg['type'].startswith('stop_running_job'):
+                    elif jmsg['type'] == 'load_startup_data':
+                        self.loadStartupData(jmsg)
+                    elif jmsg['type'] == 'load_running_jobs':
+                        self.loadRunningJobs(jmsg)
+                    elif jmsg['type'] == 'stop_running_job':
                         self.stopRunningJob(jmsg)
-                    elif jmsg['type'].startswith('remove_running_job'):
+                    elif jmsg['type'] == 'remove_running_job':
                         self.removeRunningJob(jmsg)
-                    elif jmsg['type'].startswith('save_running_job'):
+                    elif jmsg['type'] == 'save_running_job':
                         self.saveRunningJob(jmsg)
                     elif jmsg['type'] == 'load_saved_jobs':
                         self.loadSavedJobs(jmsg)
                     elif jmsg['type'] == 'load_saved_job_data':
                         self.loadSavedJobData(jmsg)
-                    elif jmsg['type'].startswith('save_profiles'):
+                    elif jmsg['type'] == 'save_profiles':
                         with open(PROFILE_DATA_FILE, 'w') as json_file:
                             json.dump({'profiles_data':jmsg['data']}, json_file)
-                    elif jmsg['type'].startswith('load_profiles'):
-                        try:
-                            with open(PROFILE_DATA_FILE) as json_file:
-                                json_data = json.load(json_file)
-                                #print(json_data['profiles_data'])
-                                jdata = json.dumps({'type':'loaded_profiles',
-                                                    'data':json_data['profiles_data']})
-                        except:
-                                print "Couldn't load profile data file"
-                                jdata = json.dumps({'type':'loaded_profiles',
-                                                    'data':[]})
-                        finally:
-                            self.output_queue.put(jdata)
+                    elif jmsg['type'] == 'load_profiles':
+                        self.loadProfiles(jmsg)
 
-                    elif jmsg['type'].startswith('list_sensors'):
+                    elif jmsg['type'] == 'list_sensors':
                         sensor_ids = []
                         for sensor in self.sensorDevices:
                             sensor_ids.append(sensor.getId())
                         jdata = json.dumps({'type':'sensor_list',
                                             'data':sensor_ids})
                         self.output_queue.put(jdata)
-                    elif jmsg['type'].startswith('list_relays'):
+                    elif jmsg['type'] == 'list_relays':
                         relay_ids = []
                         for i in range(self.relay.device_count()):
                             relay_ids.append('Relay {:02}'.format(i+1))
                         jdata = json.dumps({'type':'relay_list',
                                             'data':relay_ids})
                         self.output_queue.put(jdata)
-                    elif jmsg['type'].startswith('CMD'):
+                    elif jmsg['type'] == 'CMD':
                         # With a CMD type, the data field is an array whose
                         # first element is the command,
                         # the remaining elements are the command's args
@@ -278,6 +249,52 @@ class GPIOProcess(multiprocessing.Process):
 
             #time.sleep(1)
 
+
+    def loadStartupData(self, jmsg):
+        jdata = json.dumps({'type':'startup_data',
+                            'data':{'testing':_TESTING_,
+                                    'the_end':'orange' }})
+        self.output_queue.put(jdata)
+
+        self.loadRunningJobs(jmsg)
+        self.loadSavedJobs(jmsg)
+        self.loadProfiles(jmsg)
+
+    def loadProfiles(self, jmsg):
+        try:
+            with open(PROFILE_DATA_FILE) as json_file:
+                json_data = json.load(json_file)
+                #print(json_data['profiles_data'])
+                jdata = json.dumps({'type':'loaded_profiles',
+                                    'data':json_data['profiles_data']})
+        except:
+            print "Couldn't load profile data file"
+            jdata = json.dumps({'type':'loaded_profiles', 'data':[]})
+        finally:
+            self.output_queue.put(jdata)
+
+    def loadRunningJobs(self, jmsg):
+        #print "Rcvd request to LOAD RUNNING JOBS"
+        # We send "public" job info (since client doesn't
+        # need stuff like local file name etc.
+        # Also send collected status reports
+        # (history without "private" header)
+        if len(self.runningJobs) > 0:
+            running_jobs = []
+            for j in self.runningJobs:
+                job_info = j.jobInfo()
+                job_info['history'] = j.history[1:]
+                #print "list running job: ", job_info
+                running_jobs.append(job_info)
+            #print "running_jobs list: ", running_jobs
+            jdata = json.dumps({'type':'running_jobs',
+                                'data':running_jobs})
+            self.output_queue.put(jdata)
+        else:
+            print "No jobs running"
+            jdata = json.dumps({'type':'running_jobs',
+                                'data':[]})
+            self.output_queue.put(jdata)
 
     def loadSavedJobData(self, jmsg):
         #print "Rcvd request to LOAD SAVED JOB DATA ", jmsg['data']['fileName'] + '.txt'
@@ -452,16 +469,14 @@ class GPIOProcess(multiprocessing.Process):
         #print "STATE: ", jdata
 
     def run_command(self, command):
-        if command[0].startswith('toggle_relay'):
+        if command[0] == 'toggle_relay':
             self.toggle_relay_command(command[1])
 
 
 
 class JobProcessor(GPIOProcess):
 
-    #def __init__(self, runningJobs, rawJobInfo, output_queue):
     def __init__(self, rawJobInfo, output_queue, runningJobs, stoppedJobs, relay, sensorDevices):
-        #self.parent     = parent
         self.runningJobs = runningJobs
         self.stoppedJobs = stoppedJobs
         self.output_queue = output_queue
@@ -477,7 +492,7 @@ class JobProcessor(GPIOProcess):
                                             + ".txt")
         self.processing  = False
 
-        # In future, make this settable in the job itself
+        # In future, make processType settable in the job itself
         # e.g.self.jobProcessType = rawJobInfo['process_type']
         #
         # Probable initial types would be
