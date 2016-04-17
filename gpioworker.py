@@ -572,31 +572,23 @@ class JobProcessor(GPIOProcess):
     # whereas real version will have hours.minutes
     def convertProfileTimes(self, profile):
         hrs = mins = secs = '0';
-        durSecs = durMins = 0;
+        durMins = 0;
         for sp in profile:
-            if _TESTING_:
-                (mins,dot,secs) = sp['duration'].partition('.')
-                if len(mins) > 0:
-                    durSecs = 60 * int(mins)
-                else:
-                    durSecs = 0
-                if len(secs) > 0:
-                    durSecs += int(secs)
-                sp['duration'] = str(durSecs)
+            (hrs,dot,mins) = sp['duration'].partition('.')
+            if len(hrs) > 0:
+                durMins = 60 * int(hrs)
             else:
-                (hrs,dot,mins) = sp['duration'].partition('.')
-                if len(hrs) > 0:
-                    durMins = 60 * int(hrs)
-                else:
-                    durMins = 0
-                if len(mins) > 0:
-                    durMins += int(mins)
+                durMins = 0
+            if len(mins) > 0:
+                durMins += int(mins)
+            if _TESTING_:
                 sp['duration'] = str(durMins)
+            else:
+                sp['duration'] = str(durMins * 60)
         return profile
 
     def target_temperature(self, current_time):
         '''What is the desired temperature at current_time?'''
-
         # First generate an array of target temps at accumulated time
         control_steps = []
         cumulative_time = 0.0

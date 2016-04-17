@@ -24,7 +24,6 @@ function generateDummyProfileSet(profiles, setpoints) {
   for (i=0;i<profiles;i++) {
     profile = [];
     for (j=0;j<setpoints;j++) {
-        //setpoint = {target: (20.0+j+i), duration: 1};
         setpoint = {target: 0, duration: 0};
         profile.push(setpoint);
     }
@@ -766,7 +765,7 @@ domReady( function(){
       var lineData = [];
       for (var sp=0;sp<profileData[profile].length;sp++) {
         //console.log("pdata: " + profileData[profile][sp]["duration"] + " : " + profileData[profile][sp]["target"]);
-        setpoint = {"x":nextStep,
+        setpoint = {"x":_TESTING_?nextStep:60*nextStep,
                     "y":profileData[profile][sp]["target"]};
         lineData.push(setpoint);
         //console.log("pdata: " + setpoint["x"] + " : " + setpoint["y"]);
