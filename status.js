@@ -2,6 +2,7 @@ var _TESTING_ = false;
 
 var availableSensors = [];
 var availableRelays = [];
+var temperatureColours = ["blue", "green", "red", "orange"];
 /*
 For now, hard code the number of profiles (profilesTableRows)
 and number of steps per profile (profilesTableColumns).
@@ -338,8 +339,13 @@ domReady( function(){
       for (var i=0;i<updates.length;i++) {
         setpoint = {"x":parseFloat(updates[i]['elapsed']).toFixed(2),
                     "y":updates[i][updates[i]['sensors'][0]]};
+        // Now build a path for this sensor by going through all the history entries
         temperatureLineData.push(setpoint);
         //console.log("**** updateJobHistoryData() temperature: " + setpoint["x"] + " : " + setpoint["y"]);
+      }
+      for (var sensor_instance=0;sensor_instance<header[0]['jobSensors'].length;sensor_instance++) {
+        console.log("updateJobHistoryData() sensor name: " + header[0]['jobSensors'][sensor_instance]);
+        var sensorName = header[0]['jobSensors'][sensor_instance];
       }
 
       // Find extent of values in both profileLineData & temperatureLineData
@@ -945,13 +951,14 @@ domReady( function(){
       } else if (jmsg.type === 'sensor_list' ) {
         // Keep a copy for later
         availableSensors = [];
+        while (availableSensors.length > 0) {availableSensors.pop();}
         for (var i=0;i<jmsg.data.length;i++) {
           availableSensors.push(jmsg.data[i]);
         }
         createSensorTableFunction();
       } else if (jmsg.type === 'relay_list' ) {
         // Keep a copy for later
-        availableRelays = [];
+        while (availableRelays.length > 0) {availableRelays.pop();}
         for (var i=0;i<jmsg.data.length;i++) {
           availableRelays.push(jmsg.data[i]);
         }
@@ -1043,12 +1050,12 @@ var runningJobsFunctions = {};
 
   // Create a table of sensors based on data  from server (availableSensors)
   function createSensorTableFunction() {
-    //console.log("Reached createSensorTableFunction() " + availableSensors);
+    console.log("Reached createSensorTableFunction() " + availableSensors);
 
     var table = document.getElementById("jobSensorsTable");
 
     for(var i=0;i<availableSensors.length;i++) {
-        //console.log("Adding sensor: " + availableSensors[i]);
+        console.log("Adding sensor: " + availableSensors[i]);
         var row = table.insertRow(i);
 
         var checkLabel = document.createElement("LABEL");
@@ -1067,12 +1074,12 @@ var runningJobsFunctions = {};
   }
   // Create a table of relays based on data  from server (availableRelays)
   function createRelayTableFunction() {
-    //console.log("Reached createRelayTableFunction() " + availableRelays);
+    console.log("Reached createRelayTableFunction() " + availableRelays);
 
     var table = document.getElementById("jobRelaysTable");
 
     for(var i=0;i<availableRelays.length;i++) {
-        //console.log("Adding relay: " + availableRelays[i]);
+        console.log("Adding relay: " + availableRelays[i]);
         var row = table.insertRow(i);
 
         var checkLabel = document.createElement("LABEL");
@@ -1436,31 +1443,37 @@ var runningJobsFunctions = {};
       console.log("Received dummy update for " + data.jobName);
     }
 
-    // We assume only 1 temperature sensor being used but we could use more.
-    // Therefore we keep track of which one(s) in an array data['sensors']
+    // We keep track of which sensor(s) being used in the array data['sensors']
 
-    var scaledLineData = [];
-    for (var i=0;i<jobFunctions['history'].length;i++) {
-      var sensorName = jobFunctions['history'][i]['sensors'][0];
-      //console.log("updateRunningJob(): temp at " + jobFunctions['history'][i]['elapsed'] + " = " + jobFunctions['history'][i][sensorName]);
-      scaledLineData.push({"x":jobFunctions['linearScaleX'](parseFloat(jobFunctions['history'][i]['elapsed'])),
-                           "y":jobFunctions['linearScaleY'](parseFloat(jobFunctions['history'][i][sensorName]))});
+    // First figure out names of sensors - should be available from first history entry
+    for (var sensor_instance=0;sensor_instance<jobFunctions['history'][0]['sensors'].length;sensor_instance++) {
+        var sensorName = jobFunctions['history'][0]['sensors'][sensor_instance];
+        //console.log("updateRunningJob(): found sensor: " + sensorName);
+
+        // Now build a path for this sensor by going through all the history entries
+        var scaledLineData = [];
+        for (var i=0;i<jobFunctions['history'].length;i++) {
+          //console.log("updateRunningJob(): temp at " + jobFunctions['history'][i]['elapsed'] + " = " + jobFunctions['history'][i][sensorName]);
+          scaledLineData.push({"x":jobFunctions['linearScaleX'](parseFloat(jobFunctions['history'][i]['elapsed'])),
+                               "y":jobFunctions['linearScaleY'](parseFloat(jobFunctions['history'][i][sensorName]))});
+        }
+
+        // Draw the graph
+        d3.select("#path_" + data.jobName + "_" + sensorName).remove();
+        var runningJobsLineFunction = d3.svg.line()
+                                  .x(function(d) { return d.x; })
+                                  .y(function(d) { return d.y; })
+                                  .interpolate("linear");
+        var runningJobsGraphMargin = jobFunctions['runningJobsGraphMargin'];
+        var lineGraph = runningJobsGraphHolder.append("path")
+                                  .attr("id", "path_" + data.jobName + "_" + sensorName)
+                                  .attr("transform",
+                                        "translate(" + runningJobsGraphMargin.left + "," + runningJobsGraphMargin.top + ")")
+                                  .attr("d", runningJobsLineFunction(scaledLineData))
+                                  .attr("stroke", temperatureColours[sensor_instance])
+                                  .attr("stroke-width", 4)
+                                  .attr("fill", "none");
     }
-    // Draw the graph
-    d3.select("#path_" + data.jobName).remove();
-    var runningJobsLineFunction = d3.svg.line()
-                              .x(function(d) { return d.x; })
-                              .y(function(d) { return d.y; })
-                              .interpolate("linear");
-    var runningJobsGraphMargin = jobFunctions['runningJobsGraphMargin'];
-    var lineGraph = runningJobsGraphHolder.append("path")
-                              .attr("id", "path_" + data.jobName)
-                              .attr("transform",
-                                    "translate(" + runningJobsGraphMargin.left + "," + runningJobsGraphMargin.top + ")")
-                              .attr("d", runningJobsLineFunction(scaledLineData))
-                              .attr("stroke", "blue")
-                              .attr("stroke-width", 4)
-                              .attr("fill", "none");
   }
 
   function add_live_data(sensor_state, relay_state) {
