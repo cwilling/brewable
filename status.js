@@ -308,7 +308,7 @@ domReady( function(){
       console.log("updateJobHistoryData() temp at " + parseFloat(updates[i]['elapsed']).toFixed(2) + " = " + updates[i][updates[i]['sensors'][0]]);
     }
 */
-    var historyJobsGraphMargin = {top: 20, right: 20, bottom: 50, left: 60},
+    var historyJobsGraphMargin = {top: 20, right: 40, bottom: 50, left: 60},
         historyJobsGraphWidth = 1800 - historyJobsGraphMargin.left - historyJobsGraphMargin.right,
         historyJobsGraphHeight = 256 - historyJobsGraphMargin.top - historyJobsGraphMargin.bottom;
 
@@ -383,7 +383,9 @@ domReady( function(){
                         .range([0,historyJobsGraphWidth]);
       var xAxis = d3.svg.axis()
                         .scale(historyLinearScaleX)
-                        .orient("bottom").ticks(20);
+                        .orient("bottom")
+                        .tickValues(makeTickValues(maxTime,18));
+                        //.ticks(20);
       var xAxisGroup = historyJobsGraphHolder.append("g")
                         .attr('class', 'x historyAxis')
                         .attr("transform",
@@ -761,9 +763,9 @@ domReady( function(){
 
     /* From the raw profile, generate a dataset that has accumulated times
     */
-    console.log("profileData length = " + profileData.length);
+    //console.log("profileData length = " + profileData.length);
     for (var profile=0;profile<profileData.length;profile++) {
-      console.log("profile length = " + profileData[profile].length);
+      //console.log("profile length = " + profileData[profile].length);
       var nextStep = 0.0;
       var lineData = [];
       for (var sp=0;sp<profileData[profile].length;sp++) {
@@ -828,7 +830,9 @@ domReady( function(){
                       .range([0,profileGraphWidth]);
     var xAxis = d3.svg.axis()
                       .scale(linearScaleX)
-                      .orient("bottom").ticks(18);
+                      .orient("bottom")
+                      .tickValues(makeTickValues(maxTime,18));
+                      //.ticks(18);
                       //.tickFormat(formatSeconds);
     var xAxisGroup = profileGraphHolder.append("g")
                       .attr('class', 'x profileAxis')
@@ -838,6 +842,16 @@ domReady( function(){
 
     // Custom tick format
     profileGraphHolder.selectAll('.x.profileAxis text').text(function(d) { return tickText(d) });
+
+    var xaxistext = profileGraphHolder.append("g")
+                          .attr("id", "xaxistext_profileGraph")
+                          .attr("class", "axistext")
+                          .append("text")
+                          .attr("transform",
+                              "translate(" + (profileGraphWidth - profileGraphMargin.left)/2 + "," + (profileGraphHeight+ profileGraphMargin.top + profileGraphMargin.bottom) + ")")
+                              .attr("dy", "-0.35em")
+                              .style("text-anchor", "middle")
+                              .text("Duration (" + (_TESTING_?'mins:secs':'days.hours:mins') + ")");
 
     for ( var profile=0;profile<profileDisplayData.length;profile++) {
       var scaledLineData = [];
@@ -862,6 +876,15 @@ domReady( function(){
 
   }
 
+  function makeTickValues(maxValue, tickCount) {
+    var result = [];
+    var width = Math.floor(maxValue/tickCount)
+    for (var i=0;i<tickCount;i++) {
+      result.push(i*width);
+    }
+    result.push(maxValue);
+    return result;
+  }
   function tickText(d) {
     var secs = (d%60);
     var hrs =  Math.floor(d/60/60);
@@ -885,7 +908,7 @@ domReady( function(){
   }
 
 
-  var profileGraphMargin = {top: 100, right: 20, bottom: 30, left: 80},
+  var profileGraphMargin = {top: 100, right: 40, bottom: 60, left: 80},
     profileGraphWidth = 1800 - profileGraphMargin.left - profileGraphMargin.right,
     profileGraphHeight = 500 - profileGraphMargin.top - profileGraphMargin.bottom;
   var profileGraphHolder = d3.select("#profilesGraphHolder").append("svg")
@@ -1172,7 +1195,7 @@ var runningJobsFunctions = {};
       adiv.id = job.jobName
       runningJobsHolder.appendChild(adiv);
 
-      var runningJobsGraphMargin = {top: 60, right: 20, bottom: 50, left: 80},
+      var runningJobsGraphMargin = {top: 60, right: 40, bottom: 50, left: 80},
           runningJobsGraphWidth = 1800 - runningJobsGraphMargin.left - runningJobsGraphMargin.right,
           runningJobsGraphHeight = 300 - runningJobsGraphMargin.top - runningJobsGraphMargin.bottom;
       jobFunctions['runningJobsGraphMargin'] = runningJobsGraphMargin;
@@ -1283,7 +1306,9 @@ var runningJobsFunctions = {};
                         .range([0,runningJobsGraphWidth]);
       var xAxis = d3.svg.axis()
                         .scale(jobFunctions['linearScaleX'])
-                        .orient("bottom").ticks(20);
+                        .orient("bottom")
+                        .tickValues(makeTickValues(maxTime,18));
+                        //.ticks(20);
       var xAxisGroup = runningJobsGraphHolder.append("g")
                         .attr('class', 'x runningAxis')
                         .attr("transform",
@@ -1315,7 +1340,7 @@ var runningJobsFunctions = {};
                                 "translate(" + (runningJobsGraphWidth - runningJobsGraphMargin.left)/2 + "," + (runningJobsGraphHeight+ runningJobsGraphMargin.top + runningJobsGraphMargin.bottom) + ")")
                                 .attr("dy", "-0.35em")
                                 .style("text-anchor", "middle")
-                                .text("Elapsed Time");
+                                .text("Elapsed Time (" + (_TESTING_?'mins:secs':'hours:mins') + ")");
 
 /*
                                 .on("click", function() {
