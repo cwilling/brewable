@@ -325,6 +325,7 @@ domReady( function(){
       // Extract profile & temperature data into local arrays
       var profileData = header[0]['jobProfile'];
       var profileLineData = [];
+      var temperatureLineDataHolder = []
       var temperatureLineData = []
       var setpoint = {};
       var nextStep = 0.0;
@@ -335,42 +336,49 @@ domReady( function(){
         nextStep += parseFloat(profileData[sp]["duration"]);
         //console.log("**** updateJobHistoryData() profile: " + setpoint["x"] + " : " + setpoint["y"]);
       }
-      // We assume (for now) only temperature data from a single sensor (sensors[0])
-      for (var i=0;i<updates.length;i++) {
-        setpoint = {"x":parseFloat(updates[i]['elapsed']).toFixed(2),
-                    "y":updates[i][updates[i]['sensors'][0]]};
-        // Now build a path for this sensor by going through all the history entries
-        temperatureLineData.push(setpoint);
-        //console.log("**** updateJobHistoryData() temperature: " + setpoint["x"] + " : " + setpoint["y"]);
-      }
+      // Extract temperature data for all sensors
       for (var sensor_instance=0;sensor_instance<header[0]['jobSensors'].length;sensor_instance++) {
         console.log("updateJobHistoryData() sensor name: " + header[0]['jobSensors'][sensor_instance]);
         var sensorName = header[0]['jobSensors'][sensor_instance];
+
+        temperatureLineData = [];
+        for (var i=0;i<updates.length;i++) {
+          setpoint = {"x":parseFloat(updates[i]['elapsed']).toFixed(2),
+                      "y":updates[i][updates[i]['sensors'][sensor_instance]]};
+          // Now build a path for this sensor by going through all the history entries
+          temperatureLineData.push(setpoint);
+          //console.log("**** updateJobHistoryData() temperature: " + setpoint["x"] + " : " + setpoint["y"]);
+        }
+        temperatureLineDataHolder[sensor_instance] = temperatureLineData;
       }
 
-      // Find extent of values in both profileLineData & temperatureLineData
-      // N.B. could probably do this while populating the *LineData arrays
+      // Find extent of values in both profileLineData & all the temperatureLineData arrays (1 for each sensor)
+      // N.B. could probaby do this while populating the *LineData arrays
       var maxTime = 0.0;
       var maxDataPoint = 0.0;
       var minDataPoint = 1000.0;
       var minProfile = d3.min(profileLineData, function(d) {return parseFloat(d.y);});
       var maxProfile = d3.max(profileLineData, function(d) {return parseFloat(d.y);}) + 1.0;
       var maxProfileTime = d3.max(profileLineData, function(d) {return parseFloat(d.x);}) + 60;
-      var minTemp = d3.min(temperatureLineData, function(d) {return parseFloat(d.y);});
-      var maxTemp = d3.max(temperatureLineData, function(d) {return parseFloat(d.y);}) + 1.0;
-      var maxTempTime = d3.max(temperatureLineData, function(d) {return parseFloat(d.x);}) + 60;
 
       if ( minProfile < minDataPoint ) minDataPoint = minProfile;
       if ( maxProfile > maxDataPoint ) maxDataPoint = maxProfile;
       if ( maxProfileTime > maxTime ) maxTime = maxProfileTime;
-      if ( minTemp < minDataPoint ) minDataPoint = minTemp;
-      if ( maxTemp > maxDataPoint ) maxDataPoint = maxTemp;
-      if ( maxTempTime > maxTime ) maxTime = maxTempTime;
+
+      for (var sensor_instance=0;sensor_instance<header[0]['jobSensors'].length;sensor_instance++) {
+        var temperature = d3.min(temperatureLineDataHolder[sensor_instance], function(d) {return parseFloat(d.y);});
+        if (temperature < minDataPoint ) minDataPoint = temperature;
+        temperature = d3.max(temperatureLineData[sensor_instance], function(d) {return parseFloat(d.y);}) + 1.0;
+        if (temperature > maxDataPoint ) maxDataPoint = temperature;
+        temperature = d3.max(temperatureLineData[sensor_instance], function(d) {return parseFloat(d.x);}) + 60;
+        if ( temperature > maxTime ) maxTime = temperature;
+      }
+
 
       // Sanity check
       minDataPoint = (minDataPoint<0)?minDataPoint:0;
       maxDataPoint = (maxDataPoint>30)?maxDataPoint:30;
-      //console.log("**** minDataPoint = " + minDataPoint + ", maxDataPoint = " + maxDataPoint + ", maxTempTime = " + maxTempTime);
+      //console.log("**** minDataPoint = " + minDataPoint + ", maxDataPoint = " + maxDataPoint + ", maxTime = " + maxTim);
 
 
       // Scale & axes
@@ -420,25 +428,28 @@ domReady( function(){
                                 .attr("stroke-width", 2)
                                 .attr("fill", "none");
 
-      // Scale temperature data
-      var scaledTemperatureLineData = [];
-      for ( var sp=0;sp<temperatureLineData.length;sp++) {
-        //console.log("scaled sp = " + temperatureLineData[sp].x + " : " + temperatureLineData[sp].y);
-        scaledTemperatureLineData.push({"x":historyLinearScaleX(temperatureLineData[sp].x),
-                             "y":historyLinearScaleY(temperatureLineData[sp].y)});
+      for (var sensor_instance=0;sensor_instance<header[0]['jobSensors'].length;sensor_instance++) {
+        // Scale temperature data
+        var scaledTemperatureLineData = [];
+        var temperatureLineData = temperatureLineDataHolder[sensor_instance];
+        for ( var sp=0;sp<temperatureLineData.length;sp++) {
+          //console.log("scaled sp = " + temperatureLineData[sp].x + " : " + temperatureLineData[sp].y);
+          scaledTemperatureLineData.push({"x":historyLinearScaleX(temperatureLineData[sp].x),
+                                          "y":historyLinearScaleY(temperatureLineData[sp].y)});
+        }
+        // Draw temperature graph
+        var historyTemperatureLineFunction = d3.svg.line()
+                                  .x(function(d) { return d.x; })
+                                  .y(function(d) { return d.y; })
+                                  .interpolate("linear");
+        var lineGraph = historyJobsGraphHolder.append("path")
+                                  .attr("transform",
+                                        "translate(" + historyJobsGraphMargin.left + "," + historyJobsGraphMargin.top + ")")
+                                  .attr("d", historyTemperatureLineFunction(scaledTemperatureLineData))
+                                  .attr("stroke", temperatureColours[sensor_instance])
+                                  .attr("stroke-width", 2)
+                                  .attr("fill", "none");
       }
-      // Draw temperature graph
-      var historyTemperatureLineFunction = d3.svg.line()
-                                .x(function(d) { return d.x; })
-                                .y(function(d) { return d.y; })
-                                .interpolate("linear");
-      var lineGraph = historyJobsGraphHolder.append("path")
-                                .attr("transform",
-                                      "translate(" + historyJobsGraphMargin.left + "," + historyJobsGraphMargin.top + ")")
-                                .attr("d", historyTemperatureLineFunction(scaledTemperatureLineData))
-                                .attr("stroke", "blue")
-                                .attr("stroke-width", 2)
-                                .attr("fill", "none");
 
   }
 
@@ -1050,12 +1061,12 @@ var runningJobsFunctions = {};
 
   // Create a table of sensors based on data  from server (availableSensors)
   function createSensorTableFunction() {
-    console.log("Reached createSensorTableFunction() " + availableSensors);
+    //console.log("Reached createSensorTableFunction() " + availableSensors);
 
     var table = document.getElementById("jobSensorsTable");
 
     for(var i=0;i<availableSensors.length;i++) {
-        console.log("Adding sensor: " + availableSensors[i]);
+        //console.log("Adding sensor: " + availableSensors[i]);
         var row = table.insertRow(i);
 
         var checkLabel = document.createElement("LABEL");
@@ -1074,12 +1085,12 @@ var runningJobsFunctions = {};
   }
   // Create a table of relays based on data  from server (availableRelays)
   function createRelayTableFunction() {
-    console.log("Reached createRelayTableFunction() " + availableRelays);
+    //console.log("Reached createRelayTableFunction() " + availableRelays);
 
     var table = document.getElementById("jobRelaysTable");
 
     for(var i=0;i<availableRelays.length;i++) {
-        console.log("Adding relay: " + availableRelays[i]);
+        //console.log("Adding relay: " + availableRelays[i]);
         var row = table.insertRow(i);
 
         var checkLabel = document.createElement("LABEL");
