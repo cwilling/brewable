@@ -385,9 +385,12 @@ domReady( function(){
                         .scale(historyLinearScaleX)
                         .orient("bottom").ticks(20);
       var xAxisGroup = historyJobsGraphHolder.append("g")
+                        .attr('class', 'x historyAxis')
                         .attr("transform",
                               "translate(" + historyJobsGraphMargin.left + "," + (historyJobsGraphHeight + historyJobsGraphMargin.top) + ")")
                         .call(xAxis);
+      // Custom tick format
+      historyJobsGraphHolder.selectAll('.x.historyAxis text').text(function(d) { return tickText(d) });
 
       // Scale profile data
       var scaledProfileLineData = [];
@@ -804,6 +807,12 @@ domReady( function(){
     console.log("minData = " + minDataPoint + ", maxData = " + maxDataPoint + ", maxTime = " + maxTime);
 
     // Scale & display data
+    if ( _TESTING_ ) {
+      var formatTime = d3.time.format("%H:%M.%S");
+    } else {
+      var formatTime = d3.time.format("%-j:%H.%M");
+    }
+    var formatSeconds = function(d) { return formatTime(new Date(1955,0, 0,0,0,d)); };
     var linearScaleY = d3.scale.linear()
                       .domain([minDataPoint,maxDataPoint])
                       .range([profileGraphHeight,0]);
@@ -819,12 +828,16 @@ domReady( function(){
                       .range([0,profileGraphWidth]);
     var xAxis = d3.svg.axis()
                       .scale(linearScaleX)
-                      .orient("bottom").ticks(20);
+                      .orient("bottom").ticks(18);
+                      //.tickFormat(formatSeconds);
     var xAxisGroup = profileGraphHolder.append("g")
+                      .attr('class', 'x profileAxis')
                       .attr("transform",
                             "translate(" + profileGraphMargin.left + "," + (profileGraphHeight + profileGraphMargin.top) + ")")
                       .call(xAxis);
 
+    // Custom tick format
+    profileGraphHolder.selectAll('.x.profileAxis text').text(function(d) { return tickText(d) });
 
     for ( var profile=0;profile<profileDisplayData.length;profile++) {
       var scaledLineData = [];
@@ -847,6 +860,28 @@ domReady( function(){
                                 .attr("fill", "none");
     }
 
+  }
+
+  function tickText(d) {
+    var secs = (d%60);
+    var hrs =  Math.floor(d/60/60);
+    var mins = Math.floor(d/60) - hrs * 60;
+    var days = Math.floor(hrs/24);
+    //return mins + ":" + secs;
+    if (_TESTING_) {
+      if (hrs < 1) {
+        return sprintf("%d:%02d", mins, secs);
+      } else {
+        return sprintf("%d.%02d:%02d", hrs, mins, secs);
+      }
+    } else {
+      if (days < 1 ) {
+        return sprintf("%d:%02d", hrs, mins);
+      } else {
+        hrs -= days*24;
+        return sprintf("%d.%02d:%02d", days, hrs, mins);
+      }
+    }
   }
 
 
@@ -1250,9 +1285,12 @@ var runningJobsFunctions = {};
                         .scale(jobFunctions['linearScaleX'])
                         .orient("bottom").ticks(20);
       var xAxisGroup = runningJobsGraphHolder.append("g")
+                        .attr('class', 'x runningAxis')
                         .attr("transform",
                               "translate(" + runningJobsGraphMargin.left + "," + (runningJobsGraphHeight + runningJobsGraphMargin.top) + ")")
                         .call(xAxis);
+      // Custom tick format
+      runningJobsGraphHolder.selectAll('.x.runningAxis text').text(function(d) { return tickText(d) });
 
       // Keep jobFunctions beyond this function for a rainy day
       // e.g. periodic updates about this job from the server

@@ -172,6 +172,7 @@ class GPIOProcess(multiprocessing.Process):
                         if len(self.runningJobs) > 0:
                             running_jobs = []
                             for j in self.runningJobs:
+                                j.process()
                                 job_info = j.jobInfo()
                                 job_info['history'] = j.history[1:]
                                 #print "list running job: ", job_info
@@ -237,10 +238,13 @@ class GPIOProcess(multiprocessing.Process):
                 self.output_queue.put(jdata)
 
             # Check/process any running jobs
-            for job in self.runningJobs:
-                job.process()
-                if count % 3  == 0:
-                    job.report()
+            if _TESTING_:
+                for job in self.runningJobs:
+                    job.process()
+            else:
+                if count % 20  == 0:
+                    for job in self.runningJobs:
+                        job.process()
 
 
 
@@ -674,6 +678,7 @@ class JobProcessor(GPIOProcess):
             print e
 
     def process(self):
+        self.report()
         self.processing  = True
         accumulatedTime = 0.0
         #print "Processing job; ", self.jobName
@@ -698,7 +703,7 @@ class JobProcessor(GPIOProcess):
         self.processing  = False
 
     def report(self):
-        print "REPORT time"
+        print "REPORT time", time.asctime()
         #print self.history
 
     def temperatureAdjust(self, target):
