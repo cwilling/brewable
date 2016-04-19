@@ -63,6 +63,79 @@ domReady( function(){
   var profilesLoadedEvent = new Event('profilesLoadedEvent');
 
 
+/*******************  Popup instead of a main menu bar ***************************/
+
+  // Popup menu
+  var masterPageMenu = [{
+    title: 'Status',
+    action: function(elm, data, index) {
+      console.log('menu item #1 from ' + elm.id + " " + data.title + " " + index);
+      location.href = "#content_1";
+    }
+  }, {
+    title: 'Jobs',
+    action: function(elm, data, index) {
+      console.log('menu item #2 from ' + elm.id + " " + data.title + " " + index);
+      location.href = "#content_2";
+    }
+  }, {
+    title: 'Profiles',
+    action: function(elm, data, index) {
+      console.log('menu item #3 from ' + elm.id + " " + data.title + " " + index);
+      location.href = "#content_3";
+    }
+  }, {
+    title: 'Configuration',
+    action: function(elm, data, index) {
+      console.log('menu item #4 from ' + elm.id + " " + data.title + " " + index);
+      location.href = "#content_4";
+    }
+  }];
+  // End of popup menu
+
+  //d3.select("#statusTitle").on("click", function(data, index) {
+  d3.selectAll(".page_title").on("click", function(data, index) {
+                                          console.log("CLICK");
+                                          var elm = this;
+
+                                          // create the div element that will hold the context menu
+                                          d3.selectAll('.context-menu').data([1])
+                                            .enter()
+                                            .append('div')
+                                            .attr('class', 'context-menu');
+
+                                            // an ordinary click anywhere closes menu
+                                            d3.select('body').on('click.context-menu', function() {
+                                              d3.select('.context-menu').style('display', 'none');
+                                            });
+
+                                            // this is executed when a contextmenu event occurs
+                                            d3.selectAll('.context-menu')
+                                              .html('<center><p><b>GO TO</b></p></center><hr>')
+                                              .append('ul')
+                                              .selectAll('li')
+                                              .data(masterPageMenu).enter()
+                                              .append('li')
+                                              .on('click',function(d) {
+                                                            console.log('popup selected: ' + d.title);
+                                                            d.action(elm, d, i);
+                                                            d3.select('.context-menu')
+                                                              .style('display', 'none');
+                                                            return d;
+                                                          })
+                                              .text(function(d) {return d.title;});
+                                            d3.select('.context-menu').style('display', 'none');
+
+                                            // show the context menu
+                                            d3.select('.context-menu')
+                                              .style('left', (d3.event.pageX - 2) + 'px')
+                                              .style('top', (d3.event.pageY - 2) + 'px')
+                                              .style('display', 'block');
+                                            d3.event.preventDefault();
+
+                                            d3.event.stopPropagation();
+                                        });
+
 /***********************  Jobs Configuration page  ***************************/
   // Refresh job list button ('Jobs' page'
   var refreshJobButton = document.getElementById("refresh_job_button");
@@ -488,6 +561,7 @@ domReady( function(){
         historyItemInstance.id = 'historyItemInstance_' + jobName + '-' + jobInstance;
         historyItemInstance.className = 'historyItemInstance';
         historyItemInstance.innerHTML = "<html>" + jobInstance + "</html>"
+/*
         historyItemInstance.onclick = function() {
           var historyElementGraphName = 'historyElementGraph_' +
                                   this.id.slice('historyElementGraph_'.length);
@@ -505,12 +579,84 @@ domReady( function(){
             }
           }
         }
+*/
 
         historyElement.appendChild(historyItemName);
         historyElement.appendChild(historyItemInstance);
         historyListJobsHolder.appendChild(historyElement);
         historyListJobsHolder.appendChild(historyElementGraph);
       }
+
+      // Popup menu
+      var historyElementMenu = [{
+        title: 'Display',
+        action: function(elm, data, index) {
+          console.log('menu item #1 from ' + elm.id + " " + data.title + " " + index);
+          var historyElementGraphName = 'historyElementGraph_' +
+                                  elm.id.slice('historyElementGraph_'.length);
+          console.log('historyElementGraphName = ' + historyElementGraphName);
+          var historyElementGraph = document.getElementById(historyElementGraphName);
+          if ( historyElementGraph.style.display == 'block') {
+            historyElementGraph.style.display = 'none';
+          } else {
+            historyElementGraph.style.display = 'block';
+
+            // Only download history data if we don't already have it
+            if ( (!historyElementGraph.hasChildNodes()) ) {
+              msgobj = {type:'load_saved_job_data', data:{'fileName':historyElementGraphName.slice('historyElementGraph_'.length)}};
+              sendMessage({data:JSON.stringify(msgobj)});
+            }
+          }
+        }
+      }, {
+        title: 'Delete',
+        action: function(elm, data, index) {
+          console.log('menu item #2 from ' + elm.id + " " + data.title + " " + index);
+        }
+      }];
+      // End of popup menu
+
+      d3.selectAll(".historyItemInstance").on("click", function(data, index) {
+                                              console.log("CLICK");
+                                              var elm = this;
+
+                                              // create the div element that will hold the context menu
+                                              d3.selectAll('.context-menu').data([1])
+                                                .enter()
+                                                .append('div')
+                                                .attr('class', 'context-menu');
+
+                                                // an ordinary click anywhere closes menu
+                                                d3.select('body').on('click.context-menu', function() {
+                                                  d3.select('.context-menu').style('display', 'none');
+                                                });
+
+                                                // this is executed when a contextmenu event occurs
+                                                d3.selectAll('.context-menu')
+                                                  .html('<center><p><b>Job Options</b></p></center><hr>')
+                                                  .append('ul')
+                                                  .selectAll('li')
+                                                  .data(historyElementMenu).enter()
+                                                  .append('li')
+                                                  .on('click',function(d) {
+                                                                console.log('popup selected: ' + d.title);
+                                                                d.action(elm, d, i);
+                                                                d3.select('.context-menu')
+                                                                  .style('display', 'none');
+                                                                return d;
+                                                              })
+                                                  .text(function(d) {return d.title;});
+                                                d3.select('.context-menu').style('display', 'none');
+
+                                                // show the context menu
+                                                d3.select('.context-menu')
+                                                  .style('left', (d3.event.pageX - 2) + 'px')
+                                                  .style('top', (d3.event.pageY - 72) + 'px')
+                                                  .style('display', 'block');
+                                                d3.event.preventDefault();
+
+                                                d3.event.stopPropagation();
+                                            });
 
   }
 
@@ -925,12 +1071,12 @@ domReady( function(){
   }
 
 
-  var profileGraphMargin = {top: 100, right: 40, bottom: 60, left: 80},
+  var profileGraphMargin = {top: 50, right: 40, bottom: 60, left: 80},
     profileGraphWidth = 1800 - profileGraphMargin.left - profileGraphMargin.right,
-    profileGraphHeight = 500 - profileGraphMargin.top - profileGraphMargin.bottom;
+    profileGraphHeight = 400 - profileGraphMargin.top - profileGraphMargin.bottom;
   var profileGraphHolder = d3.select("#profilesGraphHolder").append("svg")
                       .attr("id", "profiles_graph")
-                      .attr("class", "profiles_graph")
+                      .attr("class", "generic_graph")
                       .attr("width", profileGraphWidth + profileGraphMargin.right + profileGraphMargin.left)
                       .attr("height", profileGraphHeight + profileGraphMargin.top + profileGraphMargin.bottom)
                       .style("border", "1px solid black")
@@ -1023,6 +1169,9 @@ domReady( function(){
     for (var el=1;el<navmenu.length;el++ ) {
       navmenu[el].textContent = 'NOT CONNECTED TO PI!';
     }
+
+    d3.selectAll(".page_title").style("background", "red")
+                              .text('NOT CONNECTED TO SERVER!');
   };
 
   var sendMessage = function(message) {
@@ -1660,7 +1809,6 @@ var runningJobsFunctions = {};
       //no_running_jobs.innerHTML = "No jobs are currently running";
       no_running_jobs.innerHTML = "<center>" + jobName + " was saved to <a href=#content_2 >Job History</a> <br>No other jobs are currently running</center>";
       no_running_jobs.style.display = 'flex';
-      //no_running_jobs.style.padding = '10px';
     }
   }
 
