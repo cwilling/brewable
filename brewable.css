@@ -229,18 +229,37 @@ div#content_4 {
     overflow:   auto;
 }
 
+.nav_bar {
+    top:        0;
+    width:      100%;
+    height:      60px;
+    display:    flex;
+    justify-content: flex-end;
+    align-items: center;
+    background:	#555;
+}
 .page_title {
     font-family: ariel;
     font-size:  120%;
     font-weight: bold;
     text-align: center;
-    background:	#555;
-    padding:    1em;
+    width:      15%;
+    padding:    0em 32em;
 }
-.page_title:hover {
+.navigation_button {
+    padding:    20px;
     cursor:     pointer;
+    font-family: ariel;
+    font-size:  100%;
 }
-
+.navigation_button:hover {
+    background:	#666;
+}
+.title_item {
+}
+.jobsListTitle_menu:hover {
+    cursor:	pointer;
+}
 
 /* running jobs */
 #no_running_jobs {

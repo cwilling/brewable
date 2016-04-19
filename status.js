@@ -94,7 +94,7 @@ domReady( function(){
   // End of popup menu
 
   //d3.select("#statusTitle").on("click", function(data, index) {
-  d3.selectAll(".page_title").on("click", function(data, index) {
+  d3.selectAll(".navigation_button").on("click", function(data, index) {
                                           console.log("CLICK");
                                           var elm = this;
 
@@ -128,7 +128,7 @@ domReady( function(){
 
                                             // show the context menu
                                             d3.select('.context-menu')
-                                              .style('left', (d3.event.pageX - 2) + 'px')
+                                              .style('left', (d3.event.pageX - 100) + 'px')
                                               .style('top', (d3.event.pageY - 2) + 'px')
                                               .style('display', 'block');
                                             d3.event.preventDefault();
@@ -1161,7 +1161,7 @@ domReady( function(){
     console.log("disconnected"); 
 
     /* Display disconnected status */
-    var navmenu = document.getElementsByClassName("status_navigation");
+    var navmenu = document.getElementsByClassName("nav_bar");
     //console.log("Nav Menu has " + navmenu.length + " elements");
     for (var el=0;el<navmenu.length;el++ ) {
       navmenu[el].style.background = 'red';
