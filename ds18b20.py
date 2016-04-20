@@ -2,6 +2,7 @@ import sys, os, os.path
 import subprocess
 
 DS18B20_DEFAULT_DEVICE = '28-00000726d151'
+FUDGE = -1.0
 
 def isValidTempDevice (device_id = DS18B20_DEFAULT_DEVICE):
     device_path = '/sys/bus/w1/devices/' + device_id + '/w1_slave'
@@ -19,7 +20,7 @@ def get_temp (device_id = DS18B20_DEFAULT_DEVICE):
             temperature_file.close()
             temperaturedata = text.split(" ")[20]
             temperature = float(temperaturedata[2:]) / 1000
-            return temperature
+            return temperature + FUDGE;
         except:
             return '-0.0'
     else:
