@@ -431,7 +431,7 @@ class GPIOProcess(multiprocessing.Process):
                             'sensor_state':sensor_state,
                             'relay_state':relay_state})
         self.output_queue.put(jdata)
-        #print "relay_state jdata: ", jdata
+        #print "live_update jdata: ", jdata
 
     def setupJobRun(self, jobIndex):
         try:

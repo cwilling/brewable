@@ -539,6 +539,17 @@ domReady( function(){
         historyListJobsHolder.removeChild(historyListJobsHolder.firstChild);
       }
 
+      // Reverse sort the received list (by instancePattern)
+      sortedHistoryFiles = historyfiles.sort(function(a,b) {
+                      var to_sort = [instancePattern.exec(a),instancePattern.exec(b)];
+                      var to_sort_orig = to_sort.slice();
+                      to_sort.sort();
+                      if (to_sort_orig[0] == to_sort[0]) {
+                        return 1;
+                      } else {
+                        return -1;
+                      }
+                    });
 
       for (var i=0;i<historyfiles.length;i++) {
         //console.log("              " + historyfiles[i]);
