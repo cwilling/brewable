@@ -441,17 +441,17 @@ domReady( function(){
       for (var sensor_instance=0;sensor_instance<header[0]['jobSensors'].length;sensor_instance++) {
         var temperature = d3.min(temperatureLineDataHolder[sensor_instance], function(d) {return parseFloat(d.y);});
         if (temperature < minDataPoint ) minDataPoint = temperature;
-        temperature = d3.max(temperatureLineData[sensor_instance], function(d) {return parseFloat(d.y);}) + 1.0;
+        temperature = d3.max(temperatureLineDataHolder[sensor_instance], function(d) {return parseFloat(d.y);}) + 1.0;
         if (temperature > maxDataPoint ) maxDataPoint = temperature;
-        temperature = d3.max(temperatureLineData[sensor_instance], function(d) {return parseFloat(d.x);}) + 60;
+        temperature = d3.max(temperatureLineDataHolder[sensor_instance], function(d) {return parseFloat(d.x);}) + 60;
         if ( temperature > maxTime ) maxTime = temperature;
       }
 
 
       // Sanity check
-      minDataPoint = (minDataPoint<0)?minDataPoint:0;
-      maxDataPoint = (maxDataPoint>30)?maxDataPoint:30;
-      //console.log("**** minDataPoint = " + minDataPoint + ", maxDataPoint = " + maxDataPoint + ", maxTime = " + maxTim);
+      //minDataPoint = (minDataPoint<0)?0:minDataPoint;
+      //maxDataPoint = (maxDataPoint>60)?60:maxDataPoint;
+      //console.log("**** minDataPoint = " + minDataPoint + ", maxDataPoint = " + maxDataPoint + ", maxTime = " + maxTime);
 
 
       // Scale & axes
@@ -460,7 +460,9 @@ domReady( function(){
                         .range([historyJobsGraphHeight,0]);
       var historyYAxis = d3.svg.axis()
                         .scale(historyLinearScaleY)
-                        .orient("left").ticks(4);
+                        .orient("left")
+                        .tickValues(makeTickValues(maxDataPoint,4));
+                        //.ticks(4);
       var historyYAxisGroup = historyJobsGraphHolder.append("g")
                         .attr("transform",
                               "translate(" + historyJobsGraphMargin.left + "," + historyJobsGraphMargin.top + ")")
