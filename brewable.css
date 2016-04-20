@@ -261,6 +261,15 @@ div#content_4 {
     cursor:	pointer;
 }
 
+.relay_ison {
+    font-weight: bold;
+    color:      black;
+}
+.relay_isoff {
+    font-weight: normal;
+    color:      white;
+}
+
 /* running jobs */
 #no_running_jobs {
     width:	50%;

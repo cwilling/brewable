@@ -1765,12 +1765,10 @@ var runningJobsFunctions = {};
           beep();
         }
         document.getElementById(elementName).textContent = 'ON';
-        document.getElementById(elementName).style.color = 'black';
-        document.getElementById(elementName).style.fontWeight = 'bold';
+        document.getElementById(elementName).className = 'relay_update relay_ison';
       } else {
         document.getElementById(elementName).textContent = 'OFF';
-        document.getElementById(elementName).style.color = 'white';
-        document.getElementById(elementName).style.fontWeight = 'normal';
+        document.getElementById(elementName).className = 'relay_update relay_isoff';
       }
       //console.log("Relay state of " + i + ": " + relay_state[i]);
       // 2nd True/False indicates whether relay switching is Delayed/notDelayed
