@@ -561,4 +561,28 @@ div#jobComposer {
     display:    none;
 }
 
+#configHolder {
+    display:    flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 32px;
+}
+#configEntryHolder {
+    border:	1px solid #000;
+}
+.config_label {
+    display:    inline-block;
+    float:      left;
+    clear:      left;
+    width:      256px;
+    text-align: right;
+    margin:     3px 10px;
+}
+.config_input {
+    display:    inline-block;
+    float:      left;
+    width:      100px;
+    margin:     3px 10px;
+}
+
 /* ex:set ai shiftwidth=4 inputtab=spaces smarttab noautotab: */

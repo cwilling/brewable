@@ -419,9 +419,9 @@ domReady( function(){
         //console.log("**** updateJobHistoryData() profile: " + setpoint["x"] + " : " + setpoint["y"]);
       }
       // Extract temperature data for all sensors
-      for (var sensor_instance=0;sensor_instance<header[0]['jobSensors'].length;sensor_instance++) {
-        console.log("updateJobHistoryData() sensor name: " + header[0]['jobSensors'][sensor_instance]);
-        var sensorName = header[0]['jobSensors'][sensor_instance];
+      for (var sensor_instance=0;sensor_instance<header[0]['jobSensorIds'].length;sensor_instance++) {
+        console.log("updateJobHistoryData() sensor name: " + header[0]['jobSensorIds'][sensor_instance]);
+        var sensorName = header[0]['jobSensorIds'][sensor_instance];
 
         temperatureLineData = [];
         for (var i=0;i<updates.length;i++) {
@@ -447,7 +447,7 @@ domReady( function(){
       if ( maxProfile > maxDataPoint ) maxDataPoint = maxProfile;
       if ( maxProfileTime > maxTime ) maxTime = maxProfileTime;
 
-      for (var sensor_instance=0;sensor_instance<header[0]['jobSensors'].length;sensor_instance++) {
+      for (var sensor_instance=0;sensor_instance<header[0]['jobSensorIds'].length;sensor_instance++) {
         var temperature = d3.min(temperatureLineDataHolder[sensor_instance], function(d) {return parseFloat(d.y);});
         if (temperature < minDataPoint ) minDataPoint = temperature;
         temperature = d3.max(temperatureLineDataHolder[sensor_instance], function(d) {return parseFloat(d.y);}) + 1.0;
@@ -512,7 +512,7 @@ domReady( function(){
                                 .attr("stroke-width", 2)
                                 .attr("fill", "none");
 
-      for (var sensor_instance=0;sensor_instance<header[0]['jobSensors'].length;sensor_instance++) {
+      for (var sensor_instance=0;sensor_instance<header[0]['jobSensorIds'].length;sensor_instance++) {
         // Scale temperature data
         var scaledTemperatureLineData = [];
         var temperatureLineData = temperatureLineDataHolder[sensor_instance];
@@ -1104,8 +1104,78 @@ domReady( function(){
                       .style("border", "1px solid black")
 
 
-// END of Profiles Configuration
+// END of Profiles Page
 /*****************************************************************************/
+
+
+
+// START of Configuration Page
+/*****************************************************************************/
+
+  var configEntryHolder = document.getElementById("configEntryHolder");
+
+  var fudgeLabel = document.createElement("LABEL");
+  fudgeLabel.className = 'config_label';
+  fudgeLabel.textContent = 'Sensor Fudge Factor';
+  var fudgeInput = document.createElement("INPUT");
+  fudgeInput.id = 'sensorFudgeFactor';
+  fudgeInput.className = 'config_input';
+  fudgeInput.type = 'text';
+  fudgeInput.onblur = function() {
+      msgobj = {type:'config_change', data:{'sensorFudgeFactor':this.value}};
+      sendMessage({data:JSON.stringify(msgobj)});
+    }
+
+  var multiSensorMeanWeightLabel = document.createElement("LABEL");
+  multiSensorMeanWeightLabel.className = 'config_label';
+  multiSensorMeanWeightLabel.textContent = 'Multi Sensor Mean Weight';
+  var multiSensorMeanWeightInput = document.createElement("INPUT");
+  multiSensorMeanWeightInput.id = 'multiSensorMeanWeight';
+  multiSensorMeanWeightInput.className = 'config_input';
+  multiSensorMeanWeightInput.type = 'text';
+  multiSensorMeanWeightInput.onblur = function() {
+      msgobj = {type:'config_change', data:{'multiSensorMeanWeight':this.value}};
+      sendMessage({data:JSON.stringify(msgobj)});
+    }
+
+  var delayOffLabel = document.createElement("LABEL");
+  delayOffLabel.className = 'config_label';
+  delayOffLabel.textContent = 'Relay Delay (post OFF)';
+  var delayOffInput = document.createElement("INPUT");
+  delayOffInput.id = 'relayDelayPostOFF';
+  delayOffInput.className = 'config_input';
+  delayOffInput.type = 'text';
+  delayOffInput.onblur = function() {
+      msgobj = {type:'config_change', data:{'relayDelayPostOFF':this.value}};
+      sendMessage({data:JSON.stringify(msgobj)});
+    }
+
+  var delayOnLabel = document.createElement("LABEL");
+  delayOnLabel.className = 'config_label';
+  delayOnLabel.textContent = 'Relay Delay (post ON)';
+  var delayOnInput = document.createElement("INPUT");
+  delayOnInput.id = 'relayDelayPostON';
+  delayOnInput.className = 'config_input';
+  delayOnInput.type = 'text';
+  delayOnInput.onblur = function() {
+      msgobj = {type:'config_change', data:{'relayDelayPostON':this.value}};
+      sendMessage({data:JSON.stringify(msgobj)});
+    }
+
+
+
+  configEntryHolder.appendChild(fudgeLabel);
+  configEntryHolder.appendChild(fudgeInput);
+  configEntryHolder.appendChild(multiSensorMeanWeightLabel);
+  configEntryHolder.appendChild(multiSensorMeanWeightInput);
+  configEntryHolder.appendChild(delayOffLabel);
+  configEntryHolder.appendChild(delayOffInput);
+  configEntryHolder.appendChild(delayOnLabel);
+  configEntryHolder.appendChild(delayOnInput);
+
+// END of Configuration Page
+/*****************************************************************************/
+
 
   //var socket = new WebSocket("ws://localhost:8080/ws");
   var socket = new WebSocket("ws://" + location.host + "/wsStatus");
@@ -1208,6 +1278,12 @@ domReady( function(){
       //console.log('             key : ' + data_keys[k] + " = " + data[data_keys[k]]);
       if (data_keys[k] == 'testing') {
         _TESTING_ = data[data_keys[k]]
+      } else if (data_keys[k] == 'config') {
+        var configItemsKeys = data[data_keys[k]]
+        for (var confkey in configItemsKeys) {
+          console.log("configItem: " + confkey + " = " + data[data_keys[k]][confkey]);
+          document.getElementById(confkey).value = data[data_keys[k]][confkey];
+        }
       } else if (data_keys[k] == 'the_end') {
         var the_end_unused = data[data_keys[k]];
       } else {
@@ -1814,7 +1890,7 @@ var runningJobsFunctions = {};
     var running_jobsHolder = document.getElementById('running_jobsHolder');
     if ( running_jobsHolder.children.length == 0 ) {
       var no_running_jobs = document.getElementById("no_running_jobs");
-      no_running_jobs.innerHTML = "<p>No jobs are currently running</p>";
+      no_running_jobs.innerHTML = "<p>No <a href=#content_2>jobs</a> are currently running</p>";
       no_running_jobs.style.display = 'flex';
     }
 

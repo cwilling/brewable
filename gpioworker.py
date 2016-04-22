@@ -5,11 +5,12 @@ import copy
 import os, errno
 from collections import deque
 
-# Input temperature sensor - choose one of these to be 'st'
-#import systemtemp as st
-#import ds18b20 as st
-import ds18b20 as st
-DEVICE_DIR = '/sys/bus/w1/devices/w1_bus_master1/w1_master_slaves'
+from ds18b20 import SensorDevice
+
+_home = os.path.expanduser('~')
+USER_CONFIG_DIR = os.environ.get('USER_CONFIG_DIR') or os.path.join(_home, '.brewable')
+USER_CONFIG_FILE = os.path.join(USER_CONFIG_DIR, 'brewable.conf')
+
 CWD=os.getcwd()
 PROFILE_DATA_FILE='profileData.txt'
 JOB_DATA_FILE='jobData.txt'
@@ -23,14 +24,6 @@ except:
 # Output relay
 from sainsmartrelay import Relay
 #from seedrelay import Relay
-
-class SensorDevice():
-    def __init__(self, id):
-        self._id = id
-        self._name = ""
-
-    def getId(self):
-        return self._id
 
 
 # From status.js
@@ -48,6 +41,7 @@ class GPIOProcess(multiprocessing.Process):
         multiprocessing.Process.__init__(self)
         self.input_queue = input_queue
         self.output_queue = output_queue
+        self.configuration = {}
         self.sensorDevices = []
         self.relay = Relay()
 
@@ -63,14 +57,49 @@ class GPIOProcess(multiprocessing.Process):
             print "_TESTING_ is True"
 
         # Setup
-        # First look for sensor devices
+        # First, read user config or generate default configuration
         try:
-            sensor_file = open(DEVICE_DIR)
+            os.makedirs(USER_CONFIG_DIR)
+        except OSError as exc:
+            if exc.errno == errno.EEXIST and os.path.isdir(USER_CONFIG_DIR):
+                pass
+            else:
+                raise
+
+        # Load saved configuration
+        try:
+            with open(USER_CONFIG_FILE) as json_file:
+                json_data = json.load(json_file)
+                print "CONFIGURATION DATA: ", json_data
+                #for k,v in json_data.iteritems():
+                #    self.configuration[k] = v
+                for k in json_data.keys():
+                    self.configuration[k] = json_data[k]
+        except Exception as e:
+            print e
+            print "Generating new configuration from defaults"
+            # Can't open user config file - either corrupted or doesn't exist,
+            # so generate a default config and save that.
+            self.configuration['sensorFudgeFactor'] = float(0.0);
+            self.configuration['multiSensorMeanWeight'] = int(50);
+            self.configuration['relayDelayPostON'] = int(180);
+            self.configuration['relayDelayPostOFF'] = int(480);
+            #print "CONFIGURATION: ", self.configuration
+            with open(USER_CONFIG_FILE, 'w') as json_file:
+                json.dump(self.configuration, json_file)
+
+        for k in self.configuration.keys():
+            print "config item: ", k, self.configuration[k]
+
+
+
+        # Look for sensor devices
+        try:
+            sensor_file = open(SensorDevice.deviceDirectory())
             sensors = sensor_file.read()
             sensor_file.close
             for sensorId in sensors.split():
-                self.sensorDevices.append(SensorDevice(sensorId))
-                #print sensorId
+                self.sensorDevices.append(SensorDevice(sensorId, self.configuration['sensorFudgeFactor']))
             #for sensor in self.sensorDevices:
             #    print "SENSOR", sensor.getId()
         except:
@@ -116,6 +145,12 @@ class GPIOProcess(multiprocessing.Process):
 
         # Start with all relays off
         self.relay.ALLOFF()
+
+        # Relay DelaySets look like:
+        # {'on_time':180, 'off_time':480, 'isset':False}
+        for id in range(self.relay.device_count()):
+            self.relay.setDelaySetValue(id+1, 'on_time', self.configuration['relayDelayPostON'])
+            self.relay.setDelaySetValue(id+1, 'off_time', self.configuration['relayDelayPostOFF'])
 
         # Loop
         count = 0
@@ -215,6 +250,8 @@ class GPIOProcess(multiprocessing.Process):
                         jdata = json.dumps({'type':'relay_list',
                                             'data':relay_ids})
                         self.output_queue.put(jdata)
+                    elif jmsg['type'] == 'config_change':
+                        self.configChange(jmsg);
                     elif jmsg['type'] == 'CMD':
                         # With a CMD type, the data field is an array whose
                         # first element is the command,
@@ -254,9 +291,46 @@ class GPIOProcess(multiprocessing.Process):
             #time.sleep(1)
 
 
+    def configChange(self, jmsg):
+        print "configChange() ", jmsg['data'], jmsg['data'].keys()
+        for k in jmsg['data'].keys():
+            try:
+                print "Processing config change for: ", k,jmsg['data'][k]
+                if k == 'multiSensorMeanWeight':
+                    print "Changing config item %s to %d" % (k,int(jmsg['data'][k]))
+                    self.configuration['multiSensorMeanWeight'] = int(jmsg['data'][k])
+                    print "Changed multiSensorMeanWeight configuration to: ", self.configuration['multiSensorMeanWeight']
+                elif k == 'sensorFudgeFactor':
+                    print "Changing config item %s to %f" % (k,float(jmsg['data'][k]))
+                    for sensor in self.sensorDevices:
+                        sensor.set_fudge(float(jmsg['data'][k]))
+                    self.configuration['sensorFudgeFactor'] = self.sensorDevices[0].get_fudge()
+                    print "Changed fudge configuration to: ", self.configuration['sensorFudgeFactor']
+                elif k == 'relayDelayPostON':
+                    # {'on_time':180, 'off_time':480, 'isset':False}
+                    print "Changing config item %s to %d" % (k,int(jmsg['data'][k]))
+                    for id in range(self.relay.device_count()):
+                        self.relay.setDelaySetValue(id+1, 'on_time', int(jmsg['data'][k]))
+                    self.configuration['relayDelayPostON'] = self.relay.getDelaySetValue(1, 'on_time')
+                    print "Changed relay on_time configuration to: ", self.configuration['relayDelayPostON']
+                elif k == 'relayDelayPostOFF':
+                    print "Changing config item %s to %d" % (k,int(jmsg['data'][k]))
+                    for id in range(self.relay.device_count()):
+                        self.relay.setDelaySetValue(id+1, 'off_time', int(jmsg['data'][k]))
+                    self.configuration['relayDelayPostOFF'] = self.relay.getDelaySetValue(1, 'off_time')
+                    print "Changed relay off_time configuration to: ", self.configuration['relayDelayPostOFF']
+                else:
+                    print "Unknown configuration item: ", k
+                with open(USER_CONFIG_FILE, 'w') as json_file:
+                    json.dump(self.configuration, json_file)
+            except Exception as e:
+                print "Unable to process configChange for item:", k
+                print e
+
     def loadStartupData(self, jmsg):
         jdata = json.dumps({'type':'startup_data',
                             'data':{'testing':_TESTING_,
+                                    'config':self.configuration,
                                     'the_end':'orange' }})
         self.output_queue.put(jdata)
 
@@ -414,7 +488,8 @@ class GPIOProcess(multiprocessing.Process):
     def liveUpdate(self):
         # Data/info from sensor devices
         try:
-            sensor_state = list({'sensorId':sensor.getId(),'temperature':st.get_temp(sensor.getId())} for sensor in self.sensorDevices)
+            #sensor_state = list({'sensorId':sensor.getId(),'temperature':st.get_temp(sensor.getId())} for sensor in self.sensorDevices)
+            sensor_state = list({'sensorId':sensor.getId(),'temperature':sensor.get_temp()} for sensor in self.sensorDevices)
         except:
             sensor_state = []
         #print "sensor_state: ", sensor_state
@@ -435,7 +510,7 @@ class GPIOProcess(multiprocessing.Process):
 
     def setupJobRun(self, jobIndex):
         try:
-            self.runningJobs.append(JobProcessor(copy.deepcopy(self.jobs[jobIndex]),self.output_queue,self.runningJobs,self.stoppedJobs,self.relay,self.sensorDevices))
+            self.runningJobs.append(JobProcessor(copy.deepcopy(self.jobs[jobIndex]), self.output_queue, self.runningJobs, self.stoppedJobs, self.relay, self.sensorDevices, self.configuration))
             return True
         except:
             print "JOB CREATE FAIL!"
@@ -480,14 +555,17 @@ class GPIOProcess(multiprocessing.Process):
 
 class JobProcessor(GPIOProcess):
 
-    def __init__(self, rawJobInfo, output_queue, runningJobs, stoppedJobs, relay, sensorDevices):
+    def __init__(self, rawJobInfo, output_queue, runningJobs, stoppedJobs, relay, sensorDevices, configuration):
+        self.configuration = configuration
+        self.sensorDevices = sensorDevices
         self.runningJobs = runningJobs
         self.stoppedJobs = stoppedJobs
         self.output_queue = output_queue
         self.jobName    = rawJobInfo['name']
         self.jobPreheat = rawJobInfo['preheat']
         self.jobProfile = self.convertProfileTimes(rawJobInfo['profile'])
-        self.jobSensors = self.validateSensors(rawJobInfo['sensors'])
+        self.jobSensorIds = self.validateSensors(rawJobInfo['sensors'])
+        self.jobSensors = {sensor.getId():sensor for sensor in sensorDevices if sensor.getId() in self.jobSensorIds}
         self.jobRelays  = rawJobInfo['relays']
         self.startTime  = time.time()
         self.instanceId = time.strftime("%Y%m%d_%H%M%S",time.localtime(self.startTime))
@@ -495,24 +573,7 @@ class JobProcessor(GPIOProcess):
                                             + self.instanceId
                                             + ".txt")
         self.processing  = False
-
-        # In future, make processType settable in the job itself
-        # e.g.self.jobProcessType = rawJobInfo['process_type']
-        #
-        # Probable initial types would be
-        #       SIMPLE_COOL             # single relay to cooler
-        #       SIMPLE_COOL_HEAT        # 2 relays, 1 for cool & 1 for heater
-        #       SIMPLE_HEAT             # single relay to heater
-        relaysInJob = len(self.jobRelays)
-        if relaysInJob == 1:
-            self.processType = "SIMPLE_COOL"
-        elif relaysInJob == 2:
-            self.processType = "SIMPLE_COOL_HEAT"
-        else:
-            print "Unknown process type for more than 2 relays"
         self.relay = relay
-        self.sensorDevices = sensorDevices
-
         self.history = []
 
         # Start a history file
@@ -524,7 +585,7 @@ class JobProcessor(GPIOProcess):
                   'jobInstance':self.instanceId,
                   'jobPreheat':self.jobPreheat,
                   'jobProfile':self.jobProfile,
-                  'jobSensors':self.jobSensors,
+                  'jobSensorIds':self.jobSensorIds,
                   'jobRelays':self.jobRelays,
                   'startTime':self.startTime,
                   'historyFileName':self.historyFileName
@@ -551,7 +612,7 @@ class JobProcessor(GPIOProcess):
               'jobName':self.jobName,
               'jobPreheat':self.jobPreheat,
               'jobProfile':self.jobProfile,
-              'jobSensors':self.jobSensors,
+              'jobSensorIds':self.jobSensorIds,
               'jobRelays':self.jobRelays,
               'startTime':self.startTime,
              }
@@ -564,12 +625,15 @@ class JobProcessor(GPIOProcess):
         return self.jobProfile
 
     # Confirm specififed sensors exist in the system
-    def validateSensors(self, sensors):
-        for sensor in sensors:
-            #print "VALIDATE:", sensor
-            if not st.isValidTempDevice(sensor):
-                raise Exception()
-        return sensors
+    def validateSensors(self, sensorIds):
+        valid_ids = [sensor.getId() for sensor in self.sensorDevices]
+        valid_sensorIds = []
+        for sensor in sensorIds:
+            if sensor in valid_ids:
+                valid_sensorIds.append(sensor)
+            else:
+                print "NOT validated: ", sensor
+        return valid_sensorIds
 
     # Convert profile's duration fields into seconds
     # To speed testing, assume duration fields are minutes.seconds
@@ -636,14 +700,16 @@ class JobProcessor(GPIOProcess):
                   'elapsed'     : nowTime - self.startTime,
                   'sensors'     : []
                  }
-        for sensor in self.jobSensors:
+        for sensor in self.jobSensorIds:
             job_status['sensors'].append(sensor)
-            job_status[sensor] = st.get_temp(sensor)
+            job_status[sensor] = self.jobSensors[sensor].get_temp()
         for relay in self.jobRelays:
             if self.relay.isOn(int(relay.split()[1])):
                 job_status[relay] = 'ON'
             else:
                 job_status[relay] = 'OFF'
+        if len(self.jobSensorIds) > 1:
+            job_status['msmw'] = self.configuration['multiSensorMeanWeight']
 
         return job_status
 
@@ -711,11 +777,20 @@ class JobProcessor(GPIOProcess):
         for relay in self.jobRelays:
             relayIds.append(int(relay.split()[1]))
         #print "Relays:", relayIds
-        if self.processType == "SIMPLE_COOL":
-            # Assume a single sensor for a SIMPLE method
-            temp = st.get_temp(self.jobSensors[0])
-            #print "Temp: %s for target: %s" % (temp, target)
 
+        if len(self.jobSensors) == 1:
+            temp = self.jobSensors[self.jobSensorIds[0]].get_temp()
+            print "Single temp: %s for target: %s" % (temp, target)
+        elif len(self.jobSensors) == 2:
+            temp0 = float(self.jobSensors[self.jobSensorIds[0]].get_temp())
+            temp1 = float(self.jobSensors[self.jobSensorIds[1]].get_temp())
+            mswm = float(self.configuration['multiSensorMeanWeight'])
+            temp = (temp1 * mswm + temp0 * (100-mswm))/100.0
+            #print "MSMW temp: {:.2f} for target: {:02}".format(temp, target)
+        else:
+            print "No recpipe for %d sensors" % len(self.jobSensors)
+
+        if len(self.jobRelays) == 1:
             # Single relay for COOL method
             coolerRelay = relayIds[0]
 
@@ -736,16 +811,7 @@ class JobProcessor(GPIOProcess):
                 if self.relay.isOn(coolerRelay):
                     self.relay.OFF(coolerRelay)
                     self.liveUpdate()
-        elif self.processType == "SIMPLE_COOL_HEAT":
-            # Assume a single sensor for a SIMPLE method
-            temp = st.get_temp(self.jobSensors[0])
-            #print "Temp: %s for target: %s" % (temp, target)
-
-            # Assume 2 relays for COOL_HEAT method
-            if len(relayIds) < 2:
-                #print "Need 2 relays for COOL_HEAT method"
-                # Cancel job somehow?
-                return
+        elif len(self.jobRelays) == 2:
             # Assume 1st is the cooler relay, 2nd is the heater
             coolerRelay = relayIds[0]
             heaterRelay = relayIds[1]
@@ -778,8 +844,8 @@ class JobProcessor(GPIOProcess):
                 if self.relay.isOn(heaterRelay):
                     self.relay.OFF(heaterRelay)
                     self.liveUpdate()
-        elif self.processType == "SIMPLE_HEAT":
-            print "Using SIMPLE_HEAT method to temperatureAdjust: ", target
+        else:
+            print "No recipe for %d relays" % len(self.jobRelays)
 
 
 # ex:set ai shiftwidth=4 inputtab=spaces smarttab noautotab:

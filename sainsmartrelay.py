@@ -164,6 +164,11 @@ class Relay():
         self.delayset[id-1]['isset'] = False
         #print "Relay %d delay now unset" % id
 
+    def setDelaySetValue(self, id, key, val):
+        self.delayset[id-1][key] = val
+
+    def getDelaySetValue(self, id, key):
+        return self.delayset[id-1][key]
 
 if __name__=="__main__":
     relay = Relay()
