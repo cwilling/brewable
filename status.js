@@ -11,6 +11,9 @@ Eventually we'll make these settings dynamic.
 var profilesTableColumns = 10;
 var profilesTableRows = 4;
 
+/* Save JobHistory data here */
+var historyData = {}
+
 /*
 In case we can't load saved profiles (first time use, botched file etc.),
 generate a dummy set of profiles to initially populate the profiles table.
@@ -104,7 +107,6 @@ domReady( function(){
 
   //d3.select("#statusTitle").on("click", function(data, index) {
   d3.selectAll(".navigation_button").on("click", function(data, index) {
-                                          console.log("CLICK");
                                           var elm = this;
 
                                           // create the div element that will hold the context menu
@@ -369,19 +371,28 @@ domReady( function(){
     } else {
       console.log("NOT OKtoSave");
     }
-
-
-
   }
 
-  function updateJobHistoryData(data) {
+  function updateJobHistoryData(data, jobLongName) {
     // data should consist of  two arrays,
     // 1st with just the job header and 2nd with an array of status updates
     //console.log("Received msg: saved_job_data " + data);
-    var header = data['header'];
-    var updates = data['updates'];
-    var longName = header[0]['jobName'] + '-' + header[0]['jobInstance'];
-    //console.log("longName: " + longName);
+
+    // Is it new (supplied in data)a or are we redrawing stored data?
+    if ( jobLongName === undefined ) {
+      // We must have data supplied by parameter
+      var header = data['header'];
+      var updates = data['updates'];
+      var longName = header[0]['jobName'] + '-' + header[0]['jobInstance'];
+      historyData[longName] = data;
+    } else {
+      // Must have previously saved data
+      var savedData = historyData[jobLongName];
+      var header = savedData['header'];
+      var updates = savedData['updates'];
+      var longName = header[0]['jobName'] + '-' + header[0]['jobInstance'];
+    }
+    //console.log("updateJobHistoryData() longName: " + longName);
 
 /* Examples of extracting various fields
     console.log("updateJobHistoryData() jobProfile: " + header[0]['jobProfile'] + " " + header[0]['jobProfile'].length);
@@ -391,8 +402,9 @@ domReady( function(){
       console.log("updateJobHistoryData() temp at " + parseFloat(updates[i]['elapsed']).toFixed(2) + " = " + updates[i][updates[i]['sensors'][0]]);
     }
 */
+    var graphWidthScale = parseInt(document.getElementById('historyItemHZBInput_' + longName).value);
     var historyJobsGraphMargin = {top: 20, right: 40, bottom: 50, left: 60},
-        historyJobsGraphWidth = 1800 - historyJobsGraphMargin.left - historyJobsGraphMargin.right,
+        historyJobsGraphWidth = graphWidthScale*1800 - historyJobsGraphMargin.left - historyJobsGraphMargin.right,
         historyJobsGraphHeight = 256 - historyJobsGraphMargin.top - historyJobsGraphMargin.bottom;
 
     // Draw the graph of job history
@@ -420,7 +432,7 @@ domReady( function(){
       }
       // Extract temperature data for all sensors
       for (var sensor_instance=0;sensor_instance<header[0]['jobSensorIds'].length;sensor_instance++) {
-        console.log("updateJobHistoryData() sensor name: " + header[0]['jobSensorIds'][sensor_instance]);
+        //console.log("updateJobHistoryData() sensor name: " + header[0]['jobSensorIds'][sensor_instance]);
         var sensorName = header[0]['jobSensorIds'][sensor_instance];
 
         temperatureLineData = [];
@@ -583,28 +595,51 @@ domReady( function(){
         historyItemInstance.id = 'historyItemInstance_' + jobName + '-' + jobInstance;
         historyItemInstance.className = 'historyItemInstance';
         historyItemInstance.innerHTML = "<html>" + jobInstance + "</html>"
-/*
-        historyItemInstance.onclick = function() {
-          var historyElementGraphName = 'historyElementGraph_' +
-                                  this.id.slice('historyElementGraph_'.length);
-          //console.log('historyElementGraphName = ' + historyElementGraphName);
-          var historyElementGraph = document.getElementById(historyElementGraphName);
-          if ( historyElementGraph.style.display == 'block') {
-            historyElementGraph.style.display = 'none';
-          } else {
-            historyElementGraph.style.display = 'block';
 
-            // Only download history data if we don't already have it
-            if ( (!historyElementGraph.hasChildNodes()) ) {
-              msgobj = {type:'load_saved_job_data', data:{'fileName':historyElementGraphName.slice('historyElementGraph_'.length)}};
-              sendMessage({data:JSON.stringify(msgobj)});
-            }
-          }
-        }
-*/
+        // Horizontal Zoom box
+        var historyItemHZoomBox = document.createElement('DIV');
+          historyItemHZoomBox.id = 'historyItemHZoomBox_' + jobName + '-' + jobInstance;
+          historyItemHZoomBox.className = 'zoomBox'
+          historyItemHZoomBox.title = 'Horizontal Zoom Factor'
+        var historyItemHZBLabel = document.createElement('LABEL');
+          historyItemHZBLabel.for = 'historyItemHZBInput_'+ jobName + '-' + jobInstance;
+          historyItemHZBLabel.className = 'zoomBoxLabel';
+        var historyItemHZBInput = document.createElement('INPUT');
+          historyItemHZBInput.id = 'historyItemHZBInput_'+ jobName + '-' + jobInstance;
+          historyItemHZBInput.className = 'zoomBoxInput';
+          historyItemHZBInput.value = 1;
+        var historyItemHZDown = document.createElement('Button');
+          historyItemHZDown.id = 'historyItemHZDown_' + jobName + '-' + jobInstance;
+          historyItemHZDown.className = 'zoomBoxButton';
+          historyItemHZDown.onclick = function() {
+                  var hsinput = document.getElementById(this.id.replace("historyItemHZDown", "historyItemHZBInput"));
+                  hsinput.value -=  parseInt(hsinput.value)>1?1:0;
+                  var jobLongName = this.id.replace("historyItemHZDown_", "");
+                  console.log('DOWN ' + this.id + " : " + hsinput.value + " : " + jobLongName);
+                  if ( historyData.hasOwnProperty(jobLongName) ) {
+                    updateJobHistoryData(0, jobLongName);
+                  }
+                }
+        var historyItemHZUp = document.createElement('Button');
+          historyItemHZUp.id = 'historyItemHZUp_' + jobName + '-' + jobInstance;
+          historyItemHZUp.className = 'zoomBoxButton';
+          historyItemHZUp.onclick = function() {
+                  var hsinput = document.getElementById(this.id.replace("historyItemHZUp", "historyItemHZBInput"));
+                  hsinput.value = parseInt(hsinput.value,10) + 1;
+                  var jobLongName = this.id.replace("historyItemHZUp_", "");
+                  console.log('UP ' + this.id + " : " + hsinput.value + " : " + jobLongName);
+                  if ( historyData.hasOwnProperty(jobLongName) ) {
+                    updateJobHistoryData(0, jobLongName);
+                  }
+                }
+        historyItemHZoomBox.appendChild(historyItemHZBLabel);
+        historyItemHZoomBox.appendChild(historyItemHZBInput);
+        historyItemHZoomBox.appendChild(historyItemHZDown);
+        historyItemHZoomBox.appendChild(historyItemHZUp);
 
         historyElement.appendChild(historyItemName);
         historyElement.appendChild(historyItemInstance);
+        historyElement.appendChild(historyItemHZoomBox);
         historyListJobsHolder.appendChild(historyElement);
         historyListJobsHolder.appendChild(historyElementGraph);
       }
@@ -615,8 +650,9 @@ domReady( function(){
         action: function(elm, data, index) {
           console.log('menu item #1 from ' + elm.id + " " + data.title + " " + index);
           var historyElementGraphName = 'historyElementGraph_' +
-                                  elm.id.slice('historyElementGraph_'.length);
-          console.log('historyElementGraphName = ' + historyElementGraphName);
+                                  elm.id.slice('historyItemInstance_'.length);
+          var jobLongName = elm.id.slice('historyItemInstance_'.length);
+          //console.log('historyElementGraphName = ' + historyElementGraphName);
           var historyElementGraph = document.getElementById(historyElementGraphName);
           if ( historyElementGraph.style.display == 'block') {
             historyElementGraph.style.display = 'none';
@@ -624,9 +660,11 @@ domReady( function(){
             historyElementGraph.style.display = 'block';
 
             // Only download history data if we don't already have it
-            if ( (!historyElementGraph.hasChildNodes()) ) {
+            if ( (!historyData.hasOwnProperty(jobLongName)) ) {
               msgobj = {type:'load_saved_job_data', data:{'fileName':historyElementGraphName.slice('historyElementGraph_'.length)}};
               sendMessage({data:JSON.stringify(msgobj)});
+            } else {
+              updateJobHistoryData(0, jobLongName);
             }
           }
         }
@@ -639,7 +677,6 @@ domReady( function(){
       // End of popup menu
 
       d3.selectAll(".historyItemInstance").on("click", function(data, index) {
-                                              console.log("CLICK");
                                               var elm = this;
 
                                               // create the div element that will hold the context menu
@@ -1355,7 +1392,20 @@ var runningJobsFunctions = {};
     }
   }
 
-  // Generate a listing of stored jobs
+  // Show/hide the table of Job Templates
+  document.getElementById("jobsListTitle").onclick = function() {
+                  var templates = document.getElementById("jobsListHolder");
+                  var history = document.getElementById("historyListJobsHolder");
+                  if ( templates.style.display == 'block') {
+                    templates.style.display = 'none';
+                    history.style.height = '596px';
+                  } else {
+                    templates.style.display = 'block';
+                    history.style.height = '296px';
+                  }
+                }
+
+  // Generate a listing of stored job templates
   function createStoredJobsList(data) {
     //console.log("Reached createStoredJobsList()");
     var table = document.getElementById("jobsListJobs");
@@ -1607,11 +1657,6 @@ var runningJobsFunctions = {};
                                 .style("text-anchor", "middle")
                                 .text("Elapsed Time (" + (_TESTING_?'mins:secs':'hours:mins') + ")");
 
-/*
-                                .on("click", function() {
-                                  onRunningJobTitleClick(this.id)
-                                }
-*/
       var titletext = runningJobsGraphHolder
                             .append("text")
                             .attr("transform",
@@ -1914,13 +1959,6 @@ var runningJobsFunctions = {};
       no_running_jobs.innerHTML = "<center>" + jobName + " was saved to <a href=#content_2 >Job History</a> <br>No other jobs are currently running</center>";
       no_running_jobs.style.display = 'flex';
     }
-  }
-
-  function onRunningJobTitleClick(id) {
-    var textName = id.replace('title_text_', '');
-    console.log("CLICK " + textName);
-
-      //d3.event.stopPropagation();
   }
 
 });
