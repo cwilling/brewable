@@ -615,6 +615,12 @@ domReady( function(){
                     updateJobHistoryData(0, jobLongName);
                   }
                 }
+          historyItemHZBInput.addEventListener('keypress', function(event) {
+                  if (event.keyCode == 13) {
+                    this.onblur();
+                  }
+                });
+
         var historyItemHZDown = document.createElement('Button');
           historyItemHZDown.id = 'historyItemHZDown_' + jobName + '-' + jobInstance;
           historyItemHZDown.className = 'zoomBoxButton';
