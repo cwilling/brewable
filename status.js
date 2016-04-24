@@ -378,7 +378,7 @@ domReady( function(){
     // 1st with just the job header and 2nd with an array of status updates
     //console.log("Received msg: saved_job_data " + data);
 
-    // Is it new (supplied in data)a or are we redrawing stored data?
+    // Is it new (via data parameter) or are we redrawing stored data?
     if ( jobLongName === undefined ) {
       // We must have data supplied by parameter
       var header = data['header'];
@@ -494,7 +494,7 @@ domReady( function(){
       var xAxis = d3.svg.axis()
                         .scale(historyLinearScaleX)
                         .orient("bottom")
-                        .tickValues(makeTickValues(maxTime,18));
+                        .tickValues(makeTickValues(maxTime,18*graphWidthScale));
                         //.ticks(20);
       var xAxisGroup = historyJobsGraphHolder.append("g")
                         .attr('class', 'x historyAxis')
@@ -608,6 +608,13 @@ domReady( function(){
           historyItemHZBInput.id = 'historyItemHZBInput_'+ jobName + '-' + jobInstance;
           historyItemHZBInput.className = 'zoomBoxInput';
           historyItemHZBInput.value = 1;
+          historyItemHZBInput.onblur = function() {
+                  var jobLongName = this.id.replace("historyItemHZBInput_", "");
+                  //console.log('INPUT ' + this.id + " : " + this.value + " : " + jobLongName);
+                  if ( historyData.hasOwnProperty(jobLongName) ) {
+                    updateJobHistoryData(0, jobLongName);
+                  }
+                }
         var historyItemHZDown = document.createElement('Button');
           historyItemHZDown.id = 'historyItemHZDown_' + jobName + '-' + jobInstance;
           historyItemHZDown.className = 'zoomBoxButton';
@@ -615,7 +622,7 @@ domReady( function(){
                   var hsinput = document.getElementById(this.id.replace("historyItemHZDown", "historyItemHZBInput"));
                   hsinput.value -=  parseInt(hsinput.value)>1?1:0;
                   var jobLongName = this.id.replace("historyItemHZDown_", "");
-                  console.log('DOWN ' + this.id + " : " + hsinput.value + " : " + jobLongName);
+                  //console.log('DOWN ' + this.id + " : " + hsinput.value + " : " + jobLongName);
                   if ( historyData.hasOwnProperty(jobLongName) ) {
                     updateJobHistoryData(0, jobLongName);
                   }
@@ -627,7 +634,7 @@ domReady( function(){
                   var hsinput = document.getElementById(this.id.replace("historyItemHZUp", "historyItemHZBInput"));
                   hsinput.value = parseInt(hsinput.value,10) + 1;
                   var jobLongName = this.id.replace("historyItemHZUp_", "");
-                  console.log('UP ' + this.id + " : " + hsinput.value + " : " + jobLongName);
+                  //console.log('UP ' + this.id + " : " + hsinput.value + " : " + jobLongName);
                   if ( historyData.hasOwnProperty(jobLongName) ) {
                     updateJobHistoryData(0, jobLongName);
                   }
@@ -1100,9 +1107,8 @@ domReady( function(){
 
   function makeTickValues(maxValue, tickCount) {
     var result = [];
-    var width = Math.floor(maxValue/tickCount)
     for (var i=0;i<tickCount;i++) {
-      result.push(i*width);
+      result.push(Math.floor(i*maxValue/tickCount));
     }
     result.push(maxValue);
     return result;
