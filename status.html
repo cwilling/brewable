@@ -23,7 +23,7 @@
 
     <div id="main_content">
       <div id="content_1" class="content">
-          <div id="content_1_nav_bar" class="nav_bar">
+          <div id="content_1_nav_bar" class="nav_bar" draggable="true">
             <div id="statusTitle" class="page_title title_item">
               Current Status
             </div>
@@ -47,24 +47,24 @@
       </div>
       <div id="content_2" class="content">
         <div id="content_2_nav_bar" class="nav_bar">
-          <div id="jobsListTitle" class="page_title title_item jobsListTitle_menu">
+          <div id="jobTemplatesTitle" class="page_title title_item jobTemplatesTitle">
             Job Templates
           </div>
           <div id="content_2_navigation_button" class="navigation_button title_item">
             Navigation
           </div>
         </div>
-        <div id="jobsListHolder">
-          <div id="jobsListButtonsHolder">
-            <ul id="jobsListButtons" class="jobsListButtons">
+        <div id="jobTemplatesHolder" style="display: block;">
+          <div id="jobTemplatesButtonsHolder">
+            <ul id="jobTemplatesButtons" class="jobTemplatesButtons">
               <li><a href="#" id="refresh_job_button">Refresh</a></li>
               <li><a href="#" id="new_job_button">New</a></li>
               <li><a href="#" id="delete_job_button" >Delete</a></li>
               <li><a href="#" id="run_job_button" >Run</a></li>
             </ul>
           </div>
-          <div id="jobsListJobsHolder">
-            <table id="jobsListJobs" class="jobsListJobs">
+          <div id="jobTemplatesJobsListHolder">
+            <table id="jobTemplatesJobsTable" class="jobTemplatesJobsTable">
             </table>
           </div>
         </div>

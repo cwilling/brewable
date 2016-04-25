@@ -147,6 +147,7 @@ domReady( function(){
                                             d3.event.stopPropagation();
                                         });
 
+
 /***********************  Jobs Configuration page  ***************************/
   // Refresh job list button ('Jobs' page'
   var refreshJobButton = document.getElementById("refresh_job_button");
@@ -1406,8 +1407,8 @@ var runningJobsFunctions = {};
   }
 
   // Show/hide the table of Job Templates
-  document.getElementById("jobsListTitle").onclick = function() {
-                  var templates = document.getElementById("jobsListHolder");
+  document.getElementById("jobTemplatesTitle").onclick = function() {
+                  var templates = document.getElementById("jobTemplatesHolder");
                   var history = document.getElementById("historyListJobsHolder");
                   if ( templates.style.display == 'block') {
                     templates.style.display = 'none';
@@ -1421,7 +1422,7 @@ var runningJobsFunctions = {};
   // Generate a listing of stored job templates
   function createStoredJobsList(data) {
     //console.log("Reached createStoredJobsList()");
-    var table = document.getElementById("jobsListJobs");
+    var table = document.getElementById("jobTemplatesJobsTable");
 
     // First remove existing list elements
     while ( table.hasChildNodes() ) {
@@ -1448,7 +1449,7 @@ var runningJobsFunctions = {};
 
       var radio = document.createElement("INPUT");
       radio.setAttribute("type", "radio");
-      radio.setAttribute("name", "jobsList");
+      radio.setAttribute("name", "templatesList");
       radio.id = "jl_" + i;
 
       row.appendChild(radio);
@@ -1458,10 +1459,10 @@ var runningJobsFunctions = {};
 
   // Return index of selected job (or -1 if none is selected)
   function selectedJobIndex() {
-    var jobsList = document.getElementsByName("jobsList");
-    //console.log(jobsList.length + " jobs found");
-    for ( var i=0; i<jobsList.length;i++) {
-      if ( jobsList[i].type == "radio" && jobsList[i].checked ) {
+    var templatesList = document.getElementsByName("templatesList");
+    //console.log(templatesList.length + " jobs found");
+    for ( var i=0; i<templatesList.length;i++) {
+      if ( templatesList[i].type == "radio" && templatesList[i].checked ) {
         //console.log("selected job: " + i);
         return i;
       }
@@ -1470,11 +1471,11 @@ var runningJobsFunctions = {};
     return -1;
   }
 
-  // Return true/false whether target name is found in jobsList
+  // Return true/false whether target name is found in templatesList
   function selectedJobName(target) {
-    var jobsList = document.getElementsByName("jobsList");
-    console.log(jobsList.length + " jobs found");
-    for ( var i=0; i<jobsList.length;i++) {
+    var templatesList = document.getElementsByName("templatesList");
+    console.log(templatesList.length + " jobs found");
+    for ( var i=0; i<templatesList.length;i++) {
       var jobLabel = document.getElementById("label_jl_" + i);
       // jobName is 1st field of textContent with all '.' removed
       var jobName = jobLabel.textContent.split(" ")[0].replace(/\./g, "");
