@@ -204,18 +204,8 @@ class GPIOProcess(multiprocessing.Process):
                                 print "Couldn't start job"
                             else:
                                 print "Started job ", jmsg['data']['index']
-                        if len(self.runningJobs) > 0:
-                            running_jobs = []
-                            for j in self.runningJobs:
-                                j.process()
-                                job_info = j.jobInfo()
-                                job_info['history'] = j.history[1:]
-                                #print "list running job: ", job_info
-                                running_jobs.append(job_info)
-                            #print "running_jobs list: ", running_jobs
-                            jdata = json.dumps({'type':'running_jobs',
-                                                'data':running_jobs})
-                            self.output_queue.put(jdata)
+                        # Send updated list of running jobs
+                        self.loadRunningJobs(jmsg)
                     elif jmsg['type'] == 'load_startup_data':
                         self.loadStartupData(jmsg)
                     elif jmsg['type'] == 'load_running_jobs':
@@ -352,7 +342,14 @@ class GPIOProcess(multiprocessing.Process):
             self.output_queue.put(jdata)
 
     def loadRunningJobs(self, jmsg):
-        #print "Rcvd request to LOAD RUNNING JOBS"
+        if jmsg['type'] == 'load_running_jobs':
+            print "Send running_jobs list after request to LOAD_RUNNING_JOBS"
+        elif jmsg['type'] == 'run_job':
+            print "Send running_jobs list after request to RUN_JOBS"
+        elif jmsg['type'] == 'load_startup_data':
+            print "Send running_jobs list after request to LOAD_STARTUP_DATA"
+        else:
+            print "Send running_jobs list after UNKNOWN request"
         # We send "public" job info (since client doesn't
         # need stuff like local file name etc.
         # Also send collected status reports
@@ -360,11 +357,16 @@ class GPIOProcess(multiprocessing.Process):
         if len(self.runningJobs) > 0:
             running_jobs = []
             for j in self.runningJobs:
-                job_info = j.jobInfo()
-                job_info['history'] = j.history[1:]
+                if ['jmsg.type'] == 'run_job':
+                    j.process()
+                #job_info = j.jobInfo()
+                #job_info['history'] = j.history[1:]
                 #print "list running job: ", job_info
+                job_info = {}
+                job_info['header'] = j.jobInfo()
+                job_info['updates'] = j.history[1:]
                 running_jobs.append(job_info)
-            #print "running_jobs list: ", running_jobs
+            print "running_jobs list: ", running_jobs
             jdata = json.dumps({'type':'running_jobs',
                                 'data':running_jobs})
             self.output_queue.put(jdata)
@@ -384,7 +386,7 @@ class GPIOProcess(multiprocessing.Process):
         try:
             with open(filepath) as f:
                 lines = [json.loads(line) for line in f]
-            #print "lines: ", lines
+            print "lines: ", lines
             jdata = {'type':'saved_job_data', 'data':{'header':lines[0:1],'updates':lines[1:]}}
         except:
                 print "Couldn't load saved job data"
@@ -404,7 +406,7 @@ class GPIOProcess(multiprocessing.Process):
         for file in historyfiles:
             try:
                 lastline = json.loads(deque(open(os.path.join(CWD, JOB_HISTORY_DIR, file)), 1).pop())
-                if lastline['running'] == 'stopped':
+                if lastline['running'] == 'saved':
                     goodhistoryfiles.append(file)
             except Exception as e:
                 print "wrong file format in loadSavedJobs(); ", file, e
@@ -435,20 +437,24 @@ class GPIOProcess(multiprocessing.Process):
             print "Job to remove NOT FOUND! ", jobName
 
     def saveRunningJob(self, jmsg):
-        #print "Rcvd request to SAVE RUNNING JOB"
+        print "Rcvd request to SAVE RUNNING JOB", jmsg['data']['jobName']
         jobName = jmsg['data']['jobName']
-        self.stopRunningJob(jmsg)
+        self.stopRunningJob(jmsg, 'save')
 
         # Whether previously running or not, it should now be in stoppedJobs
         job_found = False
         for i in range(len(self.stoppedJobs)):
+            print "checking ", self.stoppedJobs[i].name()
             if self.stoppedJobs[i].name() == jobName:
                 job_found = True
+                print "found ", jobName
+                self.stoppedJobs[i].stop('saved')
                 historyFileName = self.stoppedJobs[i].historyFileName
                 from_path = os.path.join(CWD, JOB_RUN_DIR, historyFileName)
                 to_path = os.path.join(CWD, JOB_HISTORY_DIR, historyFileName)
                 try:
                     os.rename(from_path, to_path)
+                    print "Moved ", from_path, to_path
                     jdata = json.dumps({'type':'saved_job',
                                         'data':{'jobName':jobName}})
                     self.output_queue.put(jdata)
@@ -462,18 +468,19 @@ class GPIOProcess(multiprocessing.Process):
 
         self.loadSavedJobs(json.dumps({'type':'load_saved_jobs','data':[]}))
 
-    def stopRunningJob(self, jmsg):
-        #print "Rcvd request to STOP RUNNING JOB"
+    def stopRunningJob(self, jmsg, stopStatus='stop'):
+        print "Rcvd request to STOP RUNNING JOB", jmsg['data']['jobName']
         job_found = False
         for job in self.runningJobs:
+            print "Trying: ", job.name()
             if job.name() == jmsg['data']['jobName']:
                 job_found = True
-                #print "Job %s running - ready to stop" % job.name()
+                print "Job %s running - ready to stop" % job.name()
                 while job.processing:
                     # Wait for any current processing to complete
                     print "spinning ..."
                     time.sleep(0.05)
-                job.stop()
+                job.stop(stopStatus)
                 break
         if not job_found:
             # Perhaps the job was already stopped?
@@ -610,11 +617,11 @@ class JobProcessor(GPIOProcess):
         #return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, indent=4)
         info = {'type':'jobData',
               'jobName':self.jobName,
+              'jobInstance':self.instanceId,
               'jobPreheat':self.jobPreheat,
               'jobProfile':self.jobProfile,
               'jobSensorIds':self.jobSensorIds,
               'jobRelays':self.jobRelays,
-              'startTime':self.startTime,
              }
         return info
 
@@ -696,6 +703,7 @@ class JobProcessor(GPIOProcess):
 
     def jobStatus(self, nowTime):
         job_status = {'jobName' :self.jobName,
+                   'jobInstance':self.instanceId,
                   'type'        :'status',
                   'elapsed'     : nowTime - self.startTime,
                   'sensors'     : []
@@ -713,12 +721,32 @@ class JobProcessor(GPIOProcess):
 
         return job_status
 
-    def stop(self):
-        #print "Stopping job: ", self.jobName
+    def stop(self, stopStatus='stop'):
+        print "Stopping job: ", self.jobName
         try:
+            # In case it was previously stopped
+            for i in range(len(self.stoppedJobs)):
+                if self.stoppedJobs[i].name() == self.jobName:
+                    # Finalise the run file
+                    status = self.jobStatus(time.time())
+                    if stopStatus.startswith('save'):
+                        status['running'] = 'saved'
+                    else:
+                        status['running'] = 'stopped'
+
+                    jdata = json.dumps({'type':'running_job_status',
+                                        'data':status})
+                    self.output_queue.put(jdata)
+
+                    self.history.append(status)
+                    with open(os.path.join(JOB_RUN_DIR, self.historyFileName), 'a') as f:
+                        json.dump(status, f)
+                        f.write(os.linesep)
+                    break
+
             for i in range(len(self.runningJobs)):
                 if self.runningJobs[i].name() == self.jobName:
-                    #print "FOUND job to stop running"
+                    print "FOUND job to stop running"
                     # Move from runningJobs to stoppedJobs
                     self.stoppedJobs.append(self.runningJobs[i])
                     del self.runningJobs[i]
@@ -728,7 +756,10 @@ class JobProcessor(GPIOProcess):
 
                     # Finalise the run file
                     status = self.jobStatus(time.time())
-                    status['running'] = 'stopped'
+                    if stopStatus.startswith('save'):
+                        status['running'] = 'saved'
+                    else:
+                        status['running'] = 'stopped'
 
                     jdata = json.dumps({'type':'running_job_status',
                                         'data':status})
@@ -780,7 +811,7 @@ class JobProcessor(GPIOProcess):
 
         if len(self.jobSensors) == 1:
             temp = self.jobSensors[self.jobSensorIds[0]].get_temp()
-            print "Single temp: %s for target: %s" % (temp, target)
+            #print "Single temp: %s for target: %s" % (temp, target)
         elif len(self.jobSensors) == 2:
             temp0 = float(self.jobSensors[self.jobSensorIds[0]].get_temp())
             temp1 = float(self.jobSensors[self.jobSensorIds[1]].get_temp())
