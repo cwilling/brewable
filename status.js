@@ -1336,6 +1336,7 @@ domReady( function(){
     var navmenu = document.getElementsByClassName("nav_bar");
     //console.log("Nav Menu has " + navmenu.length + " elements");
     for (var el=0;el<navmenu.length;el++ ) {
+      navmenu[el].style.setProperty('justify-content', 'center');
       navmenu[el].style.background = 'red';
     }
     for (var el=1;el<navmenu.length;el++ ) {

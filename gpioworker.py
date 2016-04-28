@@ -204,6 +204,10 @@ class GPIOProcess(multiprocessing.Process):
                                 print "Couldn't start job"
                             else:
                                 print "Started job ", jmsg['data']['index']
+                        # Do an initial processing of the new job
+                        for job in self.runningJobs:
+                            if job.name() == self.jobs[jmsg['data']['index']]['name']:
+                                job.process()
                         # Send updated list of running jobs
                         self.loadRunningJobs(jmsg)
                     elif jmsg['type'] == 'load_startup_data':

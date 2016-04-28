@@ -20,12 +20,18 @@ body.profiles {
     margin:	0px;
     padding: 20px;
 }
+.profilesControls {
+    display:    flex;
+    justify-content: center;
+    overflow:   hidden;
+    margin-bottom: 20px;
+}
 
 #profilesTableHolder {
     /*overflow-y: hidden;*/
     overflow-x:	auto;
     margin-top:   30px;
-    margin-bottom:30px;
+    margin-bottom:10px;
     margin-left:  10px;
     margin-right: 10px;
 }
@@ -244,16 +250,24 @@ div#content_4 {
     font-weight: bold;
     text-align: center;
     width:      15%;
-    padding:    0em 33.5em;
+    padding:    0em 34em;
 }
 .navigation_button {
     padding:    20px;
     cursor:     pointer;
     font-family: ariel;
     font-size:  100%;
+    width:      5%;
 }
 .navigation_button:hover {
     background:	#666;
+}
+#jobTemplatesTitleHolder {
+    display:    flex;
+    width:      90%;
+    align-items: center;
+    justify-content: center;
+    margin-left: 7%
 }
 .title_item {
 }
