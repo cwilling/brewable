@@ -1,5 +1,6 @@
 var _TESTING_ = false;
 
+var navigationMap = {};
 var availableSensors = [];
 var availableRelays = [];
 var temperatureColours = ["blue", "green", "red", "orange"];
@@ -76,8 +77,37 @@ domReady( function(){
   var profilesLoadedEvent = new Event('profilesLoadedEvent');
 
 
-/*******************  Popup instead of a main menu bar ***************************/
+/*******************  Swipe between pages  ***************************/
 
+  // Navigate by swipe
+  var swipeDelta = 50;
+  var pageSwipeZone = document.getElementsByClassName("page_title");
+  for (var el=0;el<pageSwipeZone.length;el++ ) {
+    //console.log(pageSwipeZone[el].id + ' is Title element ' + el);
+    var nextValue = el + 2;
+    if (nextValue > pageSwipeZone.length ) nextValue = 1;
+    var lastValue = el;
+    if (lastValue < 1 ) lastValue = pageSwipeZone.length;
+    var navMapEntry = {'last':'content_' + lastValue, 'next':'content_' + nextValue};
+    navigationMap[pageSwipeZone[el].id] = navMapEntry;
+
+    pageSwipeZone[el].onmousedown = function(e) {
+      global_x = e.pageX;
+      //console.log("down at x = " + e.pageX + " " + this.id);
+    }
+
+    pageSwipeZone[el].onmouseup = function (e) {
+      //console.log("Mouse at x = " + e.pageX + ":" + e.pageY);
+      if (e.pageX > (global_x + swipeDelta)) {
+        location.href = '#' + navigationMap[this.id]['next'];
+      } else if (e.pageX < (global_x - swipeDelta) ) {
+        location.href = '#' + navigationMap[this.id]['last'];
+      }
+    }
+
+  }
+
+/*******************  Popup instead of a main menu bar ***************************/
   // Popup menu
   var masterPageMenu = [{
     title: 'Status',
@@ -433,7 +463,7 @@ domReady( function(){
       return;
     }
     var holderName = holderNode.getAttribute('holderName');
-    console.log('Scale widget has holderName: ' + holderName);
+    //console.log('Scale widget has holderName: ' + holderName);
     var graphWidthScale = parseInt(document.getElementById('jobItemHZBInput_' + holderName + '_' + longName).value);
     var historyJobsGraphMargin = {top: 20, right: 40, bottom: 50, left: 60},
         historyJobsGraphWidth = graphWidthScale*1800 - historyJobsGraphMargin.left - historyJobsGraphMargin.right,
@@ -2034,11 +2064,11 @@ var runningJobsFunctions = {};
     var running_jobsHolder = document.getElementById('running_jobsHolder');
     var children = document.getElementById("running_jobsHolder").children
     for (var i=0;i<children.length;i++) {
-      console.log("Child: " + children[i].id);
+      //console.log("Child: " + children[i].id);
       var thisJobInstance = instancePattern.exec(children[i].id);
       var thisJobName = children[i].id.slice(0,(children[i].id.indexOf(thisJobInstance)));
-      console.log("jobName: " + thisJobName);
-      console.log("Instance: " + thisJobInstance);
+      //console.log("jobName: " + thisJobName);
+      //console.log("Instance: " + thisJobInstance);
       if (thisJobName === 'jobElement_' + jobName ) {
         //console.log("Ready to remove " + thisJobName);
         if ( endStatus !== 'stopped' ) {
@@ -2086,7 +2116,6 @@ var runningJobsFunctions = {};
   // WAS function updateJobHistoryListNew(historyfiles, holder) {
   // FROM function updateJobHistoryList(data) {
   function updateJobsList(jobfiles, holder) {
-    console.log('XXXXXXXXXXXXXXXXXXXXXXXXXXX ' + holder);
 
     var jobFiles = jobfiles;
     var jobsListHolder = document.getElementById(holder);
@@ -2266,14 +2295,6 @@ var runningJobsFunctions = {};
             var nodeName = longJobName.slice(0,(longJobName.indexOf(jobInstance)-1));
             var msgobj = {type:'stop_running_job', data:{'jobName':nodeName}};
             sendMessage({data:JSON.stringify(msgobj)});
-/*
-var nodeName = elm.id.replace('title_text_', '');
-var msgobj = {type:'stop_running_job', data:{'jobName':nodeName}};
-sendMessage({data:JSON.stringify(msgobj)});
-
-// Update status
-d3.select('#title_text_' + nodeName).text("Job: " + nodeName + " (stopping)");
-*/
           }
       }, {
           title: 'Remove',
@@ -2288,17 +2309,6 @@ d3.select('#title_text_' + nodeName).text("Job: " + nodeName + " (stopping)");
               sendMessage({data:JSON.stringify(msgobj)});
             }
           }
-/*
-var nodeName = elm.id.replace('title_text_', '');
-var confirmRemove = confirm("Remove job " + nodeName + "?");
-if ( confirmRemove == true ) {
-  // OK button pressed
-  var msgobj = {type:'remove_running_job', data:{'jobName':nodeName}};
-  sendMessage({data:JSON.stringify(msgobj)});
-  // Update status
-  d3.select('#title_text_' + nodeName).text("Job: " + nodeName + " (removing)");
-}
-*/
         }, {
           title: 'Save',
           action: function(elm, data, index) {
@@ -2309,19 +2319,6 @@ if ( confirmRemove == true ) {
             var msgobj = {type:'save_running_job', data:{'jobName':nodeName}};
             sendMessage({data:JSON.stringify(msgobj)});
           }
-/*
-      var jobInstance = instancePattern.exec(jobFiles[i]);
-      var jobName = jobfiles[i].slice(0,(jobFiles[i].indexOf(jobInstance)-1));
-
-        action: function(elm, data, index) {
-          console.log('menu item #3 from ' + elm.id + " " + data.title + " " + index);
-          //var nodeName = elm.id.replace('running_job_', '');
-          var nodeName = elm.id.replace('title_text_', '');
-          var msgobj = {type:'save_running_job', data:{'jobName':nodeName}};
-          sendMessage({data:JSON.stringify(msgobj)});
-          // Update status
-          d3.select('#title_text_' + nodeName).text("Job: " + nodeName + " (saving)");
-*/
       }];
       // End of popup menu
     } else if (holder === 'testHolder') {
@@ -2404,9 +2401,6 @@ if ( confirmRemove == true ) {
                                           d3.event.stopPropagation();
                                       });
 
-
-
-    console.log('ZZZZZZZZZZZZZZZZZZZZZZZZZZZ ');
   }
 
 });
