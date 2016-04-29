@@ -1,6 +1,9 @@
 var _TESTING_ = false;
 
 var navigationMap = {};
+var global_x = 0;
+var global_touches = {};
+
 var availableSensors = [];
 var availableRelays = [];
 var temperatureColours = ["blue", "green", "red", "orange"];
@@ -80,7 +83,7 @@ domReady( function(){
 /*******************  Swipe between pages  ***************************/
 
   // Navigate by swipe
-  var swipeDelta = 50;
+  var swipeDeltaMin = 50;
   var pageSwipeZone = document.getElementsByClassName("page_title");
   for (var el=0;el<pageSwipeZone.length;el++ ) {
     //console.log(pageSwipeZone[el].id + ' is Title element ' + el);
@@ -92,20 +95,64 @@ domReady( function(){
     navigationMap[pageSwipeZone[el].id] = navMapEntry;
 
     pageSwipeZone[el].onmousedown = function(e) {
-      global_x = e.pageX;
-      //console.log("down at x = " + e.pageX + " " + this.id);
-    }
+            global_x = e.pageX;
+            console.log("down at x = " + e.pageX + " " + this.id);
+          };
+    pageSwipeZone[el].touchstart = function(e) {
+            var touches = e.changedTouches;
 
+            for (var i=0;i<touches.length;i++) {
+              global_touches[touches[i].identifier] = {
+                identifier : touches[i].identifier,
+                pageX : touches[i].pageX,
+                pageY : touches[i].pageY
+              };
+            }
+            console.log("touch at x = " + touches[0].pageX + " " + this.id);
+
+            e.preventDefault();
+            return false;
+          };
+
+    pageSwipeZone[el].touchend = function (e) {
+            var touches = e.changedTouches;
+
+            for (var i=0;i<touches.length;i++) {
+              var touchInfo = global_touches[touches[i].identifier];
+              if (touches[i].pageX > touchInfo.pageX + swipeDeltaMin) {
+                location.href = '#' + navigationMap[this.id]['next'];
+              } else if (touches[i].pageX < touchInfo.pageX - swipeDeltaMin) {
+                location.href = '#' + navigationMap[this.id]['next'];
+              }
+            }
+
+            e.preventDefault();
+            return false;
+          };
     pageSwipeZone[el].onmouseup = function (e) {
       //console.log("Mouse at x = " + e.pageX + ":" + e.pageY);
-      if (e.pageX > (global_x + swipeDelta)) {
+      if (e.pageX > (global_x + swipeDeltaMin)) {
         location.href = '#' + navigationMap[this.id]['next'];
-      } else if (e.pageX < (global_x - swipeDelta) ) {
+      } else if (e.pageX < (global_x - swipeDeltaMin) ) {
         location.href = '#' + navigationMap[this.id]['last'];
+      } else {
+        // Special case where 'click' shows/hides job templates
+        if (this.id === 'jobTemplatesTitle') {
+          var templates = document.getElementById("jobTemplatesHolder");
+          var history = document.getElementById("historyListJobsHolder");
+          if ( templates.style.display == 'block') {
+            templates.style.display = 'none';
+            history.style.height = '596px';
+          } else {
+            templates.style.display = 'block';
+            history.style.height = '296px';
+          }
+        }
       }
-    }
+    };
 
   }
+
 
 /*******************  Popup instead of a main menu bar ***************************/
   // Popup menu
@@ -1466,18 +1513,6 @@ var runningJobsFunctions = {};
     }
   }
 
-  // Show/hide the table of Job Templates
-  document.getElementById("jobTemplatesTitle").onclick = function() {
-                  var templates = document.getElementById("jobTemplatesHolder");
-                  var history = document.getElementById("historyListJobsHolder");
-                  if ( templates.style.display == 'block') {
-                    templates.style.display = 'none';
-                    history.style.height = '596px';
-                  } else {
-                    templates.style.display = 'block';
-                    history.style.height = '296px';
-                  }
-                }
 
   // Generate a listing of stored job templates
   function createStoredJobsList(data) {
@@ -2055,7 +2090,9 @@ var runningJobsFunctions = {};
     Show the No Jobs running notice, if that is the case.
     Move data associated with jobName from runningData to historyData
   */
-  function jobFinishedWith(data, endStatus='removed') {
+  function jobFinishedWith(data, endStatus) {
+    if (endStatus === undefined) endStatus='removed';
+
     var jobName = data['jobName']
     console.log("Received " + endStatus + "_job message " + jobName);
     var instancePattern = /-[0-9]{8}_[0-9]{6}/;
