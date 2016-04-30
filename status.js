@@ -87,50 +87,57 @@ domReady( function(){
   var pageSwipeZone = document.getElementsByClassName("page_title");
   for (var el=0;el<pageSwipeZone.length;el++ ) {
     //console.log(pageSwipeZone[el].id + ' is Title element ' + el);
+
+    // Set up a dictionary of last & next targets for each page
     var nextValue = el + 2;
-    if (nextValue > pageSwipeZone.length ) nextValue = 1;
+    if (nextValue > pageSwipeZone.length ) {
+      nextValue = 1;
+    }
     var lastValue = el;
-    if (lastValue < 1 ) lastValue = pageSwipeZone.length;
+    if (lastValue < 1 ) {
+      lastValue = pageSwipeZone.length;
+    }
     var navMapEntry = {'last':'content_' + lastValue, 'next':'content_' + nextValue};
     navigationMap[pageSwipeZone[el].id] = navMapEntry;
 
+    // Event handlers for mouse down/up events and touch start/end events
     pageSwipeZone[el].onmousedown = function(e) {
-            global_x = e.pageX;
-            //console.log("down at x = " + e.pageX + " " + this.id);
-          };
-    pageSwipeZone[el].touchstart = function(e) {
-            var touches = e.changedTouches;
-            alert('touch down');
+      global_x = e.pageX;
+      //console.log("down at x = " + e.pageX + " " + this.id);
 
-            for (var i=0;i<touches.length;i++) {
-              global_touches[touches[i].identifier] = {
-                identifier : touches[i].identifier,
-                pageX : touches[i].pageX,
-                pageY : touches[i].pageY
-              };
-            }
-            console.log("touch at x = " + touches[0].pageX + " " + this.id);
+      e.preventDefault();
+      return false;
+    };
+    pageSwipeZone[el].ontouchstart = function(e) {
+      global_x = e.touches[0].pageX;
 
-            e.preventDefault();
-            return false;
-          };
+      e.preventDefault();
+      return false;
+    };
 
-    pageSwipeZone[el].touchend = function (e) {
-            var touches = e.changedTouches;
-            alert('touch down ' + touches.length);
+    pageSwipeZone[el].ontouchend = function (e) {
+      if (e.changedTouches[0].pageX > (global_x + swipeDeltaMin)) {
+        location.href = '#' + navigationMap[this.id]['next'];
+      } else if (e.changedTouches[0].pageX < (global_x - swipeDeltaMin) ) {
+        location.href = '#' + navigationMap[this.id]['last'];
+      } else {
+        // Special case where 'click' shows/hides job templates
+        if (this.id === 'jobTemplatesTitle') {
+          var templates = document.getElementById("jobTemplatesHolder");
+          var history = document.getElementById("historyListJobsHolder");
+          if ( templates.style.display == 'block') {
+            templates.style.display = 'none';
+            history.style.height = '596px';
+          } else {
+            templates.style.display = 'block';
+            history.style.height = '296px';
+          }
+        }
+      }
 
-            for (var i=0;i<touches.length;i++) {
-              var touchInfo = global_touches[touches[i].identifier];
-              if (touches[i].pageX > touchInfo.pageX + swipeDeltaMin) {
-                location.href = '#' + navigationMap[this.id]['next'];
-              } else if (touches[i].pageX < touchInfo.pageX - swipeDeltaMin) {
-                location.href = '#' + navigationMap[this.id]['next'];
-              }
-            }
-
-            e.preventDefault();
-            return false;
-          };
+      e.preventDefault();
+      return false;
+    };
     pageSwipeZone[el].onmouseup = function (e) {
       //console.log("Mouse at x = " + e.pageX + ":" + e.pageY);
       if (e.pageX > (global_x + swipeDeltaMin)) {
