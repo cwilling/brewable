@@ -96,10 +96,11 @@ domReady( function(){
 
     pageSwipeZone[el].onmousedown = function(e) {
             global_x = e.pageX;
-            console.log("down at x = " + e.pageX + " " + this.id);
+            //console.log("down at x = " + e.pageX + " " + this.id);
           };
     pageSwipeZone[el].touchstart = function(e) {
             var touches = e.changedTouches;
+            alert('touch down');
 
             for (var i=0;i<touches.length;i++) {
               global_touches[touches[i].identifier] = {
@@ -116,6 +117,7 @@ domReady( function(){
 
     pageSwipeZone[el].touchend = function (e) {
             var touches = e.changedTouches;
+            alert('touch down ' + touches.length);
 
             for (var i=0;i<touches.length;i++) {
               var touchInfo = global_touches[touches[i].identifier];
@@ -871,6 +873,11 @@ domReady( function(){
   function createProfileTableFunction(loadedProfileData) {
     var pdata;
     table = document.getElementById("profilesTable");
+
+    // First remove existing list elements
+    while ( table.hasChildNodes() ) {
+      table.removeChild(table.firstChild);
+    }
 
     if( loadedProfileData.length == 0 ) {
       pdata = dummyProfileSet;
