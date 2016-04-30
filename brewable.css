@@ -54,13 +54,12 @@ body.profiles {
     font-weight: bold;
 }
 #profilesGraphHolder {
-    display:    flex;
-    justify-content: center;
-    align-items: center;
     height:     60%;
+    overflow:	auto;
 }
 .generic_graph {
     background-color: bisque;
+    direction:  ltr;
 }
 td {
     border: 1px solid #000;
