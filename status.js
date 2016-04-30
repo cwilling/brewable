@@ -1484,6 +1484,11 @@ var runningJobsFunctions = {};
 
     var table = document.getElementById("jobSensorsTable");
 
+    // First remove existing list elements
+    while ( table.hasChildNodes() ) {
+      table.removeChild(table.firstChild);
+    }
+
     for(var i=0;i<availableSensors.length;i++) {
         //console.log("Adding sensor: " + availableSensors[i]);
         var row = table.insertRow(i);
@@ -1507,6 +1512,11 @@ var runningJobsFunctions = {};
     //console.log("Reached createRelayTableFunction() " + availableRelays);
 
     var table = document.getElementById("jobRelaysTable");
+
+    // First remove existing list elements
+    while ( table.hasChildNodes() ) {
+      table.removeChild(table.firstChild);
+    }
 
     for(var i=0;i<availableRelays.length;i++) {
         //console.log("Adding relay: " + availableRelays[i]);
