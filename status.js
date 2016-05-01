@@ -7,6 +7,7 @@ var global_touches = {};
 var availableSensors = [];
 var availableRelays = [];
 var temperatureColours = ["blue", "green", "red", "orange"];
+var profileLineColours = ["green", "red", "orange", "blue"];
 /*
 For now, hard code the number of profiles (profilesTableRows)
 and number of steps per profile (profilesTableColumns).
@@ -893,8 +894,15 @@ domReady( function(){
     }
     for (i=0;i<pdata.length;i++) {
       var row = table.insertRow(i);
-      var th = row.insertCell(0).appendChild(document.createElement('TH'));
-      th.appendChild(document.createTextNode("Profile " + i));
+      //var th = row.insertCell(0).appendChild(document.createElement('TH'));
+      //th.appendChild(document.createTextNode("Profile " + i));
+      var cell = document.createElement("TD");
+      var cellText = document.createTextNode("Profile " + i);
+      cell.appendChild(cellText);
+      cell.className = 'profileLabelText';
+      cell.style.color = profileLineColours[i];
+      var th = row.insertCell(0).appendChild(cell);
+      th.parentNode.className = 'profileLabel';
       for (j=0;j<pdata[i].length;j++) {
          row.insertCell(j+1).appendChild(populateProfilesTableCell(i,j,pdata[i]));
       }
@@ -1112,7 +1120,6 @@ domReady( function(){
     var profileData = getProfileData(); // raw data from Profiles Editor
     var profileDisplayData = [];        // "processed" data for display
     var setpoint = {};
-    var lineColours = ["green", "red", "orange", "blue"];
 
     // Clear any current graph
     profileGraphHolder.selectAll("*").remove();
@@ -1225,7 +1232,7 @@ domReady( function(){
                                 .attr("transform",
                                       "translate(" + profileGraphMargin.left + "," + profileGraphMargin.top + ")")
                                 .attr("d", profileLineFunction(scaledLineData))
-                                .attr("stroke", lineColours[profile])
+                                .attr("stroke", profileLineColours[profile])
                                 .attr("stroke-width", 3)
                                 .attr("fill", "none");
     }

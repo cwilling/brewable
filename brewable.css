@@ -53,6 +53,13 @@ body.profiles {
     font-size: 150%;
     font-weight: bold;
 }
+.profileLabel {
+    background-color: bisque;
+}
+.profileLabelText {
+    font-weight: bold;
+    border:     none;
+}
 #profilesGraphHolder {
     background-color: bisque;
     overflow:	auto;
