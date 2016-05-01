@@ -263,11 +263,13 @@ domReady( function(){
         var itemHeight = parseInt(window.getComputedStyle(c[i]).height.replace(/\D+/g, ''));
         if (itemHeight > tallest ) tallest = itemHeight;
       }
+      /*
       var jobItemsHolder = document.getElementById('jobItemsHolder');
       jobItemsHolder.style.width = (38 + itemsWidth) + 'px';
 
       // Use height of tallest item to set height of jobItemsHolder
       jobItemsHolder.style.height = (30 + tallest) + 'px';
+      */
 
     }
   }
@@ -1618,6 +1620,7 @@ var runningJobsFunctions = {};
     console.log("Reached createRunningJobsList(): " + data.length);
     if ( data.length < 1 ) {
       document.getElementById("no_running_jobs").style.display = 'flex';
+      document.getElementById("no_running_jobs").style.display = '-webkit-flex';
     } else {
       document.getElementById("no_running_jobs").style.display = 'none';
     }
@@ -1653,6 +1656,7 @@ var runningJobsFunctions = {};
     //console.log("Reached createRunningJobsList(): " + data.length);
     if ( data.length < 1 ) {
       document.getElementById("no_running_jobs").style.display = 'flex';
+      document.getElementById("no_running_jobs").style.display = '-webkit-flex';
     } else {
       document.getElementById("no_running_jobs").style.display = 'none';
     }
@@ -2086,12 +2090,14 @@ var runningJobsFunctions = {};
     // Set width of bounding box
     document.getElementById('relay_updateHolder').style.width = (128 + 128*relay_state.length) + "px";
 
+/*
     // Set size of live_updateHolder so it can be centered in its container
-    //document.getElementById('live_updateHolder').style.width = '1200px'; 
+    document.getElementById('live_updateHolder').style.width = '1200px'; 
     var sensorWidth = parseInt(document.getElementById('sensor_updateHolder').style.width.replace(/\D+/g, ''));
     var relayWidth = parseInt(document.getElementById('relay_updateHolder').style.width.replace(/\D+/g, ''));
     document.getElementById('live_updateHolder').style.width =
-        (sensorWidth + relayWidth + 6 /* borders fudge factor*/) + 'px'; 
+        (sensorWidth + relayWidth + 6) + 'px'; 
+*/
   }
 
   function sensorClickHandler(ev) {
@@ -2158,6 +2164,7 @@ var runningJobsFunctions = {};
             //no_running_jobs.innerHTML = "No jobs are currently running";
             no_running_jobs.innerHTML = "<center>" + jobName + " was saved to <a href=#content_2 >Job History</a> <br>No other jobs are currently running</center>";
             no_running_jobs.style.display = 'flex';
+            no_running_jobs.style.display = '-webkit-flex';
           }
 
         } else if ( endStatus === 'stopped' ) {
@@ -2172,6 +2179,7 @@ var runningJobsFunctions = {};
             var no_running_jobs = document.getElementById("no_running_jobs");
             no_running_jobs.innerHTML = "<p>No <a href=#content_2>jobs</a> are currently running</p>";
             no_running_jobs.style.display = 'flex';
+            no_running_jobs.style.display = '-webkit-flex';
           }
         }
       }

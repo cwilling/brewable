@@ -8,6 +8,14 @@
     user-select:           none;
 }
 title.main {
+    display:    flex;
+    align-items: center;
+    justify-content: center;
+
+    display:                    -webkit-flex;
+    -webkit-align-items:	center;
+    -webkit-justify-content:	center;
+
     text-align: center;
     font-family: ariel;
     font-size: 160%;
@@ -16,21 +24,27 @@ title.main {
 }
 
 body.status {
+    display:    flex;
+    align-items: center;
+    justify-content: center;
+
+    display:                    -webkit-flex;
+    -webkit-align-items:	center;
+    -webkit-justify-content:	center;
+
     font-family: ariel;
     background-color: lightgray;
     margin:	0px;
     padding: 0px;
     position: static;
 }
-body.profiles {
-    font-family: ariel;
-    background-color: lightblue;
-    margin:	0px;
-    padding: 20px;
-}
 .profilesControls {
     display:    flex;
     justify-content: center;
+
+    display:    -webkit-flex;
+    -webkit-justify-content: center;
+
     overflow:   hidden;
     margin-bottom: 20px;
 }
@@ -111,30 +125,44 @@ td {
 
 
 div#live_updateHolderContainer {
-    width:	100%;
+    display:    flex;
+    align-items: center;
+    justify-content: center;
+
+    display:                    -webkit-flex;
+    -webkit-align-items:	center;
+    -webkit-justify-content:	center;
+
+    /*width:	100%;*/
     height:	96px;
     margin:     auto;
     transform-style: preserve-3d;
+    -webkit-transform-style: preserve-3d;
 }
 div#live_updateHolder {
-    /* To centre this div horizontally requires fixed width + margin:auto.
-       However width is not known - it depends on number of sensors & relays.
-       Therefore don't specify width here but set it programmatically at
-       run time. See add_live_data().
-    */
+    display:    flex;
+    align-items: center;
+    justify-content: center;
+
+    display:                    -webkit-flex;
+    -webkit-align-items:	center;
+    -webkit-justify-content:	center;
+
     margin:     auto;
     height:	64px;
     border-top:    2px solid black;
     border-bottom: 2px solid black;
-
-    /* Centre vertically within container */
-    position:   relative;
-    top:        50%;
-    transform:  translateY(-50%);
 }
 div#sensor_updateHolder {
+    display:    flex;
+    align-items: center;
+    justify-content: center;
+
+    display:                    -webkit-flex;
+    -webkit-align-items:	center;
+    -webkit-justify-content:	center;
+
     height:	64px;
-    float:	left;
     margin:     auto;
     border-left:  2px solid black;
     border-right: 2px solid black;
@@ -154,11 +182,16 @@ div#sensor_updateHolder {
     text-align: center;
 }
 div#relay_updateHolder {
+    display:    flex;
+    align-items: center;
+    justify-content: center;
+
+    display:                    -webkit-flex;
+    -webkit-align-items:	center;
+    -webkit-justify-content:	center;
+
     height:	64px;
-    float:	left;
-    /*margin-left: 128px;*/
     margin:     auto;
-    /*border-left:  2px solid black;*/
     border-right: 2px solid black;
 }
 #relay_update_title {
@@ -250,15 +283,21 @@ div#content_4 {
 }
 
 .page_title, .section_title {
+    display:    flex;
+    align-items: center;
+    justify-content: center;
+
+    display:                    -webkit-flex;
+    -webkit-align-items:	center;
+    -webkit-justify-content:	center;
+
     font-family: ariel;
     font-size:  120%;
     font-weight: bold;
     background:	#555;
-    display:    flex;
-    width:      100%;
     height:      60px;
-    align-items: center;
-    justify-content: center;
+    width:      100%;
+
 }
 .navigation_button {
     padding:    20px;
@@ -273,9 +312,14 @@ div#content_4 {
 /*
 #jobTemplatesTitleHolder {
     display:    flex;
-    width:      90%;
     align-items: center;
     justify-content: center;
+
+    display:                    -webkit-flex;
+    -webkit-align-items:	center;
+    -webkit-justify-content:	center;
+
+    width:      90%;
     margin-left: 7%
 }
 */
@@ -296,13 +340,17 @@ div#content_4 {
 
 /* running jobs */
 #no_running_jobs {
-    width:	50%;
-    margin:     50px auto auto auto;
-    height:	96px;
+    display:    none;
     justify-content: center;
     align-items:     center;
-    border:	6px solid black;
-    display:    none;
+
+    -webkit-justify-content: center;
+    -webkit-align-items:     center;
+
+    border:	5px solid black;
+    width:	50%;
+    margin:     50px auto;
+    height:	96px;
     padding:    70px;
     font-size:  120%;
     font-weight: bold;
@@ -354,10 +402,6 @@ div#content_4 {
     background:	#000;
     width:      72px;
     border:	1px solid white;
-    /* Centre vertically within container */
-    position:   relative;
-    top:        50%;
-    transform:  translateY(-50%);
 }
 #jobSaveButton a {
     display:    block;
@@ -378,10 +422,6 @@ div#content_4 {
     margin-right: 5px;
     padding-top: 10px;
     border:	1px solid white;
-    /* Centre vertically within container */
-    position:   relative;
-    top:        50%;
-    transform:  translateY(-50%);
 }
 #jobName {
     padding:	0;
@@ -394,23 +434,23 @@ div#content_4 {
     height:     36px;
     text-align: center;
     border:	1px solid white;
-    /* Centre vertically within container */
-    position:   relative;
-    top:        50%;
-    transform:  translateY(-50%);
 }
 
 /* Profiles page */
 #jobProfileHolder {
+    display:    flex;
+    align-items: center;
+    justify-content: center;
+
+    display:                    -webkit-flex;
+    -webkit-align-items:	center;
+    -webkit-justify-content:	center;
+
     float:	left;
     padding:	0;
     margin-right: 5px;
     height:     51px;
     border:	1px solid white;
-    /* Centre vertically within container */
-    position:   relative;
-    top:        50%;
-    transform:  translateY(-50%);
 }
 #jobProfileSelector {
     float:	left;
@@ -425,10 +465,6 @@ div#content_4 {
     margin-right: 5px;
     padding:	0;
     border:	1px solid white;
-    /* Centre vertically within container */
-    position:   relative;
-    top:        50%;
-    transform:  translateY(-50%);
 }
 #jobSensorsTable.jobSensorsTable {
     font-family: ariel;
@@ -445,10 +481,6 @@ div#content_4 {
     margin:	0;
     padding:	0;
     border:	1px solid white;
-    /* Centre vertically within container */
-    position:   relative;
-    top:        50%;
-    transform:  translateY(-50%);
 }
 #jobRelaysTable.jobRelaysTable {
     font-family: ariel;
@@ -464,7 +496,6 @@ div#content_4 {
     border-bottom:	5px solid red;
     float:      left;
     width:      100%;
-/*    height:     360px; */
 }
 ul#jobTemplatesButtons {
     margin:	24px;
@@ -472,13 +503,11 @@ ul#jobTemplatesButtons {
     min-width:	40%;
     list-style: none;
     text-align: center;
-    /*border:	2px solid green;*/
 }
 ul#jobTemplatesButtons li {
     display:	inline;
     margin:	auto;
     padding:	0;
-    /*border:	2px solid blue; */
 }
 ul#jobTemplatesButtons a {
     margin:	auto;
@@ -504,7 +533,6 @@ ul#jobTemplatesButtons a:hover {
     padding:    0;
     width:      100%;
     font-family: "Lucida Console", Monaco, monospace;
-    /*height:     256px;*/
     font-size:  80%;
     direction:  ltr;
 }
@@ -518,11 +546,18 @@ div#jobComposer {
     display:    none;
 }
 #jobItemsHolder {
-    margin:     auto;
-    transform-style: preserve-3d;
+    display:    flex;
+    align-items: center;
+    justify-content: center;
+
+    display:    -webkit-flex;
+    -webkit-align-items: center;
+    -webkit-justify-content: center;
+
+    padding:    1em;
+    overflow-x: auto;
 }
 #jobsHistoryHolder {
-/*    border-bottom:	5px solid red; */
     float:      left;
     width:      100%;
     height:     54%;
@@ -535,11 +570,15 @@ div#jobComposer {
     margin-block-end:   5px;
 }
 .historyElement {
+    display:    flex;
+    align-items: center;
+
+    display:            -webkit-flex;
+    -webkit-align-items: center;
+
     width:      100%;
     height:     43px;
     border-bottom: 1px solid #000;
-    display:    flex;
-    align-items: center;
     direction:  ltr;
 }
 .historyItemName {
@@ -561,8 +600,8 @@ div#jobComposer {
     text-align: center;
     border-width:       0;
     width:      100%;
-    margin:     0;
-    color:      #fff;;
+    margin:     0px;
+    color:      #fff;
 }
 .zoomBoxLabel {
     display:    block;
@@ -577,7 +616,7 @@ div#jobComposer {
     /* rounded corners */
     -webkit-border-radius: 6px;
     border-radius: 6px;
-    -moz-background-clip: padding: -webkit-background-clip: padding-box;
+    -moz-background-clip: padding; -webkit-background-clip: padding-box;
     background-clip: padding-box;
     font-weight: bold;
 }
@@ -596,7 +635,7 @@ div#jobComposer {
     /* rounded corners */
     -webkit-border-radius: 8px;
     border-radius: 8px;
-    -moz-background-clip: padding: -webkit-background-clip: padding-box;
+    -moz-background-clip: padding; -webkit-background-clip: padding-box;
     background-clip: padding-box;
     padding:    .1em;
     width:      3em;
@@ -621,11 +660,15 @@ div#jobComposer {
     margin-block-end:   5px;
 }
 .jobElement {
+    display:    flex;
+    align-items: center;
+
+    display:            -webkit-flex;
+    -webkit-align-items: center;
+
     width:      100%;
     height:     43px;
     border-bottom: 1px solid #000;
-    display:    flex;
-    align-items: center;
     direction:  ltr;
 }
 .jobElementGraph {
@@ -652,6 +695,11 @@ div#jobComposer {
     display:    flex;
     justify-content: center;
     align-items: center;
+
+    display:                    -webkit-flex;
+    -webkit-justify-content:	center;
+    align-items: center;
+
     margin-top: 32px;
 }
 #configEntryHolder {
