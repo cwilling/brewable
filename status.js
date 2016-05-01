@@ -2,7 +2,6 @@ var _TESTING_ = false;
 
 var navigationMap = {};
 var global_x = 0;
-var global_touches = {};
 
 var availableSensors = [];
 var availableRelays = [];

@@ -500,7 +500,6 @@ ul#jobTemplatesButtons a:hover {
     margin-block-end:   5px;
 }
 #jobTemplatesJobsTable {
-    /*background:	#366;*/
     margin-top: 0px;
     padding:    0;
     width:      100%;
@@ -516,7 +515,6 @@ div#jobComposer {
     float:	left;
     width:	100%;
     top:	0;
-    border-bottom: 5px solid red;
     display:    none;
 }
 #jobItemsHolder {
@@ -609,10 +607,6 @@ div#jobComposer {
 
 
 .historyElementGraph {
-/*
-    width:      100%;
-    height:     256px;
-*/
     direction:  ltr;
     border-bottom: 1px solid #000;
     background-color: bisque;
