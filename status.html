@@ -3,7 +3,10 @@
   <head>
     <meta name="viewport" content="width=device-width,user-scalable=no" />
     <link rel="stylesheet" href="static/brewable.css" type="text/css" media="screen">
+<!--
     <script src="http://d3js.org/d3.v3.min.js"></script>
+-->
+    <script type="text/javascript" src="static/d3.v3.min.js"></script>
     <script type="text/javascript" src="static/status.js"></script>
     <script type="text/javascript" src="static/sprintf.js"></script>
 
@@ -11,15 +14,6 @@
   </head>
   <body class="status">
 
-<!--
-    <div id="navigation_holder">
-    <ul id="navigation" class="status_navigation">
-      <li><a href="#content_1" class="status_navigation">Status</a></li>
-      <li><a href="#content_2" id="open_jobs" class="status_navigation">Jobs</a></li>
-      <li><a href="#content_3" id="open_profiles" class="status_navigation">Profiles</a></li>
-    </ul>
-    </div>
--->
 
     <div id="main_content">
       <div id="content_1" class="content">
@@ -27,11 +21,6 @@
             <div id="statusTitle" class="page_title title_item unselectable">
               Current Status
             </div>
-<!--
-            <div id="content_1_navigation_button" class="navigation_button title_item">
-              Navigation
-            </div>
--->
           </div>
           <div id="live_updateHolderContainer">
             <div id="live_updateHolder">
@@ -52,11 +41,6 @@
           <div id="jobTemplatesTitle" class="page_title title_item unselectable">
             Job Templates
           </div>
-<!--
-          <div id="content_2_navigation_button" class="navigation_button title_item">
-            Navigation
-          </div>
--->
         </div>
         <div id="jobTemplatesHolder" style="display: block;">
           <div id="jobTemplatesButtonsHolder">
@@ -116,11 +100,6 @@
           <div id="profilesTitle" class="page_title title_item unselectable">
             Profiles
           </div>
-<!--
-          <div id="content_3_navigation_button" class="navigation_button title_item">
-            Navigation
-          </div>
--->
         </div>
         <div id="profilesTableHolder">
           <table id="profilesTable" class="profilesTable" align="center">
@@ -138,11 +117,6 @@
           <div id="configTitle" class="page_title title_item unselectable">
             Configuration
           </div>
-<!--
-          <div id="content_4_navigation_button" class="navigation_button title_item">
-            Navigation
-          </div>
--->
         </div>
         <div id="configHolder">
           <div id="configEntryHolder">

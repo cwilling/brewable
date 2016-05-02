@@ -463,7 +463,7 @@ div#content_4 {
     float:	left;
     width:      192px;
     margin-right: 5px;
-    padding:	0;
+    padding:	3px 0px 3px 0px;
     border:	1px solid white;
 }
 #jobSensorsTable.jobSensorsTable {
@@ -479,7 +479,7 @@ div#content_4 {
     float:	left;
     width:      192px;
     margin:	0;
-    padding:	0;
+    padding:	3px 0px 3px 0px;
     border:	1px solid white;
 }
 #jobRelaysTable.jobRelaysTable {

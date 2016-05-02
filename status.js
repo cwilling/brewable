@@ -254,7 +254,6 @@ domReady( function(){
       jobComposer.style.display = 'none';
     } else {
       jobComposer.style.display = 'block';
-      console.log("YYY");
       var c = document.getElementById("jobItemsHolder").children;
       var itemsWidth = 0;
       var tallest = 0;
