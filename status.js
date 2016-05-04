@@ -60,6 +60,32 @@ var isNumeric = function (n) {
   return !isNaN(parseFloat(n)) && isFinite(n);
 };
 
+/* Return top left corner of enclosing element
+   From: http://javascript.info/tutorial/coordinates
+*/
+function getOffsetRect(elem) {
+  // (1)
+  var box = elem.getBoundingClientRect()
+
+  var body = document.body
+  var docElem = document.documentElement
+
+  // (2)
+  var scrollTop = window.pageYOffset || docElem.scrollTop || body.scrollTop
+  var scrollLeft = window.pageXOffset || docElem.scrollLeft || body.scrollLeft
+
+  // (3)
+  var clientTop = docElem.clientTop || body.clientTop || 0
+  var clientLeft = docElem.clientLeft || body.clientLeft || 0
+
+  // (4)
+  var top  = box.top +  scrollTop - clientTop
+  var left = box.left + scrollLeft - clientLeft
+
+  return { top: Math.round(top), left: Math.round(left) }
+}
+
+
 var domReady = function(callback) {
   document.readyState === "interactive" ||
   document.readyState === "complete" ? callback() : document.addEventListener("DOMContentLoaded", callback);
@@ -125,16 +151,17 @@ domReady( function(){
         if (this.id === 'jobTemplatesTitle') {
           var templates = document.getElementById("jobTemplatesHolder");
           var history = document.getElementById("historyListJobsHolder");
-          if ( templates.style.display == 'block') {
+          //if ( templates.style.display == 'flex') {
+          if ( templates.style.display.includes('flex')) {
             templates.style.display = 'none';
-            history.style.height = '596px';
+            history.style.height = '35em';
           } else {
-            templates.style.display = 'block';
-            history.style.height = '296px';
+            templates.style.display = 'flex';
+            templates.style.display = '-webkit-flex';
+            history.style.height = '21em';
           }
         }
       }
-
       e.preventDefault();
       return false;
     };
@@ -149,15 +176,19 @@ domReady( function(){
         if (this.id === 'jobTemplatesTitle') {
           var templates = document.getElementById("jobTemplatesHolder");
           var history = document.getElementById("historyListJobsHolder");
-          if ( templates.style.display == 'block') {
+          //if ( templates.style.display == 'flex') {
+          if (templates.style.display.includes('flex')) {
             templates.style.display = 'none';
-            history.style.height = '596px';
+            history.style.height = '35em';
           } else {
-            templates.style.display = 'block';
-            history.style.height = '296px';
+            templates.style.display = 'flex';
+            templates.style.display = '-webkit-flex';
+            history.style.height = '21em';
           }
         }
       }
+      e.preventDefault();
+      return false;
     };
 
   }
@@ -236,87 +267,6 @@ domReady( function(){
 
 
 /***********************  Jobs Configuration page  ***************************/
-  // Refresh job list button ('Jobs' page'
-  var refreshJobButton = document.getElementById("refresh_job_button");
-  refreshJobButton.onclick = function () {
-    console.log("REFRESH job button clicked");
-
-    // Request job data
-    var msgobj = {type:'load_jobs', data:[]};
-    sendMessage({data:JSON.stringify(msgobj)});
-  }
-
-  // New jobs button
-  var newJobButton = document.getElementById("new_job_button");
-  newJobButton.onclick = function () {
-    var jobComposer = document.getElementById("jobComposer");
-    if ( jobComposer.style.display == 'block') {
-      jobComposer.style.display = 'none';
-    } else {
-      jobComposer.style.display = 'block';
-      var c = document.getElementById("jobItemsHolder").children;
-      var itemsWidth = 0;
-      var tallest = 0;
-      for (var i=0;i<c.length;i++) {
-        itemsWidth += parseInt(window.getComputedStyle(c[i]).width.replace(/\D+/g, ''));
-        var itemHeight = parseInt(window.getComputedStyle(c[i]).height.replace(/\D+/g, ''));
-        if (itemHeight > tallest ) tallest = itemHeight;
-      }
-      /*
-      var jobItemsHolder = document.getElementById('jobItemsHolder');
-      jobItemsHolder.style.width = (38 + itemsWidth) + 'px';
-
-      // Use height of tallest item to set height of jobItemsHolder
-      jobItemsHolder.style.height = (30 + tallest) + 'px';
-      */
-
-    }
-  }
-
-  // Delete job button
-  var deleteJobButton = document.getElementById("delete_job_button");
-  deleteJobButton.onclick = function () {
-    console.log("DELETE job button clicked");
-    var jobIndex = selectedJobIndex();
-    if ( jobIndex < 0 )
-        return;
-    // else confirmation dialog?
-
-    // Request job deletion
-    //var jobData = { index: jobIndex };
-    var msgobj = {type:'delete_job', data:{ index: jobIndex }};
-    sendMessage({data:JSON.stringify(msgobj)});
-  }
-
-  // Run job button
-  var runJobButton = document.getElementById("run_job_button");
-  runJobButton.onclick = function () {
-    //console.log("RUN job button clicked");
-    var jobIndex = selectedJobIndex();
-    if ( jobIndex < 0 )
-        return;
-
-    // We want the jobName to use for user confirmation
-    var jobLabel = document.getElementById("label_jl_" + jobIndex);
-    // jobName is 1st field of textContent with all '.' removed
-    var jobName = jobLabel.textContent.split(" ")[0].replace(/\./g, "");
-
-    var confirmRun = confirm("Run job " + jobName + "?");
-    if ( confirmRun == true ) {
-      //alert("You pressed OK");
-
-      // Request job run
-      var msgobj = {type:'run_job', data:{ index: jobIndex }};
-      sendMessage({data:JSON.stringify(msgobj)});
-
-      // Now go to status page to view job progress
-      document.getElementById("no_running_jobs").innerHTML = "Waiting for job " + jobName + " to start";
-      location.href = "#content_1";
-    } else {
-      return;
-    }
-  }
-
 
   //Clear the job name
   document.getElementById("jobName").value = "";
@@ -348,6 +298,15 @@ domReady( function(){
 
   }, false);
 
+
+  // Dismiss the job composer
+  var dismissJobComposerButton = document.getElementById('dismissJobComposerButton');
+  dismissJobComposerButton.onclick = function() {
+    var jobComposer = document.getElementById("jobComposer");
+    if ( jobComposer.style.display != 'none') {
+      jobComposer.style.display = 'none';
+    }
+  }
 
   // Save a new job
   var saveNewJobButton = document.getElementById("jobSaveButton");
@@ -668,19 +627,21 @@ domReady( function(){
 
   }
 
-  function updateJobHistoryList(data) {
-    //console.log("Received msg: saved_jobs_list");
-    var historyfiles = data['historyfiles']
-    var historyListJobsHolder = document.getElementById("historyListJobsHolder");
+  // WAS function updateJobHistoryListNew(historyfiles, holder) {
+  // FROM function updateJobHistoryList(data) {
+  function updateJobsList(jobfiles, holder) {
+
+    var jobFiles = jobfiles;
+    var jobsListHolder = document.getElementById(holder);
     var instancePattern = /[0-9]{8}_[0-9]{6}/;
 
     // First remove existing items
-    while ( historyListJobsHolder.hasChildNodes() ) {
-      historyListJobsHolder.removeChild(historyListJobsHolder.firstChild);
+    while ( jobsListHolder.hasChildNodes() ) {
+      jobsListHolder.removeChild(jobsListHolder.firstChild);
     }
 
     // Reverse sort the received list (by instancePattern)
-    sortedHistoryFiles = historyfiles.sort(function(a,b) {
+    sortedJobFiles = jobFiles.sort(function(a,b) {
                     var to_sort = [instancePattern.exec(a),instancePattern.exec(b)];
                     var to_sort_orig = to_sort.slice();
                     to_sort.sort();
@@ -691,124 +652,229 @@ domReady( function(){
                     }
                   });
 
-    for (var i=0;i<historyfiles.length;i++) {
-      //console.log("              " + historyfiles[i]);
+    for (var i=0;i<jobFiles.length;i++) {
+      //console.log("              " + jobFiles[i]);
       // Extract some identifiers from the filename
-      var jobInstance = instancePattern.exec(historyfiles[i]);
-      var jobName = historyfiles[i].slice(0,(historyfiles[i].indexOf(jobInstance)-1));
+      var jobInstance = instancePattern.exec(jobFiles[i]);
+      var jobName = jobfiles[i].slice(0,(jobFiles[i].indexOf(jobInstance)-1));
+      var jobNameFull = jobName + '-' + jobInstance;
+      //console.log(jobFiles[i] + ': ' + jobName + ' ' + jobInstance);
 
-      var historyElement = document.createElement('DIV');
-      historyElement.id = 'historyElement_' + jobName + '-' + jobInstance;
-      historyElement.className = 'historyElement';
+      var jobElement = document.createElement('DIV');
+      jobElement.id = 'jobElement_' + jobNameFull;
+      jobElement.className = 'jobElement';
 
-      var historyElementGraph = document.createElement('DIV');
-      historyElementGraph.id = 'historyElementGraph_' + jobName + '-' + jobInstance;
-      historyElementGraph.className = 'historyElementGraph';
+      var jobElementGraph = document.createElement('DIV');
+      jobElementGraph.id = 'jobElementGraph_' + jobNameFull;
+      jobElementGraph.className = 'jobElementGraph';
+      jobElementGraph.setAttribute('holderName', holder);
 
-      var historyItemName = document.createElement('DIV');
-      historyItemName.id = 'historyItemName' + i;
-      historyItemName.className = 'historyItemName';
-      historyItemName.innerHTML = "<html>" + jobName + "</html>"
+      var jobItemName = document.createElement('DIV');
+      jobItemName.id = 'jobItemName_' + i;
+      jobItemName.className = 'jobItemName';
+      jobItemName.innerHTML = "<html>" + jobName + "</html>"
 
-      var historyItemInstance = document.createElement('DIV');
-      historyItemInstance.id = 'historyItemInstance_' + jobName + '-' + jobInstance;
-      historyItemInstance.className = 'historyItemInstance';
-      historyItemInstance.innerHTML = "<html>" + jobInstance + "</html>"
+      var jobItemInstance = document.createElement('DIV');
+      jobItemInstance.id = 'jobItemInstance_' + jobNameFull;
+      jobItemInstance.className = 'jobItemInstance jobItemInstance_' + holder;
+      jobItemInstance.innerHTML = "<html>" + jobInstance + "</html>"
 
       // Horizontal Zoom box
-      var historyItemHZoomBox = document.createElement('DIV');
-        historyItemHZoomBox.id = 'historyItemHZoomBox_' + jobName + '-' + jobInstance;
-        historyItemHZoomBox.className = 'zoomBox'
-        historyItemHZoomBox.title = 'Horizontal Zoom Factor'
-      var historyItemHZBLabel = document.createElement('LABEL');
-        historyItemHZBLabel.for = 'historyItemHZBInput_'+ jobName + '-' + jobInstance;
-        historyItemHZBLabel.className = 'zoomBoxLabel';
-      var historyItemHZBInput = document.createElement('INPUT');
-        historyItemHZBInput.id = 'historyItemHZBInput_'+ jobName + '-' + jobInstance;
-        historyItemHZBInput.className = 'zoomBoxInput';
-        historyItemHZBInput.value = 1;
-        historyItemHZBInput.onblur = function() {
-                var jobLongName = this.id.replace("historyItemHZBInput_", "");
+      var jobItemHZoomBox = document.createElement('DIV');
+        jobItemHZoomBox.id = 'jobItemHZoomBox_' + jobNameFull;
+        jobItemHZoomBox.className = 'zoomBox'
+        jobItemHZoomBox.title = 'Horizontal Zoom Factor'
+      var jobItemHZBLabel = document.createElement('LABEL');
+        jobItemHZBLabel.for = 'jobItemHZBInput_'+ holder + '_' + jobNameFull;
+        jobItemHZBLabel.className = 'zoomBoxLabel';
+      var jobItemHZBInput = document.createElement('INPUT');
+        jobItemHZBInput.id = 'jobItemHZBInput_'+ holder + '_' + jobNameFull;
+        jobItemHZBInput.className = 'zoomBoxInput';
+        jobItemHZBInput.value = 1;
+        jobItemHZBInput.onblur = function() {
+                var jobLongName = this.id.replace("jobItemHZBInput_" + holder + '_', "");
                 //console.log('INPUT ' + this.id + " : " + this.value + " : " + jobLongName);
-                if ( historyData.hasOwnProperty(jobLongName) ) {
-                  updateJobHistoryData(0, jobLongName);
-                }
+                //if ( historyData.hasOwnProperty(jobLongName) ) {
+                //  updateJobHistoryData(0, jobLongName);
+                //}
+                updateJobHistoryData(0, jobLongName);
               }
-        historyItemHZBInput.addEventListener('keypress', function(event) {
+        jobItemHZBInput.addEventListener('keypress', function(event) {
                 if (event.keyCode == 13) {
                   this.onblur();
                 }
               });
 
-      var historyItemHZDown = document.createElement('Button');
-        historyItemHZDown.id = 'historyItemHZDown_' + jobName + '-' + jobInstance;
-        historyItemHZDown.className = 'zoomBoxButton';
-        historyItemHZDown.onclick = function() {
-                var hsinput = document.getElementById(this.id.replace("historyItemHZDown", "historyItemHZBInput"));
+      var jobItemHZDown = document.createElement('Button');
+        jobItemHZDown.id = 'jobItemHZDown_' + jobNameFull;
+        jobItemHZDown.className = 'zoomBoxButton';
+        jobItemHZDown.onclick = function() {
+                var hsinput = document.getElementById(this.id.replace("jobItemHZDown", "jobItemHZBInput_" + holder));
                 hsinput.value -=  parseInt(hsinput.value)>1?1:0;
-                var jobLongName = this.id.replace("historyItemHZDown_", "");
+                var jobLongName = this.id.replace("jobItemHZDown_", "");
                 //console.log('DOWN ' + this.id + " : " + hsinput.value + " : " + jobLongName);
-                if ( historyData.hasOwnProperty(jobLongName) ) {
-                  updateJobHistoryData(0, jobLongName);
-                }
+                //if ( historyData.hasOwnProperty(jobLongName) ) {
+                //  updateJobHistoryData(0, jobLongName);
+                //}
+                updateJobHistoryData(0, jobLongName);
               }
-      var historyItemHZUp = document.createElement('Button');
-        historyItemHZUp.id = 'historyItemHZUp_' + jobName + '-' + jobInstance;
-        historyItemHZUp.className = 'zoomBoxButton';
-        historyItemHZUp.onclick = function() {
-                var hsinput = document.getElementById(this.id.replace("historyItemHZUp", "historyItemHZBInput"));
+      var jobItemHZUp = document.createElement('Button');
+        jobItemHZUp.id = 'jobItemHZUp_' + jobNameFull;
+        jobItemHZUp.className = 'zoomBoxButton';
+        jobItemHZUp.onclick = function() {
+                var hsinput = document.getElementById(this.id.replace("jobItemHZUp", "jobItemHZBInput_" + holder));
                 hsinput.value = parseInt(hsinput.value,10) + 1;
-                var jobLongName = this.id.replace("historyItemHZUp_", "");
+                var jobLongName = this.id.replace("jobItemHZUp_", "");
                 //console.log('UP ' + this.id + " : " + hsinput.value + " : " + jobLongName);
-                if ( historyData.hasOwnProperty(jobLongName) ) {
-                  updateJobHistoryData(0, jobLongName);
-                }
+                //if ( historyData.hasOwnProperty(jobLongName) ) {
+                //  updateJobHistoryData(0, jobLongName);
+                //}
+                updateJobHistoryData(0, jobLongName);
               }
-      historyItemHZoomBox.appendChild(historyItemHZBLabel);
-      historyItemHZoomBox.appendChild(historyItemHZBInput);
-      historyItemHZoomBox.appendChild(historyItemHZDown);
-      historyItemHZoomBox.appendChild(historyItemHZUp);
+      //jobItemHZoomBox.appendChild(jobItemHZBLabel);
+      jobItemHZoomBox.appendChild(jobItemHZBInput);
+      jobItemHZoomBox.appendChild(jobItemHZDown);
+      jobItemHZoomBox.appendChild(jobItemHZUp);
 
-      historyElement.appendChild(historyItemName);
-      historyElement.appendChild(historyItemInstance);
-      historyElement.appendChild(historyItemHZoomBox);
-      historyListJobsHolder.appendChild(historyElement);
-      historyListJobsHolder.appendChild(historyElementGraph);
+
+      jobElement.appendChild(jobItemName);
+      jobElement.appendChild(jobItemInstance);
+      jobElement.appendChild(jobItemHZoomBox);
+      jobsListHolder.appendChild(jobElement);
+      jobsListHolder.appendChild(jobElementGraph);
+
+      if (holder === 'running_jobsHolder') {
+        jobElementGraph.style.display = 'block';
+        updateJobHistoryData(0, jobNameFull);
+      }
     }
 
-    // Popup menu
-    var historyElementMenu = [{
-      title: 'Display',
-      action: function(elm, data, index) {
-        console.log('menu item #1 from ' + elm.id + " " + data.title + " " + index);
-        var historyElementGraphName = 'historyElementGraph_' +
-                                elm.id.slice('historyItemInstance_'.length);
-        var jobLongName = elm.id.slice('historyItemInstance_'.length);
-        //console.log('historyElementGraphName = ' + historyElementGraphName);
-        var historyElementGraph = document.getElementById(historyElementGraphName);
-        if ( historyElementGraph.style.display == 'block') {
-          historyElementGraph.style.display = 'none';
-        } else {
-          historyElementGraph.style.display = 'block';
+    // Popup menu - content could vary depending on where the jobs list is parented
+    if (holder === 'historyListJobsHolder' ) {
+      // Start of popup menu
+      var jobElementMenu = [{
+        title: 'Display',
+        action: function(elm, data, index) {
+          console.log('menu item #1 from ' + elm.id + " " + data.title + " " + index);
+          var jobElementGraphName = 'jobElementGraph_' +
+                                  elm.id.slice('jobItemInstance_'.length);
+          var jobLongName = elm.id.slice('jobItemInstance_'.length);
+          //console.log('jobElementGraphName = ' + jobElementGraphName);
+          var jobElementGraph = document.getElementById(jobElementGraphName);
+          if ( jobElementGraph.style.display == 'block') {
+            jobElementGraph.style.display = 'none';
+          } else {
+            jobElementGraph.style.display = 'block';
 
-          // Only download history data if we don't already have it
-          if ( (!historyData.hasOwnProperty(jobLongName)) ) {
-            msgobj = {type:'load_saved_job_data', data:{'fileName':historyElementGraphName.slice('historyElementGraph_'.length)}};
-              sendMessage({data:JSON.stringify(msgobj)});
-            } else {
-              updateJobHistoryData(0, jobLongName);
+            // Only download job data if we don't already have it
+            if ( (!historyData.hasOwnProperty(jobLongName)) ) {
+              msgobj = {type:'load_saved_job_data', data:{'fileName':jobElementGraphName.slice('jobElementGraph_'.length)}};
+                sendMessage({data:JSON.stringify(msgobj)});
+              } else {
+                updateJobHistoryData(0, jobLongName);
+              }
             }
+          }
+        }, {
+          title: 'Delete',
+          action: function(elm, data, index) {
+          console.log('menu item #2 from ' + elm.id + " " + data.title + " " + index);
+        }
+      }];
+      // End of popup menu
+    } else if (holder === 'running_jobsHolder') {
+      // Start of popup menu
+      var jobElementMenu = [{
+        title: 'Hide/Display',
+        action: function(elm, data, index) {
+          console.log('menu item #1 from ' + elm.id + " " + data.title + " " + index);
+          var jobElementGraphName = 'jobElementGraph_' +
+                                  elm.id.slice('jobItemInstance_'.length);
+          var jobLongName = elm.id.slice('jobItemInstance_'.length);
+          //console.log('jobElementGraphName = ' + jobElementGraphName);
+          var jobElementGraph = document.getElementById(jobElementGraphName);
+          if ( jobElementGraph.style.display == 'block') {
+            jobElementGraph.style.display = 'none';
+          } else {
+            jobElementGraph.style.display = 'block';
+            updateJobHistoryData(0, jobLongName);
           }
         }
       }, {
-        title: 'Delete',
+          title: 'Stop',
+          action: function(elm, data, index) {
+            console.log('menu item #2 from ' + elm.id + " " + data.title + " " + index);
+            var longJobName = elm.id.replace('jobItemInstance_', '');
+            var jobInstance = instancePattern.exec(longJobName);
+            var nodeName = longJobName.slice(0,(longJobName.indexOf(jobInstance)-1));
+            var msgobj = {type:'stop_running_job', data:{'jobName':nodeName}};
+            sendMessage({data:JSON.stringify(msgobj)});
+          }
+      }, {
+          title: 'Remove',
+          action: function(elm, data, index) {
+            console.log('menu item #3 from ' + elm.id + " " + data.title + " " + index);
+            var longJobName = elm.id.replace('jobItemInstance_', '');
+            var jobInstance = instancePattern.exec(longJobName);
+            var nodeName = longJobName.slice(0,(longJobName.indexOf(jobInstance)-1));
+            var confirmRemove = confirm("Remove job " + nodeName + "?");
+            if ( confirmRemove == true ) {
+              var msgobj = {type:'remove_running_job', data:{'jobName':nodeName}};
+              sendMessage({data:JSON.stringify(msgobj)});
+            }
+          }
+        }, {
+          title: 'Save',
+          action: function(elm, data, index) {
+            console.log('menu item #4 from ' + elm.id + " " + data.title + " " + index);
+            var longJobName = elm.id.replace('jobItemInstance_', '');
+            var jobInstance = instancePattern.exec(longJobName);
+            var nodeName = longJobName.slice(0,(longJobName.indexOf(jobInstance)-1));
+            var msgobj = {type:'save_running_job', data:{'jobName':nodeName}};
+            sendMessage({data:JSON.stringify(msgobj)});
+          }
+      }];
+      // End of popup menu
+    } else if (holder === 'testHolder') {
+      // Start of popup menu
+      var jobElementMenu = [{
+        title: 'Display',
         action: function(elm, data, index) {
-        console.log('menu item #2 from ' + elm.id + " " + data.title + " " + index);
-      }
-    }];
-    // End of popup menu
+          console.log('menu item #1 from ' + elm.id + " " + data.title + " " + index);
+          var jobElementGraphName = 'jobElementGraph_' +
+                                  elm.id.slice('jobItemInstance_'.length);
+          var jobLongName = elm.id.slice('jobItemInstance_'.length);
+          //console.log('jobElementGraphName = ' + jobElementGraphName);
+          var jobElementGraph = document.getElementById(jobElementGraphName);
+          if ( jobElementGraph.style.display == 'block') {
+            jobElementGraph.style.display = 'none';
+          } else {
+            jobElementGraph.style.display = 'block';
 
-    d3.selectAll(".historyItemInstance").on("click", function(data, index) {
+            // Only download job data if we don't already have it
+            if ( (!historyData.hasOwnProperty(jobLongName)) ) {
+              msgobj = {type:'load_saved_job_data', data:{'fileName':jobElementGraphName.slice('jobElementGraph_'.length)}};
+                sendMessage({data:JSON.stringify(msgobj)});
+              } else {
+                updateJobHistoryData(0, jobLongName);
+              }
+            }
+          }
+        }, {
+          title: 'Delete',
+          action: function(elm, data, index) {
+            console.log('menu item #2 from ' + elm.id + " " + data.title + " " + index);
+          }
+        }, {
+          title: 'Is this the Status Page?',
+          action: function(elm, data, index) {
+            console.log('menu item #3 from ' + elm.id + " " + data.title + " " + index);
+          }
+      }];
+      // End of popup menu
+    }
+
+    d3.selectAll('.jobItemInstance_' + holder).on('click', function(data, index) {
                                         var elm = this;
 
                                         // create the div element that will hold the context menu
@@ -827,7 +893,7 @@ domReady( function(){
                                             .html('<center><p><b>Job Options</b></p></center><hr>')
                                             .append('ul')
                                             .selectAll('li')
-                                            .data(historyElementMenu).enter()
+                                            .data(jobElementMenu).enter()
                                             .append('li')
                                             .on('click',function(d) {
                                                         console.log('popup selected: ' + d.title);
@@ -841,7 +907,7 @@ domReady( function(){
 
                                           // show the context menu
                                           d3.select('.context-menu')
-                                            .style('left', (d3.event.pageX - 2) + 'px')
+                                            .style('left', (d3.event.pageX - 12) + 'px')
                                             .style('top', (d3.event.pageY - 72) + 'px')
                                             .style('display', 'block');
                                           d3.event.preventDefault();
@@ -849,7 +915,8 @@ domReady( function(){
                                           d3.event.stopPropagation();
                                       });
 
-    }
+  }
+
 
 
 
@@ -1390,7 +1457,8 @@ domReady( function(){
         }
         createRelayTableFunction();
       } else if (jmsg.type === 'loaded_jobs' ) {
-        createStoredJobsList(jmsg.data);
+        //createStoredJobsList(jmsg.data);
+        createJobTemplatesList(jmsg.data);
       } else if (jmsg.type === 'running_jobs' ) {
         createRunningJobsList(jmsg.data);
       } else if (jmsg.type === 'running_job_status' ) {
@@ -1412,7 +1480,6 @@ domReady( function(){
         jobSaved(jmsg.data);
       } else if (jmsg.type === 'saved_jobs_list' ) {
         // Just the list of saved jobs - not any job data
-        //updateJobHistoryList(jmsg.data);
         updateJobsList(jmsg.data['historyfiles'], 'historyListJobsHolder');
       } else if (jmsg.type === 'saved_job_data' ) {
         // Data for a particular saved job
@@ -1544,44 +1611,6 @@ var runningJobsFunctions = {};
     }
   }
 
-
-  // Generate a listing of stored job templates
-  function createStoredJobsList(data) {
-    //console.log("Reached createStoredJobsList()");
-    var table = document.getElementById("jobTemplatesJobsTable");
-
-    // First remove existing list elements
-    while ( table.hasChildNodes() ) {
-      table.removeChild(table.firstChild);
-    }
-
-
-    for (var i=0;i<data.length;i++) {
-      var thisJob = data[i];
-      var name = thisJob['name'];
-      var preheat = "Preheat OFF";
-      var description = name + '................'.slice(name.length);
-      if ( thisJob['preheat'] ) {
-        preheat = "Preheat  ON";
-      }
-      description = description + "    " + preheat + "    " + thisJob['profile'] + "    " + thisJob['sensors'] + "    " + thisJob['relays'];
-      //console.log("loading job: " + description);
-
-      var row = table.insertRow(i);
-      var radioLabel = document.createElement("LABEL");
-      radioLabel.setAttribute("for", "jl_" + i);      // jl for jobs list
-      radioLabel.textContent = description;
-      radioLabel.id = "label_jl_" + i;
-
-      var radio = document.createElement("INPUT");
-      radio.setAttribute("type", "radio");
-      radio.setAttribute("name", "templatesList");
-      radio.id = "jl_" + i;
-
-      row.appendChild(radio);
-      row.appendChild(radioLabel);
-    }
-  }
 
   // Return index of selected job (or -1 if none is selected)
   function selectedJobIndex() {
@@ -2187,296 +2216,270 @@ var runningJobsFunctions = {};
 
 /************************* Test Area **********************/
 
-  // WAS function updateJobHistoryListNew(historyfiles, holder) {
-  // FROM function updateJobHistoryList(data) {
-  function updateJobsList(jobfiles, holder) {
 
-    var jobFiles = jobfiles;
-    var jobsListHolder = document.getElementById(holder);
-    var instancePattern = /[0-9]{8}_[0-9]{6}/;
+  // To replace function createStoredJobsList(data)
+  // Generate a listing of stored job templates
+  function createJobTemplatesList(data) {
+    console.log("Reached createJobTemplatesList() ...");
+    var jobTemplatesListHolder = document.getElementById("jobTemplatesListHolder");
+    var toolTipDiv = d3.select("body").append("div")
+                                      .attr('class', 'templateItemTooltip')
+                                      .style('opacity', 0.0);
+                                      //.style('display', 'none');
 
-    // First remove existing items
-    while ( jobsListHolder.hasChildNodes() ) {
-      jobsListHolder.removeChild(jobsListHolder.firstChild);
+    // First remove existing list elements
+    while ( jobTemplatesListHolder.hasChildNodes() ) {
+      jobTemplatesListHolder.removeChild(jobTemplatesListHolder.firstChild);
     }
 
-    // Reverse sort the received list (by instancePattern)
-    sortedJobFiles = jobFiles.sort(function(a,b) {
-                    var to_sort = [instancePattern.exec(a),instancePattern.exec(b)];
-                    var to_sort_orig = to_sort.slice();
-                    to_sort.sort();
-                    if (to_sort_orig[0] == to_sort[0]) {
-                      return 1;
-                    } else {
-                      return -1;
-                    }
-                  });
-
-    for (var i=0;i<jobFiles.length;i++) {
-      //console.log("              " + jobFiles[i]);
-      // Extract some identifiers from the filename
-      var jobInstance = instancePattern.exec(jobFiles[i]);
-      var jobName = jobfiles[i].slice(0,(jobFiles[i].indexOf(jobInstance)-1));
-      var jobNameFull = jobName + '-' + jobInstance;
-      //console.log(jobFiles[i] + ': ' + jobName + ' ' + jobInstance);
-
-      var jobElement = document.createElement('DIV');
-      jobElement.id = 'jobElement_' + jobNameFull;
-      jobElement.className = 'jobElement';
-
-      var jobElementGraph = document.createElement('DIV');
-      jobElementGraph.id = 'jobElementGraph_' + jobNameFull;
-      jobElementGraph.className = 'jobElementGraph';
-      jobElementGraph.setAttribute('holderName', holder);
-
-      var jobItemName = document.createElement('DIV');
-      jobItemName.id = 'jobItemName_' + i;
-      jobItemName.className = 'jobItemName';
-      jobItemName.innerHTML = "<html>" + jobName + "</html>"
-
-      var jobItemInstance = document.createElement('DIV');
-      jobItemInstance.id = 'jobItemInstance_' + jobNameFull;
-      jobItemInstance.className = 'jobItemInstance jobItemInstance_' + holder;
-      jobItemInstance.innerHTML = "<html>" + jobInstance + "</html>"
-
-      // Horizontal Zoom box
-      var jobItemHZoomBox = document.createElement('DIV');
-        jobItemHZoomBox.id = 'jobItemHZoomBox_' + jobNameFull;
-        jobItemHZoomBox.className = 'zoomBox'
-        jobItemHZoomBox.title = 'Horizontal Zoom Factor'
-      var jobItemHZBLabel = document.createElement('LABEL');
-        jobItemHZBLabel.for = 'jobItemHZBInput_'+ holder + '_' + jobNameFull;
-        jobItemHZBLabel.className = 'zoomBoxLabel';
-      var jobItemHZBInput = document.createElement('INPUT');
-        jobItemHZBInput.id = 'jobItemHZBInput_'+ holder + '_' + jobNameFull;
-        jobItemHZBInput.className = 'zoomBoxInput';
-        jobItemHZBInput.value = 1;
-        jobItemHZBInput.onblur = function() {
-                var jobLongName = this.id.replace("jobItemHZBInput_" + holder + '_', "");
-                //console.log('INPUT ' + this.id + " : " + this.value + " : " + jobLongName);
-                //if ( historyData.hasOwnProperty(jobLongName) ) {
-                //  updateJobHistoryData(0, jobLongName);
-                //}
-                updateJobHistoryData(0, jobLongName);
-              }
-        jobItemHZBInput.addEventListener('keypress', function(event) {
-                if (event.keyCode == 13) {
-                  this.onblur();
-                }
-              });
-
-      var jobItemHZDown = document.createElement('Button');
-        jobItemHZDown.id = 'jobItemHZDown_' + jobNameFull;
-        jobItemHZDown.className = 'zoomBoxButton';
-        jobItemHZDown.onclick = function() {
-                var hsinput = document.getElementById(this.id.replace("jobItemHZDown", "jobItemHZBInput_" + holder));
-                hsinput.value -=  parseInt(hsinput.value)>1?1:0;
-                var jobLongName = this.id.replace("jobItemHZDown_", "");
-                //console.log('DOWN ' + this.id + " : " + hsinput.value + " : " + jobLongName);
-                //if ( historyData.hasOwnProperty(jobLongName) ) {
-                //  updateJobHistoryData(0, jobLongName);
-                //}
-                updateJobHistoryData(0, jobLongName);
-              }
-      var jobItemHZUp = document.createElement('Button');
-        jobItemHZUp.id = 'jobItemHZUp_' + jobNameFull;
-        jobItemHZUp.className = 'zoomBoxButton';
-        jobItemHZUp.onclick = function() {
-                var hsinput = document.getElementById(this.id.replace("jobItemHZUp", "jobItemHZBInput_" + holder));
-                hsinput.value = parseInt(hsinput.value,10) + 1;
-                var jobLongName = this.id.replace("jobItemHZUp_", "");
-                //console.log('UP ' + this.id + " : " + hsinput.value + " : " + jobLongName);
-                //if ( historyData.hasOwnProperty(jobLongName) ) {
-                //  updateJobHistoryData(0, jobLongName);
-                //}
-                updateJobHistoryData(0, jobLongName);
-              }
-      //jobItemHZoomBox.appendChild(jobItemHZBLabel);
-      jobItemHZoomBox.appendChild(jobItemHZBInput);
-      jobItemHZoomBox.appendChild(jobItemHZDown);
-      jobItemHZoomBox.appendChild(jobItemHZUp);
-
-
-      jobElement.appendChild(jobItemName);
-      jobElement.appendChild(jobItemInstance);
-      jobElement.appendChild(jobItemHZoomBox);
-      jobsListHolder.appendChild(jobElement);
-      jobsListHolder.appendChild(jobElementGraph);
-
-      if (holder === 'running_jobsHolder') {
-        jobElementGraph.style.display = 'block';
-        updateJobHistoryData(0, jobNameFull);
+    for (var i=0;i<data.length;i++) {
+      var thisJob = data[i];
+      var name = thisJob['name'];
+      var preheat = "Preheat OFF";
+      if ( thisJob['preheat'] ) {
+        preheat = "Preheat  ON";
       }
-    }
 
-    // Popup menu - content could vary depending on where the jobs list is parented
-    if (holder === 'historyListJobsHolder' ) {
-      // Start of popup menu
-      var jobElementMenu = [{
-        title: 'Display',
+      var templateItem = document.createElement('DIV');
+      templateItem.id = 'ti_' + i;
+      templateItem.className = 'templateItem';
+
+
+      var templateItemName = document.createElement('LABEL');
+      templateItemName.id = 'tiName_' + name;
+      templateItemName.className = 'templateItemName unselectable';
+      templateItemName.textContent = name;
+      templateItemName.setAttribute('templateItemIndex', i);
+
+      var templateItemPreheat = document.createElement('LABEL');
+      templateItemPreheat.id = 'tiPreheat_' + i;
+      templateItemPreheat.className = 'templateItemPreheat unselectable';
+      templateItemPreheat.innerHTML = '<center>Preset<br>Heat/Cool</center>';
+      templateItemPreheat.setAttribute('isSet', thisJob['preheat']);
+      if (templateItemPreheat.getAttribute('isSet') === 'true') {
+        templateItemPreheat.innerHTML = '<center>Pre Heat<br><b>ON</b></center>';
+      } else {
+        templateItemPreheat.innerHTML = '<center>Pre Heat<br><b>OFF</b></center>';
+      }
+
+      var templateItemSensors = document.createElement('LABEL');
+      templateItemSensors.id = 'tiSensors_' + i;
+      templateItemSensors.className = 'templateItemSensors unselectable';
+      templateItemSensors.textContent = 'Sensors';
+      var loadedSensors = [];
+      for (var j=0;j<thisJob['sensors'].length;j++) {
+        loadedSensors.push(thisJob['sensors'][j]);
+      }
+      //console.log(name + ' sensors: ' + loadedSensors);
+      templateItemSensors.setAttribute('sensors', loadedSensors);
+
+      var templateItemRelays = document.createElement('LABEL');
+      templateItemRelays.id = 'tiRelays_' + i;
+      templateItemRelays.className = 'templateItemRelays unselectable';
+      templateItemRelays.textContent = 'Relays';
+      var loadedRelays = [];
+      for (var j=0;j<thisJob['relays'].length;j++) {
+        loadedRelays.push(thisJob['relays'][j]);
+      }
+      //console.log(name + ' relays: ' + loadedRelays);
+      templateItemRelays.setAttribute('relays', loadedRelays);
+
+      var templateItemProfile = document.createElement('DIV');
+      templateItemProfile.id = 'tiProfile_' + i;
+      templateItemProfile.className = 'templateItemProfile generic_graph';
+
+
+      templateItem.appendChild(templateItemName);
+      templateItem.appendChild(templateItemPreheat);
+      templateItem.appendChild(templateItemSensors);
+      templateItem.appendChild(templateItemRelays);
+      templateItem.appendChild(templateItemProfile);
+
+      jobTemplatesListHolder.appendChild(templateItem);
+
+      // Start of templateItemName menu
+      var templateItemNameMenu = [{
+        title: 'Delete',
         action: function(elm, data, index) {
-          console.log('menu item #1 from ' + elm.id + " " + data.title + " " + index);
-          var jobElementGraphName = 'jobElementGraph_' +
-                                  elm.id.slice('jobItemInstance_'.length);
-          var jobLongName = elm.id.slice('jobItemInstance_'.length);
-          //console.log('jobElementGraphName = ' + jobElementGraphName);
-          var jobElementGraph = document.getElementById(jobElementGraphName);
-          if ( jobElementGraph.style.display == 'block') {
-            jobElementGraph.style.display = 'none';
-          } else {
-            jobElementGraph.style.display = 'block';
+          console.log('menu item #3 from ' + elm.id + " " + data.title + " " + index);
+          var templateItemIndex = elm.getAttribute('templateItemIndex');
+          var jobName = elm.textContent;
 
-            // Only download job data if we don't already have it
-            if ( (!historyData.hasOwnProperty(jobLongName)) ) {
-              msgobj = {type:'load_saved_job_data', data:{'fileName':jobElementGraphName.slice('jobElementGraph_'.length)}};
-                sendMessage({data:JSON.stringify(msgobj)});
-              } else {
-                updateJobHistoryData(0, jobLongName);
-              }
-            }
+          if ( templateItemIndex < 0 )
+              return;
+
+          var confirmDelete = confirm("Delete job " + jobName + "?");
+          if ( confirmDelete == true ) {
+            // Request job deletion
+            //var jobData = { index: parseInt(templateItemIndex) };
+            var msgobj = {type:'delete_job', data:{ index: parseInt(templateItemIndex) }};
+            sendMessage({data:JSON.stringify(msgobj)});
+          } else {
+            return;
           }
-        }, {
-          title: 'Delete',
-          action: function(elm, data, index) {
+        }
+      }, {
+        title: 'New',
+        action: function(elm, data, index) {
           console.log('menu item #2 from ' + elm.id + " " + data.title + " " + index);
-        }
-      }];
-      // End of popup menu
-    } else if (holder === 'running_jobsHolder') {
-      // Start of popup menu
-      var jobElementMenu = [{
-        title: 'Hide/Display',
-        action: function(elm, data, index) {
-          console.log('menu item #1 from ' + elm.id + " " + data.title + " " + index);
-          var jobElementGraphName = 'jobElementGraph_' +
-                                  elm.id.slice('jobItemInstance_'.length);
-          var jobLongName = elm.id.slice('jobItemInstance_'.length);
-          //console.log('jobElementGraphName = ' + jobElementGraphName);
-          var jobElementGraph = document.getElementById(jobElementGraphName);
-          if ( jobElementGraph.style.display == 'block') {
-            jobElementGraph.style.display = 'none';
-          } else {
-            jobElementGraph.style.display = 'block';
-            updateJobHistoryData(0, jobLongName);
-          }
-        }
-      }, {
-          title: 'Stop',
-          action: function(elm, data, index) {
-            console.log('menu item #2 from ' + elm.id + " " + data.title + " " + index);
-            var longJobName = elm.id.replace('jobItemInstance_', '');
-            var jobInstance = instancePattern.exec(longJobName);
-            var nodeName = longJobName.slice(0,(longJobName.indexOf(jobInstance)-1));
-            var msgobj = {type:'stop_running_job', data:{'jobName':nodeName}};
-            sendMessage({data:JSON.stringify(msgobj)});
-          }
-      }, {
-          title: 'Remove',
-          action: function(elm, data, index) {
-            console.log('menu item #3 from ' + elm.id + " " + data.title + " " + index);
-            var longJobName = elm.id.replace('jobItemInstance_', '');
-            var jobInstance = instancePattern.exec(longJobName);
-            var nodeName = longJobName.slice(0,(longJobName.indexOf(jobInstance)-1));
-            var confirmRemove = confirm("Remove job " + nodeName + "?");
-            if ( confirmRemove == true ) {
-              var msgobj = {type:'remove_running_job', data:{'jobName':nodeName}};
-              sendMessage({data:JSON.stringify(msgobj)});
-            }
-          }
-        }, {
-          title: 'Save',
-          action: function(elm, data, index) {
-            console.log('menu item #4 from ' + elm.id + " " + data.title + " " + index);
-            var longJobName = elm.id.replace('jobItemInstance_', '');
-            var jobInstance = instancePattern.exec(longJobName);
-            var nodeName = longJobName.slice(0,(longJobName.indexOf(jobInstance)-1));
-            var msgobj = {type:'save_running_job', data:{'jobName':nodeName}};
-            sendMessage({data:JSON.stringify(msgobj)});
-          }
-      }];
-      // End of popup menu
-    } else if (holder === 'testHolder') {
-      // Start of popup menu
-      var jobElementMenu = [{
-        title: 'Display',
-        action: function(elm, data, index) {
-          console.log('menu item #1 from ' + elm.id + " " + data.title + " " + index);
-          var jobElementGraphName = 'jobElementGraph_' +
-                                  elm.id.slice('jobItemInstance_'.length);
-          var jobLongName = elm.id.slice('jobItemInstance_'.length);
-          //console.log('jobElementGraphName = ' + jobElementGraphName);
-          var jobElementGraph = document.getElementById(jobElementGraphName);
-          if ( jobElementGraph.style.display == 'block') {
-            jobElementGraph.style.display = 'none';
-          } else {
-            jobElementGraph.style.display = 'block';
 
-            // Only download job data if we don't already have it
-            if ( (!historyData.hasOwnProperty(jobLongName)) ) {
-              msgobj = {type:'load_saved_job_data', data:{'fileName':jobElementGraphName.slice('jobElementGraph_'.length)}};
-                sendMessage({data:JSON.stringify(msgobj)});
-              } else {
-                updateJobHistoryData(0, jobLongName);
-              }
+          var jobComposer = document.getElementById("jobComposer");
+          if ( jobComposer.style.display == 'block') {
+            jobComposer.style.display = 'none';
+          } else {
+            jobComposer.style.display = 'block';
+            var c = document.getElementById("jobItemsHolder").children;
+            var itemsWidth = 0;
+            var tallest = 0;
+            for (var i=0;i<c.length;i++) {
+              itemsWidth += parseInt(window.getComputedStyle(c[i]).width.replace(/\D+/g, ''));
+              var itemHeight = parseInt(window.getComputedStyle(c[i]).height.replace(/\D+/g, ''));
+              if (itemHeight > tallest ) tallest = itemHeight;
             }
           }
-        }, {
-          title: 'Delete',
-          action: function(elm, data, index) {
-            console.log('menu item #2 from ' + elm.id + " " + data.title + " " + index);
+        }
+      }, {
+        title: 'Refresh',
+        action: function(elm, data, index) {
+          console.log('menu item #1 from ' + elm.id + " " + data.title + " " + index);
+          console.log("REFRESH job button clicked");
+
+          // Request job data
+          var msgobj = {type:'load_jobs', data:[]};
+          sendMessage({data:JSON.stringify(msgobj)});
+        }
+      }, {
+        title: 'Run',
+        action: function(elm, data, index) {
+          //console.log('menu item #4 from ' + elm.id + " " + data.title + " " + index);
+          var templateItemIndex = elm.getAttribute('templateItemIndex');
+          var jobName = elm.textContent;
+
+          var confirmRun = confirm("Run job " + jobName + "?");
+          if ( confirmRun == true ) {
+            // Request job run
+            var msgobj = {type:'run_job', data:{ index: parseInt(templateItemIndex) }};
+            sendMessage({data:JSON.stringify(msgobj)});
+
+            // Now go to status page to view job progress
+            document.getElementById("no_running_jobs").innerHTML = "Waiting for job " + jobName + " to start";
+            location.href = "#content_1";
+          } else {
+            return;
           }
-        }, {
-          title: 'Is this the Status Page?',
-          action: function(elm, data, index) {
-            console.log('menu item #3 from ' + elm.id + " " + data.title + " " + index);
-          }
+      }
       }];
       // End of popup menu
+
+      d3.selectAll('.templateItemName').on('click', function(data, index) {
+                                          var elm = this;
+
+                                          // create the div element that will hold the context menu
+                                          d3.selectAll('.context-menu').data([1])
+                                            .enter()
+                                            .append('div')
+                                            .attr('class', 'context-menu');
+
+                                            // an ordinary click anywhere closes menu
+                                            d3.select('body').on('click.context-menu', function() {
+                                              d3.select('.context-menu').style('display', 'none');
+                                            });
+
+                                            // this is executed when a contextmenu event occurs
+                                            d3.selectAll('.context-menu')
+                                              .html('<center><p><b>Template Options</b></p></center><hr>')
+                                              .append('ul')
+                                              .selectAll('li')
+                                              .data(templateItemNameMenu).enter()
+                                              .append('li')
+                                              .on('click',function(d) {
+                                                          console.log('popup selected: ' + d.title);
+                                                          d.action(elm, d, i);
+                                                          d3.select('.context-menu')
+                                                            .style('display', 'none');
+                                                          return d;
+                                                        })
+                                              .text(function(d) {return d.title;});
+                                            d3.select('.context-menu').style('display', 'none');
+
+                                            // show the context menu
+                                            d3.select('.context-menu')
+                                              .style('left', (d3.event.pageX - 96) + 'px')
+                                              .style('top', (d3.event.pageY - 148) + 'px')
+                                              .style('display', 'block');
+                                            d3.event.preventDefault();
+
+                                            d3.event.stopPropagation();
+                                        });
+
+
+/*
+      // templateItemPreheat tooltip
+      d3.selectAll('.templateItemPreheat').on('mouseover', function() {
+                                      if (this.getAttribute('isSet') === 'true') {
+                                        var preheatText = '<center>Preset Heat/Cool<br/><b>ON</b></center>';
+                                      } else {
+                                        var preheatText = '<center>Preset Heat/Cool<br/><b>OFF</b></center>';
+                                      }
+                                      //toolTipDiv.style('display', 'block')
+                                      toolTipDiv.style('opacity', 0.9)
+                                          .html(preheatText)
+                                          .style('left', (getOffsetRect(this).left - 34) + 'px')
+                                          .style('top', (getOffsetRect(this).top + 12) + 'px');
+
+                                    })
+                                      .on('mouseout', function() {
+                                      //toolTipDiv.style('display', 'none');
+                                      toolTipDiv.style('opacity', 0.0);
+                                    });
+*/
+
+      // templateItemSensors tooltip
+      d3.selectAll('.templateItemSensors').on('click', function() {
+                                      //console.log('click on Sensors');
+                                      if (toolTipDiv.style('opacity') == 0.0) {
+                                        var sensors = this.getAttribute('sensors').split(',');
+                                        var sensorsText = '<center>';
+                                        for (var i=0;i<sensors.length;i++) {
+                                          sensorsText = sensorsText + sensors[i] + '<br>';
+                                        }
+                                        sensorsText = sensorsText + '</center>';
+                                        toolTipDiv.style('opacity', 0.9)
+                                            .html(sensorsText)
+                                            .style('left', (getOffsetRect(this).left - 34) + 'px')
+                                            .style('top', (getOffsetRect(this).top + 12) + 'px');
+                                      } else {
+                                        toolTipDiv.style('opacity', 0.0);
+                                      }
+                                    })
+
+      // templateItemRelays tooltip
+      d3.selectAll('.templateItemRelays').on('click', function() {
+                                      //console.log('click on Relays');
+                                      if (toolTipDiv.style('opacity') == 0.0) {
+                                        var relays = this.getAttribute('relays').split(',');
+                                        var relaysText = '<center>';
+                                        for (var i=0;i<relays.length;i++) {
+                                          relaysText = relaysText + relays[i] + '<br>';
+                                        }
+                                        relaysText = relaysText + '</center>';
+                                        toolTipDiv.style('opacity', 0.9)
+                                            .html(relaysText)
+                                            .style('left', (getOffsetRect(this).left - 34) + 'px')
+                                            .style('top', (getOffsetRect(this).top + 12) + 'px');
+                                      } else {
+                                        toolTipDiv.style('opacity', 0.0);
+                                      }
+                                    })
+
+
+
     }
 
-    d3.selectAll('.jobItemInstance_' + holder).on('click', function(data, index) {
-                                        var elm = this;
+  } // End function createJobTemplatesList()
 
-                                        // create the div element that will hold the context menu
-                                        d3.selectAll('.context-menu').data([1])
-                                          .enter()
-                                          .append('div')
-                                          .attr('class', 'context-menu');
 
-                                          // an ordinary click anywhere closes menu
-                                          d3.select('body').on('click.context-menu', function() {
-                                            d3.select('.context-menu').style('display', 'none');
-                                          });
-
-                                          // this is executed when a contextmenu event occurs
-                                          d3.selectAll('.context-menu')
-                                            .html('<center><p><b>Job Options</b></p></center><hr>')
-                                            .append('ul')
-                                            .selectAll('li')
-                                            .data(jobElementMenu).enter()
-                                            .append('li')
-                                            .on('click',function(d) {
-                                                        console.log('popup selected: ' + d.title);
-                                                        d.action(elm, d, i);
-                                                        d3.select('.context-menu')
-                                                          .style('display', 'none');
-                                                        return d;
-                                                      })
-                                            .text(function(d) {return d.title;});
-                                          d3.select('.context-menu').style('display', 'none');
-
-                                          // show the context menu
-                                          d3.select('.context-menu')
-                                            .style('left', (d3.event.pageX - 12) + 'px')
-                                            .style('top', (d3.event.pageY - 72) + 'px')
-                                            .style('display', 'block');
-                                          d3.event.preventDefault();
-
-                                          d3.event.stopPropagation();
-                                      });
-
-  }
-
+/********************** END Test Area **********************/
 });
 
 

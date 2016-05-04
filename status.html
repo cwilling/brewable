@@ -38,22 +38,12 @@
       </div>
       <div id="content_2" class="content">
         <div id="content_2_nav_bar" class="nav_bar">
-          <div id="jobTemplatesTitle" class="page_title title_item unselectable">
+          <div id="jobTemplatesTitle" class="page_title title_item unselectable" style="cursor:pointer;">
             Job Templates
           </div>
         </div>
-        <div id="jobTemplatesHolder" style="display: block;">
-          <div id="jobTemplatesButtonsHolder">
-            <ul id="jobTemplatesButtons" class="jobTemplatesButtons">
-              <li><a href="#" id="refresh_job_button">Refresh</a></li>
-              <li><a href="#" id="new_job_button">New</a></li>
-              <li><a href="#" id="delete_job_button" >Delete</a></li>
-              <li><a href="#" id="run_job_button" >Run</a></li>
-            </ul>
-          </div>
-          <div id="jobTemplatesJobsListHolder">
-            <table id="jobTemplatesJobsTable" class="jobTemplatesJobsTable">
-            </table>
+        <div id="jobTemplatesHolder" style="display:flex;display:-webkit-flex;">
+          <div id="jobTemplatesListHolder">
           </div>
         </div>
         <div id="jobComposer">
@@ -75,23 +65,28 @@
             <div id="jobProfileHolder">
               <select id="jobProfileSelector"></select>
             </div>
-              <div id="jobSensorsHolder">
-                <table id="jobSensorsTable" class="jobSensorsTable" align="center">
-                  <caption id="jobSensorsTableCaption">Sensors</caption>
-                </table>
-              </div>
-              <div id="jobRelaysHolder">
-                <table id="jobRelaysTable" class="jobRelaysTable" align="center">
-                  <caption id="jobRelaysTableCaption">Relays</caption>
-                </table>
-              </div>
+            <div id="jobSensorsHolder">
+              <table id="jobSensorsTable" class="jobSensorsTable" align="center">
+                <caption id="jobSensorsTableCaption">Sensors</caption>
+              </table>
+            </div>
+            <div id="jobRelaysHolder">
+              <table id="jobRelaysTable" class="jobRelaysTable" align="center">
+                <caption id="jobRelaysTableCaption">Relays</caption>
+              </table>
+            </div>
+            <div id="dismissJobComposerButton">
+              Dismiss
+            </div>
           </div>
         </div>
-        <div id="jobsHistoryHolder">
+        <div id="jobsHistory">
           <div id="jobsHistoryTitle" class="section_title unselectable">
             Job History
           </div>
-          <div id="historyListJobsHolder" class="historyListJobsHolder">
+          <div id="historyList" class="historyList">
+            <div id="historyListJobsHolder" class="historyListJobsHolder">
+            </div>
           </div>
         </div>
       </div>
@@ -122,7 +117,7 @@
           <div id="configEntryHolder">
           </div>
         </div>
-        <div id="testHolder" class="jobsListHolder">
+        <div id="testHolder">
         </div>
       </div>
     </div>

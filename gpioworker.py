@@ -167,7 +167,7 @@ class GPIOProcess(multiprocessing.Process):
                         # Update local version, then save to file
                         #print("gpio found save_job msg")
                         self.jobs.append(jmsg['data'])
-                        # print("self.jobs: ", self.jobs)
+                        #print("self.jobs: ", self.jobs)
                         with open(JOB_DATA_FILE, 'w') as json_file:
                             json.dump({'job_data':self.jobs}, json_file)
                         # Return updated jobs list to client
@@ -179,6 +179,7 @@ class GPIOProcess(multiprocessing.Process):
                         jdata = json.dumps({'type':'loaded_jobs',
                                             'data':self.jobs})
                         self.output_queue.put(jdata)
+                        print("self.jobs: ", self.jobs)
                     elif jmsg['type'] == 'delete_job':
                         # First check if index in range?
                         del self.jobs[jmsg['data']['index']]
