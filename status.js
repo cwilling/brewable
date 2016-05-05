@@ -60,6 +60,24 @@ var isNumeric = function (n) {
   return !isNaN(parseFloat(n)) && isFinite(n);
 };
 
+/* Some javascript implementations don't have string.includes()
+   so provide one
+*/
+if (!String.prototype.includes) {
+  String.prototype.includes = function(search, start) {
+    'use strict';
+    if (typeof start !== 'number') {
+      start = 0;
+    }
+
+    if (start + search.length > this.length) {
+      return false;
+    } else {
+      return this.indexOf(search, start) !== -1;
+    }
+  };
+}
+
 /* Return top left corner of enclosing element
    From: http://javascript.info/tutorial/coordinates
 */
@@ -151,7 +169,7 @@ domReady( function(){
         if (this.id === 'jobTemplatesTitle') {
           var templates = document.getElementById("jobTemplatesHolder");
           var history = document.getElementById("historyListJobsHolder");
-          if (templates.style.display.indexOf('flex') < 0 ) {
+          if (!templates.style.display.includes('flex')) {
             // Must be hidden, so display it
             templates.style.display = 'flex';
             templates.style.display = '-webkit-flex';
@@ -176,7 +194,7 @@ domReady( function(){
         if (this.id === 'jobTemplatesTitle') {
           var templates = document.getElementById("jobTemplatesHolder");
           var history = document.getElementById("historyListJobsHolder");
-          if (templates.style.display.indexOf('flex') < 0 ) {
+          if (!templates.style.display.includes('flex')) {
             // Must be hidden, so display it
             templates.style.display = 'flex';
             templates.style.display = '-webkit-flex';
