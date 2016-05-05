@@ -151,14 +151,14 @@ domReady( function(){
         if (this.id === 'jobTemplatesTitle') {
           var templates = document.getElementById("jobTemplatesHolder");
           var history = document.getElementById("historyListJobsHolder");
-          //if ( templates.style.display == 'flex') {
-          if ( templates.style.display.includes('flex')) {
-            templates.style.display = 'none';
-            history.style.height = '35em';
-          } else {
+          if (templates.style.display.indexOf('flex') < 0 ) {
+            // Must be hidden, so display it
             templates.style.display = 'flex';
             templates.style.display = '-webkit-flex';
             history.style.height = '21em';
+          } else {
+            templates.style.display = 'none';
+            history.style.height = '35em';
           }
         }
       }
@@ -176,14 +176,14 @@ domReady( function(){
         if (this.id === 'jobTemplatesTitle') {
           var templates = document.getElementById("jobTemplatesHolder");
           var history = document.getElementById("historyListJobsHolder");
-          //if ( templates.style.display == 'flex') {
-          if (templates.style.display.includes('flex')) {
-            templates.style.display = 'none';
-            history.style.height = '35em';
-          } else {
+          if (templates.style.display.indexOf('flex') < 0 ) {
+            // Must be hidden, so display it
             templates.style.display = 'flex';
             templates.style.display = '-webkit-flex';
             history.style.height = '21em';
+          } else {
+            templates.style.display = 'none';
+            history.style.height = '35em';
           }
         }
       }
@@ -1498,18 +1498,12 @@ domReady( function(){
     console.log("disconnected"); 
 
     /* Display disconnected status */
-    var navmenu = document.getElementsByClassName("nav_bar");
-    //console.log("Nav Menu has " + navmenu.length + " elements");
-    for (var el=0;el<navmenu.length;el++ ) {
-      navmenu[el].style.setProperty('justify-content', 'center');
-      navmenu[el].style.background = 'red';
-    }
-    for (var el=1;el<navmenu.length;el++ ) {
-      navmenu[el].textContent = 'NOT CONNECTED TO PI!';
+    var pageTitles = document.getElementsByClassName("page_title");
+    for (var page=0;page<pageTitles.length;page++ ) {
+      pageTitles[page].style.background = 'red';
+      pageTitles[page].textContent = 'NOT CONNECTED TO PI!';
     }
 
-    d3.selectAll(".page_title").style("background", "red")
-                              .text('NOT CONNECTED TO SERVER!');
   };
 
   var sendMessage = function(message) {
