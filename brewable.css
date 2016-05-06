@@ -510,22 +510,19 @@ div#content_4 {
 /* New templates list */
 #jobTemplatesHolder {
     display:    flex;
-    align-items: center;
     justify-content: center;
 
     display:                    -webkit-flex;
-    -webkit-align-items:	center;
     -webkit-justify-content:	center;
 
     height:     14em;
     overflow-y: auto;
-    direction: rtl;
 
 }
 #jobTemplatesListHolder {
     background: #366;
     overflow-x: auto;
-    direction:  ltr;
+    direction:  rtl;
 }
 .templateItem {
     display:    flex;
@@ -537,6 +534,7 @@ div#content_4 {
     -webkit-justify-content: left;
 
     height:     44px;
+    direction:  ltr;
     border-bottom: 1px solid #000;
 }
 .templateItemName {
@@ -616,8 +614,8 @@ div#content_4 {
     -webkit-align-items: center;
     -webkit-justify-content: left;
 
-    width:      36em;
-    height:     36px;
+    width:      576px;
+    height:     40px;
     margin-left: 1em;
 
     border:	1px solid black;

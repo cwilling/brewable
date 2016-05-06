@@ -317,6 +317,20 @@ domReady( function(){
   }, false);
 
 
+  // Display the job Composer
+  var jobTemplatesHolder = document.getElementById('jobTemplatesHolder');
+  jobTemplatesHolder.onclick = function(e) {
+    console.log('Target: ' + e.target.id);
+    if (e.target.id != 'jobTemplatesHolder') return;
+
+    var jobComposer = document.getElementById("jobComposer");
+    if ( jobComposer.style.display != 'block') {
+      jobComposer.style.display = 'block';
+    }
+    e.stopPropagation();
+    return false;
+  }
+
   // Dismiss the job composer
   var dismissJobComposerButton = document.getElementById('dismissJobComposerButton');
   dismissJobComposerButton.onclick = function() {
@@ -543,7 +557,7 @@ domReady( function(){
       }
 
       // Find extent of values in both profileLineData & all the temperatureLineData arrays (1 for each sensor)
-      // N.B. could probaby do this while populating the *LineData arrays
+      // N.B. could maybe do this while populating the *LineData arrays
       var maxTime = 0.0;
       var maxDataPoint = 0.0;
       var minDataPoint = 1000.0;
@@ -1996,6 +2010,12 @@ var runningJobsFunctions = {};
       var templateItemProfile = document.createElement('DIV');
       templateItemProfile.id = 'tiProfile_' + i;
       templateItemProfile.className = 'templateItemProfile generic_graph';
+      var loadedProfile = [];
+      for (k=0;k<thisJob['profile'].length;k++) {
+        //console.log('profile step for ' + name + ': ' + thisJob['profile'][k].target + ' . ' + thisJob['profile'][k].duration);
+        loadedProfile.push({'target':parseFloat(thisJob['profile'][k].target),'duration':parseFloat(thisJob['profile'][k].duration)});
+      }
+      //templateItemProfile.setAttribute('profile', loadedProfile);
 
 
       templateItem.appendChild(templateItemName);
@@ -2005,6 +2025,9 @@ var runningJobsFunctions = {};
       templateItem.appendChild(templateItemProfile);
 
       jobTemplatesListHolder.appendChild(templateItem);
+
+      // Draw the profile graph for this template item
+      updateTemplateProfile(loadedProfile,templateItemProfile.id);
 
       // Start of templateItemName menu
       var templateItemNameMenu = [{
@@ -2186,6 +2209,106 @@ var runningJobsFunctions = {};
     }
 
   } // End function createJobTemplatesList()
+
+
+  function updateTemplateProfile(profileData, profileDivName) {
+    var templateProfileGraphMargin = {top: 2, right: 4, bottom: 1, left: 1},
+        templateProfileGraphWidth = 576 - templateProfileGraphMargin.left - templateProfileGraphMargin.right,
+        templateProfileGraphHeight = 40 - templateProfileGraphMargin.top - templateProfileGraphMargin.bottom;
+
+    // Draw the graph of profile
+    d3.select('#profile_' + profileDivName).remove();
+    var templateProfileGraphHolder = d3.select('#' + profileDivName).append("svg")
+                      .attr("id", "profile_" + profileDivName)
+                      .attr("class", "template_profileGraph")
+                      .attr("width", templateProfileGraphWidth + templateProfileGraphMargin.right + templateProfileGraphMargin.left)
+                      .attr("height", templateProfileGraphHeight + templateProfileGraphMargin.top + templateProfileGraphMargin.bottom)
+                      .style("border", "1px solid black")
+
+    // Extract profileData into local array
+    var profileLineData = [];
+    var setpoint = {};
+    var nextStep = 0.0;
+    for (var sp=0;sp<profileData.length;sp++) {
+      setpoint = {"x":nextStep.toFixed(2),
+                  "y":profileData[sp]["target"]};
+      profileLineData.push(setpoint);
+      nextStep += parseFloat(profileData[sp]["duration"]);
+      //console.log("*** updateTemplateProfile() profile: " + setpoint["x"] + " : " + setpoint["y"]);
+    }
+
+    // Find extent of values in profileLineData
+    var maxTime = 0.0;
+    var maxDataPoint = 0.0;
+    var minDataPoint = 1000.0;
+    var minProfile = d3.min(profileLineData, function(d) {return parseFloat(d.y);});
+    var maxProfile = d3.max(profileLineData, function(d) {return parseFloat(d.y);}) + 1.0;
+    var maxProfileTime = d3.max(profileLineData, function(d) {return parseFloat(d.x);});
+
+    if ( minProfile < minDataPoint ) minDataPoint = minProfile;
+    if ( maxProfile > maxDataPoint ) maxDataPoint = maxProfile;
+    if ( maxProfileTime > maxTime ) maxTime = maxProfileTime;
+
+    // Scale & axes
+    var templateLinearScaleY = d3.scale.linear()
+                      .domain([minDataPoint,maxDataPoint])
+                      .range([templateProfileGraphHeight,0]);
+    var templateYAxis = d3.svg.axis()
+                      .scale(templateLinearScaleY)
+                      .orient("left")
+                      .tickSize(-4)
+                      .ticks(2);
+                      //.tickValues(makeTickValues(maxDataPoint,4));
+    var templateYAxisGroup = templateProfileGraphHolder.append("g")
+                      .attr("transform",
+                            "translate(" + templateProfileGraphMargin.left + "," + templateProfileGraphMargin.top + ")")
+                      .attr('stroke-width', 2)
+                      .attr('stroke', 'black')
+                      .attr('fill', 'none')
+                      .call(templateYAxis);
+    var templateLinearScaleX = d3.scale.linear()
+                      .domain([0,maxTime])
+                      .range([0,templateProfileGraphWidth]);
+    var templateXAxis = d3.svg.axis()
+                      .scale(templateLinearScaleX)
+                      .orient("bottom")
+                      .tickSize(-4)
+                      .ticks(5);
+                      //.tickValues(makeTickValues(maxTime,18*graphWidthScale));
+    var templateXAxisGroup = templateProfileGraphHolder.append("g")
+                      .attr('class', 'x templateAxis')
+                      .attr("transform",
+                            "translate(" + templateProfileGraphMargin.left + "," + (templateProfileGraphHeight + templateProfileGraphMargin.top) + ")")
+                      .attr('stroke-width', 2)
+                      .attr('stroke', 'black')
+                      .attr('fill', 'none')
+                      .call(templateXAxis);
+    // Custom tick format
+    //templateProfileGraphHolder.selectAll('.x.templateAxis text').text(function(d) { return tickText(d) });
+
+    // Scale profile data
+    var scaledProfileLineData = [];
+    for (var sp=0;sp<profileLineData.length;sp++) {
+      //console.log("scaled sp = " + profileLineData[sp].x + " : " + profileLineData[sp].y);
+      scaledProfileLineData.push({"x":templateLinearScaleX(profileLineData[sp].x),
+                                  "y":templateLinearScaleY(profileLineData[sp].y)});
+    }
+    // Draw profile graph
+    var templateProfileLineFunction = d3.svg.line()
+                              .x(function(d) { return d.x; })
+                              .y(function(d) { return d.y; })
+                              .interpolate("linear");
+    var lineGraph = templateProfileGraphHolder.append("path")
+                              .attr("transform",
+                                    "translate(" + templateProfileGraphMargin.left + "," + templateProfileGraphMargin.top + ")")
+                              .attr("d", templateProfileLineFunction(scaledProfileLineData))
+                              .attr("stroke", "gray")
+                              .attr("stroke-width", 2)
+                              .attr("fill", "none");
+
+
+  }
+
 
 
 /********************** END Test Area **********************/
