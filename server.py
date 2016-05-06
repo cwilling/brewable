@@ -14,7 +14,6 @@ import gpioworker
  
 define("port", default=7080, help="run on the given port", type=int)
  
-#clients = [] 
 clients = set()
 
 input_queue = multiprocessing.Queue()
@@ -26,13 +25,9 @@ class IndexHandler(tornado.web.RequestHandler):
     def get(self):
         self.render('status.html')
  
-class ProfileHandler(tornado.web.RequestHandler):
-    def get(self):
-        self.render('profiles.html')
-
-class StaticFileHandler(tornado.web.RequestHandler):
-	def get(self):
-		self.render('main.js')
+#class StaticFileHandler(tornado.web.RequestHandler):
+#    def get(self):
+#        self.render('main.js')
  
 class WebSocketHandlerStatus(tornado.websocket.WebSocketHandler):
     def open(self):
@@ -40,7 +35,6 @@ class WebSocketHandlerStatus(tornado.websocket.WebSocketHandler):
         clients.add(self)
 	jdata = json.dumps({'type':'info','data':'status page connected'})
 	print "New connection SSS %d" % len(clients)
-        #self.write_message("SSS connected")
         self.write_message(jdata)
  
     def on_message(self, message):
@@ -55,11 +49,10 @@ class WebSocketHandlerStatus(tornado.websocket.WebSocketHandler):
  
 class WebSocketHandlerProfiles(tornado.websocket.WebSocketHandler):
     def open(self):
-        print '(profiles) new connection'
+        print 'New connection'
         clients.add(self)
 	jdata = json.dumps({'type':'info','data':'profile page connected'})
 	print "New connection PPP %d" % len(clients)
-        #self.write_message("PPP connected")
         self.write_message(jdata)
  
     def on_message(self, message):
@@ -91,7 +84,6 @@ if __name__ == '__main__':
 	app = tornado.web.Application(
 	    handlers=[
 	        (r"/", IndexHandler),
-	        (r"/profile", ProfileHandler),
 	        (r"/static/(.*)", tornado.web.StaticFileHandler, {'path':  './'}),
 	        (r"/wsStatus", WebSocketHandlerStatus),
 	        (r"/wsProfiles", WebSocketHandlerProfiles)
