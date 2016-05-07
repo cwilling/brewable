@@ -817,7 +817,10 @@ class JobProcessor(GPIOProcess):
         if len(self.jobSensors) == 1:
             temp = self.jobSensors[self.jobSensorIds[0]].get_temp()
             #print "Single temp: %s for target: %s" % (temp, target)
-        elif len(self.jobSensors) == 2:
+        elif len(self.jobSensors) > 1:
+            # At this stage, only the first 2 sensors have a role temperature
+            # adjustment (although the others can be used for additional
+            # monitoring etc.)
             temp0 = float(self.jobSensors[self.jobSensorIds[0]].get_temp())
             temp1 = float(self.jobSensors[self.jobSensorIds[1]].get_temp())
             mswm = float(self.configuration['multiSensorMeanWeight'])
