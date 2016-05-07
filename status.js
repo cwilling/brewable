@@ -320,7 +320,7 @@ domReady( function(){
   // Display the job Composer
   var jobTemplatesHolder = document.getElementById('jobTemplatesHolder');
   jobTemplatesHolder.onclick = function(e) {
-    console.log('Target: ' + e.target.id);
+    //console.log('Target: ' + e.target.id);
     if (e.target.id != 'jobTemplatesHolder') return;
 
     var jobComposer = document.getElementById("jobComposer");
@@ -1947,7 +1947,9 @@ var runningJobsFunctions = {};
     var jobTemplatesListHolder = document.getElementById("jobTemplatesListHolder");
     var toolTipDiv = d3.select("body").append("div")
                                       .attr('class', 'templateItemTooltip')
-                                      .style('opacity', 0.0);
+                                      .style('opacity', 0.0)
+                                      .style('left', '200px')
+                                      .style('top', '200px');
                                       //.style('display', 'none');
 
     // First remove existing list elements
@@ -2144,27 +2146,6 @@ var runningJobsFunctions = {};
                                             d3.event.stopPropagation();
                                         });
 
-
-/*
-      // templateItemPreheat tooltip
-      d3.selectAll('.templateItemPreheat').on('mouseover', function() {
-                                      if (this.getAttribute('isSet') === 'true') {
-                                        var preheatText = '<center>Preset Heat/Cool<br/><b>ON</b></center>';
-                                      } else {
-                                        var preheatText = '<center>Preset Heat/Cool<br/><b>OFF</b></center>';
-                                      }
-                                      //toolTipDiv.style('display', 'block')
-                                      toolTipDiv.style('opacity', 0.9)
-                                          .html(preheatText)
-                                          .style('left', (getOffsetRect(this).left - 34) + 'px')
-                                          .style('top', (getOffsetRect(this).top + 12) + 'px');
-
-                                    })
-                                      .on('mouseout', function() {
-                                      //toolTipDiv.style('display', 'none');
-                                      toolTipDiv.style('opacity', 0.0);
-                                    });
-*/
 
       // templateItemSensors tooltip
       d3.selectAll('.templateItemSensors').on('click', function() {
