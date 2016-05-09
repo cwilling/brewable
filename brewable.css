@@ -681,7 +681,7 @@ div#jobComposer {
     height:     54%;
 }
 .historyListJobsHolder {
-    height:     296px;
+    height:     22em;
     overflow-y: auto;
     direction:  rtl;
     margin-block-start: 5px;

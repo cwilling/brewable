@@ -173,7 +173,7 @@ domReady( function(){
             // Must be hidden, so display it
             templates.style.display = 'flex';
             templates.style.display = '-webkit-flex';
-            history.style.height = '21em';
+            history.style.height = '22em';
           } else {
             templates.style.display = 'none';
             history.style.height = '35em';
@@ -198,7 +198,7 @@ domReady( function(){
             // Must be hidden, so display it
             templates.style.display = 'flex';
             templates.style.display = '-webkit-flex';
-            history.style.height = '21em';
+            history.style.height = '22em';
           } else {
             templates.style.display = 'none';
             history.style.height = '35em';
@@ -518,9 +518,9 @@ domReady( function(){
         historyJobsGraphHeight = 256 - historyJobsGraphMargin.top - historyJobsGraphMargin.bottom;
 
     // Draw the graph of job history
-    d3.select("#history_" + longName).remove();
-    var historyJobsGraphHolder = d3.select("#jobElementGraph_" + longName).append("svg")
-                      .attr("id", "history_" + longName)
+    d3.select("#history_" + longName.replace('%', '\\%')).remove();
+    var historyJobsGraphHolder = d3.select("#jobElementGraph_" + longName.replace('%', '\\%')).append("svg")
+                      .attr("id", "history_" + longName.replace('%', '\%'))
                       .attr("class", "history_job")
                       .attr("width", historyJobsGraphWidth + historyJobsGraphMargin.right + historyJobsGraphMargin.left)
                       .attr("height", historyJobsGraphHeight + historyJobsGraphMargin.top + historyJobsGraphMargin.bottom)
@@ -690,7 +690,7 @@ domReady( function(){
       var jobInstance = instancePattern.exec(jobFiles[i]);
       var jobName = jobfiles[i].slice(0,(jobFiles[i].indexOf(jobInstance)-1));
       var jobNameFull = jobName + '-' + jobInstance;
-      //console.log(jobFiles[i] + ': ' + jobName + ' ' + jobInstance);
+      console.log(jobFiles[i] + ': ' + jobName + ' ' + jobInstance);
 
       var jobElement = document.createElement('DIV');
       jobElement.id = 'jobElement_' + jobNameFull;
