@@ -16,6 +16,7 @@ PROFILE_DATA_FILE='profileData.txt'
 JOB_DATA_FILE='jobData.txt'
 JOB_RUN_DIR='jobs'
 JOB_HISTORY_DIR='history'
+JOB_ARCHIVE_DIR='archive'
 try:
     _TESTING_ = os.environ['TESTING']
 except:
@@ -126,7 +127,6 @@ class GPIOProcess(multiprocessing.Process):
                 pass
             else:
                 raise
-
         # Load saved job templates
         try:
             with open(JOB_DATA_FILE) as json_file:
@@ -138,6 +138,16 @@ class GPIOProcess(multiprocessing.Process):
         except Exception as e:
             # Can't open job file - either corrupted or doesn't exist
             print e
+
+        # JOB_ARCHIVE_DIR is where saved job history files are kept
+        # yet are not to be displayed in the Job History section of the browser
+        try:
+            os.makedirs(JOB_ARCHIVE_DIR)
+        except OSError as exc:
+            if exc.errno == errno.EEXIST and os.path.isdir(JOB_ARCHIVE_DIR):
+                pass
+            else:
+                raise
 
 
         # Now check the relays
@@ -225,6 +235,10 @@ class GPIOProcess(multiprocessing.Process):
                         self.loadSavedJobs(jmsg)
                     elif jmsg['type'] == 'load_saved_job_data':
                         self.loadSavedJobData(jmsg)
+                    elif jmsg['type'] == 'archive_saved_job':
+                        self.archiveSavedJob(jmsg)
+                    elif jmsg['type'] == 'delete_saved_job':
+                        self.deleteSavedJob(jmsg)
                     elif jmsg['type'] == 'save_profiles':
                         with open(PROFILE_DATA_FILE, 'w') as json_file:
                             json.dump({'profiles_data':jmsg['data']}, json_file)
@@ -284,6 +298,34 @@ class GPIOProcess(multiprocessing.Process):
             count += 1
 
             #time.sleep(1)
+
+
+    def deleteSavedJob(self, jmsg):
+        print "deleteSavedJob() ",  jmsg['data']['jobName'], jmsg['data']['instance']
+        historyFileName = jmsg['data']['jobName'] + '-' + jmsg['data']['instance'] + '.txt'
+        historyFilePath = os.path.join(CWD, JOB_HISTORY_DIR, historyFileName)
+        #print "Trying to remove ", historyFilePath
+        try:
+            os.remove(historyFilePath)
+            jdata = json.dumps({'type':'removed_saved_job',
+                                'data':{'jobName':jmsg['data']['jobName'],'instance':jmsg['data']['instance']}})
+            self.output_queue.put(jdata)
+        except Exception as e:
+            print "archiveSavedJob() ERROR: ", e
+
+    def archiveSavedJob(self, jmsg):
+        print "archiveSavedJob() ",  jmsg['data']['jobName'], jmsg['data']['instance']
+        historyFileName = jmsg['data']['jobName'] + '-' + jmsg['data']['instance'] + '.txt'
+        from_path = os.path.join(CWD, JOB_HISTORY_DIR, historyFileName)
+        to_path = os.path.join(CWD, JOB_ARCHIVE_DIR, historyFileName)
+        #print "Trying to move ", from_path, to_path
+        try:
+            os.rename(from_path, to_path)
+            jdata = json.dumps({'type':'archived_job',
+                                'data':{'jobName':jmsg['data']['jobName'],'instance':jmsg['data']['instance']}})
+            self.output_queue.put(jdata)
+        except Exception as e:
+            print "archiveSavedJob() ERROR: ", e
 
 
     def configChange(self, jmsg):
@@ -424,6 +466,7 @@ class GPIOProcess(multiprocessing.Process):
     def removeRunningJob(self, jmsg):
         #print "Rcvd request to REMOVE JOB"
         jobName = jmsg['data']['jobName']
+        longName = jmsg['data']['longName']
         self.stopRunningJob(jmsg)
 
         # Whether previously running or not, it should now be in stoppedJobs
@@ -441,6 +484,19 @@ class GPIOProcess(multiprocessing.Process):
             # This shouldn't be possible
             print "Job to remove NOT FOUND! ", jobName
 
+        filename = longName + '.txt'
+        filepath = os.path.join(CWD, JOB_RUN_DIR, filename)
+        #print "Deleting filepath: ", filepath
+        if os.path.exists(filepath):
+            try:
+                os.remove(filepath)
+            except OSError as e:
+                print "OSError", e
+        else:
+            print "Can't find file to delete: ", filepath
+        # LATER - could clear out other files?
+        # - need to check if still running, stopped etc.
+
     def saveRunningJob(self, jmsg):
         print "Rcvd request to SAVE RUNNING JOB", jmsg['data']['jobName']
         jobName = jmsg['data']['jobName']
@@ -452,19 +508,18 @@ class GPIOProcess(multiprocessing.Process):
             print "checking ", self.stoppedJobs[i].name()
             if self.stoppedJobs[i].name() == jobName:
                 job_found = True
-                print "found ", jobName
                 self.stoppedJobs[i].stop('saved')
                 historyFileName = self.stoppedJobs[i].historyFileName
                 from_path = os.path.join(CWD, JOB_RUN_DIR, historyFileName)
                 to_path = os.path.join(CWD, JOB_HISTORY_DIR, historyFileName)
                 try:
                     os.rename(from_path, to_path)
-                    print "Moved ", from_path, to_path
                     jdata = json.dumps({'type':'saved_job',
                                         'data':{'jobName':jobName}})
                     self.output_queue.put(jdata)
                 except Exception as e:
                     print "saveRunningJob() ERROR: ", e
+                #print "Moved ", from_path, to_path
 
         if not job_found:
             jdata = json.dumps({'type':'error_save_running_job',

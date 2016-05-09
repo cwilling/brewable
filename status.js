@@ -808,9 +808,35 @@ domReady( function(){
             }
           }
         }, {
-          title: 'Delete',
-          action: function(elm, data, index) {
+        // At the server, move from history to archive directory
+        // In the browser, remove item from list
+        title: 'Archive',
+        action: function(elm, data, index) {
           console.log('menu item #2 from ' + elm.id + " " + data.title + " " + index);
+          var longName = elm.id.replace('jobItemInstance_', '');
+          var jobName = longName.slice(0, (longName.length - 16)); // e.g. '-20160504_103213'
+          var jobInstance = longName.replace(jobName + '-', '');
+          var confirmArchive = confirm("Archive job: " + jobName + "?");
+          if ( confirmArchive == true ) {
+            var msgobj = {type:'archive_saved_job',
+                          data:{'jobName':jobName, 'instance':jobInstance}};
+            sendMessage({data:JSON.stringify(msgobj)});
+          }
+        }
+      }, {
+        title: 'Delete',
+        action: function(elm, data, index) {
+          console.log('menu item #3 from ' + elm.id + " " + data.title + " " + index);
+          var longName = elm.id.replace('jobItemInstance_', '');
+          var jobName = longName.slice(0, (longName.length - 16)); // e.g. '-20160504_103213'
+          var jobInstance = longName.replace(jobName + '-', '');
+          console.log('menu jobName ' + jobName + ' instance: ' + jobInstance);
+          var confirmDelete = confirm("Completely DELETE job: " + jobName + " from the system?");
+          if ( confirmDelete == true ) {
+            var msgobj = {type:'delete_saved_job',
+                          data:{'jobName':jobName, 'instance':jobInstance}};
+            sendMessage({data:JSON.stringify(msgobj)});
+          }
         }
       }];
       // End of popup menu
@@ -833,38 +859,39 @@ domReady( function(){
           }
         }
       }, {
-          title: 'Stop',
-          action: function(elm, data, index) {
-            console.log('menu item #2 from ' + elm.id + " " + data.title + " " + index);
-            var longJobName = elm.id.replace('jobItemInstance_', '');
-            var jobInstance = instancePattern.exec(longJobName);
-            var nodeName = longJobName.slice(0,(longJobName.indexOf(jobInstance)-1));
-            var msgobj = {type:'stop_running_job', data:{'jobName':nodeName}};
-            sendMessage({data:JSON.stringify(msgobj)});
-          }
+        title: 'Stop',
+        action: function(elm, data, index) {
+          console.log('menu item #2 from ' + elm.id + " " + data.title + " " + index);
+          var longJobName = elm.id.replace('jobItemInstance_', '');
+          var jobInstance = instancePattern.exec(longJobName);
+          var nodeName = longJobName.slice(0,(longJobName.indexOf(jobInstance)-1));
+          var msgobj = {type:'stop_running_job', data:{'jobName':nodeName}};
+          sendMessage({data:JSON.stringify(msgobj)});
+        }
       }, {
-          title: 'Remove',
-          action: function(elm, data, index) {
-            console.log('menu item #3 from ' + elm.id + " " + data.title + " " + index);
-            var longJobName = elm.id.replace('jobItemInstance_', '');
-            var jobInstance = instancePattern.exec(longJobName);
-            var nodeName = longJobName.slice(0,(longJobName.indexOf(jobInstance)-1));
-            var confirmRemove = confirm("Remove job " + nodeName + "?");
-            if ( confirmRemove == true ) {
-              var msgobj = {type:'remove_running_job', data:{'jobName':nodeName}};
-              sendMessage({data:JSON.stringify(msgobj)});
-            }
-          }
-        }, {
-          title: 'Save',
-          action: function(elm, data, index) {
-            console.log('menu item #4 from ' + elm.id + " " + data.title + " " + index);
-            var longJobName = elm.id.replace('jobItemInstance_', '');
-            var jobInstance = instancePattern.exec(longJobName);
-            var nodeName = longJobName.slice(0,(longJobName.indexOf(jobInstance)-1));
-            var msgobj = {type:'save_running_job', data:{'jobName':nodeName}};
+        title: 'Remove',
+        action: function(elm, data, index) {
+          console.log('menu item #3 from ' + elm.id + " " + data.title + " " + index);
+          var longJobName = elm.id.replace('jobItemInstance_', '');
+          var jobInstance = instancePattern.exec(longJobName);
+          var nodeName = longJobName.slice(0,(longJobName.indexOf(jobInstance)-1));
+          var confirmRemove = confirm("Remove job " + nodeName + "?");
+          if ( confirmRemove == true ) {
+            var msgobj = {type:'remove_running_job',
+                          data:{'jobName':nodeName,'longName':longJobName}};
             sendMessage({data:JSON.stringify(msgobj)});
           }
+        }
+      }, {
+        title: 'Save',
+        action: function(elm, data, index) {
+          console.log('menu item #4 from ' + elm.id + " " + data.title + " " + index);
+          var longJobName = elm.id.replace('jobItemInstance_', '');
+          var jobInstance = instancePattern.exec(longJobName);
+          var nodeName = longJobName.slice(0,(longJobName.indexOf(jobInstance)-1));
+          var msgobj = {type:'save_running_job', data:{'jobName':nodeName}};
+          sendMessage({data:JSON.stringify(msgobj)});
+        }
       }];
       // End of popup menu
     } else if (holder === 'testHolder') {
@@ -1516,6 +1543,10 @@ domReady( function(){
       } else if (jmsg.type === 'saved_job_data' ) {
         // Data for a particular saved job
         updateJobHistoryData(jmsg.data);
+      } else if (jmsg.type === 'archived_job' ) {
+        jobHistoryItemRemoved(jmsg);
+      } else if (jmsg.type === 'removed_saved_job' ) {
+        jobHistoryItemRemoved(jmsg);
       } else {
         console.log('Unknown json messsage type: ' + jmsg.type);
       }
@@ -1936,6 +1967,32 @@ var runningJobsFunctions = {};
       }
     }
   }
+
+  // At the server, the job has been removed from the history directory
+  // or moved from history to archive directory
+  // so now remove this job from the Job History list
+  function jobHistoryItemRemoved(jmsg) {
+    var jobName = jmsg.data['jobName']
+    var jobInstance = jmsg.data['instance'];
+    console.log("Received " + jmsg.type + " message for: " + jobName + '-' + jobInstance);
+
+    // Remove the jobElement_<jobName>-<jobInstance> element
+    // Also (if it has been displayed) jobElementGraph_<jobName>-<jobInstance>
+    jobElement = document.getElementById('jobElement_' + jobName + '-' + jobInstance);
+    while ( jobElement.hasChildNodes() ) {
+      jobElement.removeChild(jobElement.firstChild);
+    }
+    jobElement.parentNode.removeChild(jobElement);
+
+    jobElementGraph = document.getElementById('jobElementGraph_' + jobName + '-' + jobInstance);
+    if (typeof(jobElementGraph) != 'undefined' && jobElementGraph != null) {
+      while (jobElementGraph.hasChildNodes() ) {
+        jobElementGraph.removeChild(jobElementGraph.firstChild);
+      }
+      jobElementGraph.parentNode.removeChild(jobElementGraph);
+    }
+  }
+
 
 /************************* Test Area **********************/
 
