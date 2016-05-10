@@ -20,6 +20,9 @@ RUNDIR = /var/www/html/brewable
 # Who the server will be run as
 USER = pi
 
+# Where daemon log files will be
+LOGDIR = /var/log/brewable
+
 
 
 build: default.conf
@@ -27,8 +30,9 @@ build: default.conf
 
 default.conf:	default.conf.in
 	cat default.conf.in | sed \
-		-e 's:%RUNDIR%:$(DESTDIR)$(RUNDIR):' \
+		-e 's:%RUNDIR%:$(RUNDIR):' \
 		-e 's:%USER%:$(USER):' \
+		-e 's:%LOGDIR%:$(LOGDIR):' \
 		> default.conf
 
 
