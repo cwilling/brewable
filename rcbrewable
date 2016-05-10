@@ -48,7 +48,7 @@ brewable_stop () {
         | grep -v grep \
         | grep "python $BREWABLE_SERVER" \
         | awk '{print $2}' \
-        | xargs kill
+        | xargs kill 1>/dev/null 2>/dev/null
 }
 
 case "$1" in
