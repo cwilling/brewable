@@ -1,0 +1,4 @@
+# Configuration for brewable server
+BREWABLE_RUN_DIR=%RUNDIR%
+BREWABLE_USER=%USER%
+

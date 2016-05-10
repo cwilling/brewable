@@ -7,13 +7,18 @@ from collections import deque
 
 from ds18b20 import SensorDevice
 
+# XDG definitions
 _home = os.path.expanduser('~')
+xdg_data_home = os.environ.get('XDG_DATA_HOME') or os.path.join(_home, '.local', 'share')
+xdg_config_home = os.environ.get('XDG_CONFIG_HOME') or os.path.join(_home, '.config')
+
 USER_CONFIG_DIR = os.environ.get('USER_CONFIG_DIR') or os.path.join(_home, '.brewable')
 USER_CONFIG_FILE = os.path.join(USER_CONFIG_DIR, 'brewable.conf')
 
 CWD=os.getcwd()
+BREWABLE_BASE_DIR = os.environ.get('BREWABLE_BASE_DIR') or os.path.join(xdg_data_home, 'brewable')
 PROFILE_DATA_FILE='profileData.txt'
-JOB_DATA_FILE='jobData.txt'
+JOB_TEMPLATES_FILE='jobTemplateData.txt'
 JOB_RUN_DIR='jobs'
 JOB_HISTORY_DIR='history'
 JOB_ARCHIVE_DIR='archive'
@@ -28,7 +33,7 @@ from sainsmartrelay import Relay
 
 
 # From status.js
-# var jobData = {
+# var jobTemplateData = {
 #    name: xxxxx,
 #    preheat: xxxxx,
 #    profile: xxxxx,
@@ -58,7 +63,26 @@ class GPIOProcess(multiprocessing.Process):
             print "_TESTING_ is True"
 
         # Setup
-        # First, read user config or generate default configuration
+        # First create user directory for brewable data
+        # then move data from old location into it
+        try:
+            os.makedirs(BREWABLE_BASE_DIR)
+        except OSError as exc:
+            if exc.errno == errno.EEXIST and os.path.isdir(BREWABLE_BASE_DIR):
+                pass
+            else:
+                raise
+
+        oldbase = os.path.join(_home, 'src', 'brewable')
+        try:
+            os.rename(os.path.join(oldbase, JOB_HISTORY_DIR), os.path.join(BREWABLE_BASE_DIR, JOB_HISTORY_DIR))
+            os.rename(os.path.join(oldbase, JOB_ARCHIVE_DIR), os.path.join(BREWABLE_BASE_DIR, JOB_ARCHIVE_DIR))
+            os.rename(os.path.join(oldbase, PROFILE_DATA_FILE), os.path.join(BREWABLE_BASE_DIR, PROFILE_DATA_FILE))
+            os.rename(os.path.join(oldbase, JOB_TEMPLATES_FILE), os.path.join(BREWABLE_BASE_DIR, JOB_TEMPLATES_FILE))
+        except Exception as e:
+            print "Moving stuff: ", e
+
+        # Next, read user config or generate default configuration
         try:
             os.makedirs(USER_CONFIG_DIR)
         except OSError as exc:
@@ -112,24 +136,24 @@ class GPIOProcess(multiprocessing.Process):
         # then add it to self.runningJobs.
         # First ensure the directory exists
         try:
-            os.makedirs(JOB_RUN_DIR)
+            os.makedirs(os.path.join(BREWABLE_BASE_DIR, JOB_RUN_DIR))
         except OSError as exc:
-            if exc.errno == errno.EEXIST and os.path.isdir(JOB_RUN_DIR):
+            if exc.errno == errno.EEXIST and os.path.isdir(os.path.join(BREWABLE_BASE_DIR, JOB_RUN_DIR)):
                 pass
             else:
                 raise
 
         # JOB_HISTORY_DIR is where saved job history files are kept
         try:
-            os.makedirs(JOB_HISTORY_DIR)
+            os.makedirs(os.path.join(BREWABLE_BASE_DIR, JOB_HISTORY_DIR))
         except OSError as exc:
-            if exc.errno == errno.EEXIST and os.path.isdir(JOB_HISTORY_DIR):
+            if exc.errno == errno.EEXIST and os.path.isdir(os.path.join(BREWABLE_BASE_DIR, JOB_HISTORY_DIR)):
                 pass
             else:
                 raise
         # Load saved job templates
         try:
-            with open(JOB_DATA_FILE) as json_file:
+            with open(os.path.join(BREWABLE_BASE_DIR, JOB_TEMPLATES_FILE)) as json_file:
                 json_data = json.load(json_file)
                 #print "Job data: ", json_data['job_data']
                 for job in json_data['job_data']:
@@ -142,9 +166,9 @@ class GPIOProcess(multiprocessing.Process):
         # JOB_ARCHIVE_DIR is where saved job history files are kept
         # yet are not to be displayed in the Job History section of the browser
         try:
-            os.makedirs(JOB_ARCHIVE_DIR)
+            os.makedirs(os.path.join(BREWABLE_BASE_DIR, JOB_ARCHIVE_DIR))
         except OSError as exc:
-            if exc.errno == errno.EEXIST and os.path.isdir(JOB_ARCHIVE_DIR):
+            if exc.errno == errno.EEXIST and os.path.isdir(os.path.join(BREWABLE_BASE_DIR, JOB_ARCHIVE_DIR)):
                 pass
             else:
                 raise
@@ -178,7 +202,7 @@ class GPIOProcess(multiprocessing.Process):
                         #print("gpio found save_job msg")
                         self.jobs.append(jmsg['data'])
                         #print("self.jobs: ", self.jobs)
-                        with open(JOB_DATA_FILE, 'w') as json_file:
+                        with open(os.path.join(BREWABLE_BASE_DIR, JOB_TEMPLATES_FILE), 'w') as json_file:
                             json.dump({'job_data':self.jobs}, json_file)
                         # Return updated jobs list to client
                         jdata = json.dumps({'type':'loaded_jobs',
@@ -195,7 +219,7 @@ class GPIOProcess(multiprocessing.Process):
                         del self.jobs[jmsg['data']['index']]
 
                         # Save result
-                        with open(JOB_DATA_FILE, 'w') as json_file:
+                        with open(os.path.join(BREWABLE_BASE_DIR, JOB_TEMPLATES_FILE), 'w') as json_file:
                             json.dump({'job_data':self.jobs}, json_file)
                         # Return updated jobs list to client
                         jdata = json.dumps({'type':'loaded_jobs',
@@ -240,7 +264,7 @@ class GPIOProcess(multiprocessing.Process):
                     elif jmsg['type'] == 'delete_saved_job':
                         self.deleteSavedJob(jmsg)
                     elif jmsg['type'] == 'save_profiles':
-                        with open(PROFILE_DATA_FILE, 'w') as json_file:
+                        with open(os.path.join(BREWABLE_BASE_DIR, PROFILE_DATA_FILE), 'w') as json_file:
                             json.dump({'profiles_data':jmsg['data']}, json_file)
                     elif jmsg['type'] == 'load_profiles':
                         self.loadProfiles(jmsg)
@@ -303,7 +327,7 @@ class GPIOProcess(multiprocessing.Process):
     def deleteSavedJob(self, jmsg):
         print "deleteSavedJob() ",  jmsg['data']['jobName'], jmsg['data']['instance']
         historyFileName = jmsg['data']['jobName'] + '-' + jmsg['data']['instance'] + '.txt'
-        historyFilePath = os.path.join(CWD, JOB_HISTORY_DIR, historyFileName)
+        historyFilePath = os.path.join(BREWABLE_BASE_DIR, JOB_HISTORY_DIR, historyFileName)
         #print "Trying to remove ", historyFilePath
         try:
             os.remove(historyFilePath)
@@ -316,8 +340,8 @@ class GPIOProcess(multiprocessing.Process):
     def archiveSavedJob(self, jmsg):
         print "archiveSavedJob() ",  jmsg['data']['jobName'], jmsg['data']['instance']
         historyFileName = jmsg['data']['jobName'] + '-' + jmsg['data']['instance'] + '.txt'
-        from_path = os.path.join(CWD, JOB_HISTORY_DIR, historyFileName)
-        to_path = os.path.join(CWD, JOB_ARCHIVE_DIR, historyFileName)
+        from_path = os.path.join(BREWABLE_BASE_DIR, JOB_HISTORY_DIR, historyFileName)
+        to_path = os.path.join(BREWABLE_BASE_DIR, JOB_ARCHIVE_DIR, historyFileName)
         #print "Trying to move ", from_path, to_path
         try:
             os.rename(from_path, to_path)
@@ -377,7 +401,7 @@ class GPIOProcess(multiprocessing.Process):
 
     def loadProfiles(self, jmsg):
         try:
-            with open(PROFILE_DATA_FILE) as json_file:
+            with open(os.path.join(BREWABLE_BASE_DIR, PROFILE_DATA_FILE)) as json_file:
                 json_data = json.load(json_file)
                 #print(json_data['profiles_data'])
                 jdata = json.dumps({'type':'loaded_profiles',
@@ -428,7 +452,7 @@ class GPIOProcess(multiprocessing.Process):
 
         fileName = jmsg['data']['fileName'] + '.txt'
         #print "fileName: ", fileName
-        filepath = os.path.join(CWD, JOB_HISTORY_DIR, fileName)
+        filepath = os.path.join(BREWABLE_BASE_DIR, JOB_HISTORY_DIR, fileName)
         #print "loading data from file: ", filepath
         try:
             with open(filepath) as f:
@@ -447,12 +471,12 @@ class GPIOProcess(multiprocessing.Process):
         #print "Rcvd request to LOAD SAVED JOBS"
         goodhistoryfiles = []
         try:
-            historyfiles = [f for f in os.listdir(os.path.join(CWD, JOB_HISTORY_DIR)) if os.path.isfile(os.path.join(CWD, JOB_HISTORY_DIR, f))]
+            historyfiles = [f for f in os.listdir(os.path.join(BREWABLE_BASE_DIR, JOB_HISTORY_DIR)) if os.path.isfile(os.path.join(BREWABLE_BASE_DIR, JOB_HISTORY_DIR, f))]
         except Exception as e:
             print "error loadSavedJobs(); ", e
         for file in historyfiles:
             try:
-                lastline = json.loads(deque(open(os.path.join(CWD, JOB_HISTORY_DIR, file)), 1).pop())
+                lastline = json.loads(deque(open(os.path.join(BREWABLE_BASE_DIR, JOB_HISTORY_DIR, file)), 1).pop())
                 if lastline['running'] == 'saved':
                     goodhistoryfiles.append(file)
             except Exception as e:
@@ -485,7 +509,7 @@ class GPIOProcess(multiprocessing.Process):
             print "Job to remove NOT FOUND! ", jobName
 
         filename = longName + '.txt'
-        filepath = os.path.join(CWD, JOB_RUN_DIR, filename)
+        filepath = os.path.join(BREWABLE_BASE_DIR, JOB_RUN_DIR, filename)
         #print "Deleting filepath: ", filepath
         if os.path.exists(filepath):
             try:
@@ -510,8 +534,8 @@ class GPIOProcess(multiprocessing.Process):
                 job_found = True
                 self.stoppedJobs[i].stop('saved')
                 historyFileName = self.stoppedJobs[i].historyFileName
-                from_path = os.path.join(CWD, JOB_RUN_DIR, historyFileName)
-                to_path = os.path.join(CWD, JOB_HISTORY_DIR, historyFileName)
+                from_path = os.path.join(BREWABLE_BASE_DIR, JOB_RUN_DIR, historyFileName)
+                to_path = os.path.join(BREWABLE_BASE_DIR, JOB_HISTORY_DIR, historyFileName)
                 try:
                     os.rename(from_path, to_path)
                     jdata = json.dumps({'type':'saved_job',
@@ -666,7 +690,7 @@ class JobProcessor(GPIOProcess):
         status = self.jobStatus(self.startTime)
         status['running'] = 'startup'
         self.history.append(status)
-        with open(os.path.join(JOB_RUN_DIR, self.historyFileName), 'a') as f:
+        with open(os.path.join(BREWABLE_BASE_DIR, JOB_RUN_DIR, self.historyFileName), 'a') as f:
             json.dump(header, f)
             f.write(os.linesep)
             json.dump(status, f)
@@ -799,7 +823,7 @@ class JobProcessor(GPIOProcess):
                     self.output_queue.put(jdata)
 
                     self.history.append(status)
-                    with open(os.path.join(JOB_RUN_DIR, self.historyFileName), 'a') as f:
+                    with open(os.path.join(BREWABLE_BASE_DIR, JOB_RUN_DIR, self.historyFileName), 'a') as f:
                         json.dump(status, f)
                         f.write(os.linesep)
                     break
@@ -826,7 +850,7 @@ class JobProcessor(GPIOProcess):
                     self.output_queue.put(jdata)
 
                     self.history.append(status)
-                    with open(os.path.join(JOB_RUN_DIR, self.historyFileName), 'a') as f:
+                    with open(os.path.join(BREWABLE_BASE_DIR, JOB_RUN_DIR, self.historyFileName), 'a') as f:
                         json.dump(status, f)
                         f.write(os.linesep)
 
@@ -854,7 +878,7 @@ class JobProcessor(GPIOProcess):
                             'data':status})
         self.output_queue.put(jdata)
         self.history.append(status)
-        with open(os.path.join(JOB_RUN_DIR, self.historyFileName), 'a') as f:
+        with open(os.path.join(BREWABLE_BASE_DIR, JOB_RUN_DIR, self.historyFileName), 'a') as f:
             json.dump(status, f)
             f.write(os.linesep)
         self.processing  = False
