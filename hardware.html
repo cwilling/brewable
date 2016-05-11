@@ -39,13 +39,17 @@
 which unfortunately can impact network connectivity. If your Raspberry Pi uses one of these wifi dongles
 (check whether it's using the module named '8192cu'), it is recommended to turn this feature off by creating
 the file /etc/modprobe.d/8192cu.conf containing the following line:
-<br><code>options 8192cu rtw_power_mgnt=0 rtw_enusbss=0</code>
+<br>&nbsp;&nbsp;&nbsp;&nbsp;<code>options 8192cu rtw_power_mgnt=0 rtw_enusbss=0</code>
 <br>Further improvement in wifi performance may result from correctly setting the regulatory domain
 in which you're operating, by adding the following lines to the same file:
-<br><code>softdep 8192cu pre: cfg80211
-<br>options cfg80211 ieee80211_regdom=AU</code>
+<br>&nbsp;&nbsp;&nbsp;&nbsp;<code>softdep 8192cu pre: cfg80211</code>
+<br>&nbsp;&nbsp;&nbsp;&nbsp;<code>options cfg80211 ieee80211_regdom=AU</code>
+<br>Take care to use the correct country code ('AU' for Australia is used in this example).
+Now reboot the Raspberry Pi for the changes to take efffect.
+</li>
 
-<h3>
+
+<p><h3>
 Back to: <a id="software-installation" class="anchor" href="index.html" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span>What is brewable, Software Installation</a></h3>
         </section>
 
