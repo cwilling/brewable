@@ -9,8 +9,8 @@
 
 ### BEGIN INIT INFO
 # Provides:          brewable
-# Required-Start:    $network
-# Required-Stop:
+# Required-Start:    $local_fs $network $syslog
+# Required-Stop:     $local_fs $network $syslog
 # Default-Start:     3 5
 # Default-Stop:      0 1 2 6
 # Short-Description: brewable temperature controller daemon
