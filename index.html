@@ -45,11 +45,17 @@ either remotely, using any ssh client program (e.g. 'ssh' on Linux & Mac, Putty 
 on the Raspberry Pi using keyboard, mouse & display if they're still connected. If installing remotely,
 connect with ssh or putty to the Raspberry Pi at its previously noted IP address. If installing directly,
 open a Terminal window. In either case, run the following commands:
+<br>&nbsp;&nbsp;&nbsp;&nbsp;<code>sudo apt-get install -y python-tornado</code>
 <br>&nbsp;&nbsp;&nbsp;&nbsp;<code>wget https://github.com/cwilling/brewable/archive/0.1.tar.gz</code>
 <br>&nbsp;&nbsp;&nbsp;&nbsp;<code>tar xf 0.1.tar.gz</code>
 <br>&nbsp;&nbsp;&nbsp;&nbsp;<code>cd brewable-0.1</code>
 <br>&nbsp;&nbsp;&nbsp;&nbsp;<code>sudo make install</code>
 <br>&nbsp;&nbsp;&nbsp;&nbsp;<code>sudo update-rc.d brewable defaults</code>
+<br>Start the software by rebooting (the software is started automatically whenever the Raspberry Pi boots up)
+or by running the command:
+<br>&nbsp;&nbsp;&nbsp;&nbsp;<code>sudo /etc/init.d/brewable start</code>
+<br>If you need to stop the brewable software while the Raspberry Pi stays running, run the command:
+<br>&nbsp;&nbsp;&nbsp;&nbsp;<code>sudo /etc/init.d/brewable stop</code>
 </p>
 
 See also:
