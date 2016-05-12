@@ -23,6 +23,8 @@ case "$1" in
 
   configure)
     update-rc.d brewable defaults
+    grep "^dtoverlay=w1-gpio" /boot/config.txt || \
+	sed -i -e '$a\\n# OneWire temperature sensor\ndtoverlay=w1-gpio,gpiopin=4' /boot/config.txt
     exit 0
   ;;
 
