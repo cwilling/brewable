@@ -50,12 +50,15 @@ open a Terminal window. In either case, run the following commands:
 <br>&nbsp;&nbsp;&nbsp;&nbsp;<code>tar xf 0.1.tar.gz</code>
 <br>&nbsp;&nbsp;&nbsp;&nbsp;<code>cd brewable-0.1</code>
 <br>&nbsp;&nbsp;&nbsp;&nbsp;<code>sudo make install</code>
-<br>&nbsp;&nbsp;&nbsp;&nbsp;<code>sudo update-rc.d brewable defaults</code>
-<br>Start the software by rebooting (the software is started automatically whenever the Raspberry Pi boots up)
-or by running the command:
-<br>&nbsp;&nbsp;&nbsp;&nbsp;<code>sudo /etc/init.d/brewable start</code>
+<br>&nbsp;&nbsp;&nbsp;&nbsp;<code>sudo ./postinst configure</code>
+<br>Now reboot the Raspberry Pi; this is necessary to enable the GPIO
+pins, as well as to start the brewable server. The software is started
+automatically whenever the Raspberry Pi boots up so there's generally no
+need to start it manually.
 <br>If you need to stop the brewable software while the Raspberry Pi stays running, run the command:
 <br>&nbsp;&nbsp;&nbsp;&nbsp;<code>sudo /etc/init.d/brewable stop</code>
+<br>or to restart, run the command:
+<br>&nbsp;&nbsp;&nbsp;&nbsp;<code>sudo /etc/init.d/brewable restart</code>
 </p>
 
 See also:
