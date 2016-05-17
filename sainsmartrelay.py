@@ -20,28 +20,18 @@ PIN_NUMBERING_MODE = gpio.BCM
 #'PIN_RELAY_3'	: 22,
 #'PIN_RELAY_4'	: 10
 #}
-RelayPins = {
-'PIN_RELAY_1'	: 18,
-'PIN_RELAY_2'	: 17,
-'PIN_RELAY_3'	: 27,
-'PIN_RELAY_4'	: 22,
+RelayPins = {}
 
-'PIN_RELAY_5'	: 23,
-'PIN_RELAY_6'	: 24,
-'PIN_RELAY_7'	: 10,
-'PIN_RELAY_8'	: 9,
-
-'PIN_RELAY_9'	: 11,
-'PIN_RELAY_10'	: 25,
-'PIN_RELAY_11'	: 8,
-'PIN_RELAY_12'	: 7,
-
-'PIN_RELAY_13'	: 5,
-'PIN_RELAY_14'	: 6,
-'PIN_RELAY_15'	: 13,
-'PIN_RELAY_16'	: 19
-}
-_RELAY_COUNT_MAX = len(RelayPins)
+# This is the list of pins we scan for relay connection
+# to build up RelayPins{} (our record of pins we're actually using).
+PossibleRelayPins = [
+18, 17, 27, 22,
+23, 24, 10, 9,
+11, 25, 8, 7,
+ 5, 6, 13, 19,
+26, 16,20, 21
+]
+_RELAY_COUNT_MAX = len(PossibleRelayPins)
 
 # Relay boolean constants. Flipped for Sainsmart relay module.
 RELAY_ON = False;
@@ -63,15 +53,17 @@ class Relay():
         self.relayCount = 0
         # Detect relays
         # First zero the pins
-        gpio.setup(RelayPins.values(), gpio.OUT)
+        gpio.setup(PossibleRelayPins, gpio.OUT)
         for i in range(_RELAY_COUNT_MAX):
-            gpio.output(RelayPins['PIN_RELAY_'+ str(i+1)],0)
+            gpio.output(PossibleRelayPins[i],0)
         # Now check if they're alive
-        gpio.setup(RelayPins.values(), gpio.IN)
+        gpio.setup(PossibleRelayPins, gpio.IN)
         for i in range(_RELAY_COUNT_MAX):
-            print "gpio", i+1, gpio.input(RelayPins['PIN_RELAY_'+ str(i+1)])
-            if gpio.input(RelayPins['PIN_RELAY_'+ str(i+1)]) == 1:
+            print "gpio", i+1, gpio.input(PossibleRelayPins[i])
+            if gpio.input(PossibleRelayPins[i]) == 1:
                 self.relayCount += 1
+                RelayPins['PIN_RELAY_' + str(self.relayCount)] = PossibleRelayPins[i]
+        print "RelayPins: ", RelayPins
         # Now return to output mode for actual operation
         gpio.setup(RelayPins.values(), gpio.OUT)
 
