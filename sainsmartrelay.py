@@ -14,13 +14,34 @@ except:
 
 PIN_NUMBERING_MODE = gpio.BCM
 
+#RelayPins = {
+#'PIN_RELAY_1'	: 17,
+#'PIN_RELAY_2'	: 27,
+#'PIN_RELAY_3'	: 22,
+#'PIN_RELAY_4'	: 10
+#}
 RelayPins = {
-'PIN_RELAY_1'	: 17,
-'PIN_RELAY_2'	: 27,
-'PIN_RELAY_3'	: 22,
-'PIN_RELAY_4'	: 10
+'PIN_RELAY_1'	: 18,
+'PIN_RELAY_2'	: 17,
+'PIN_RELAY_3'	: 27,
+'PIN_RELAY_4'	: 22,
+
+'PIN_RELAY_5'	: 23,
+'PIN_RELAY_6'	: 24,
+'PIN_RELAY_7'	: 10,
+'PIN_RELAY_8'	: 9,
+
+'PIN_RELAY_9'	: 11,
+'PIN_RELAY_10'	: 25,
+'PIN_RELAY_11'	: 8,
+'PIN_RELAY_12'	: 7,
+
+'PIN_RELAY_13'	: 5,
+'PIN_RELAY_14'	: 6,
+'PIN_RELAY_15'	: 13,
+'PIN_RELAY_16'	: 19
 }
-RELAY_COUNT = len(RelayPins)
+_RELAY_COUNT_MAX = len(RelayPins)
 
 # Relay boolean constants. Flipped for Sainsmart relay module.
 RELAY_ON = False;
@@ -39,9 +60,23 @@ class Relay():
         print "GPIO VERSION: ", self.gpio_version
         print "RPI INFO: ", self.rpi_info
         gpio.setmode(PIN_NUMBERING_MODE);
+        self.relayCount = 0
+        # Detect relays
+        # First zero the pins
         gpio.setup(RelayPins.values(), gpio.OUT)
+        for i in range(_RELAY_COUNT_MAX):
+            gpio.output(RelayPins['PIN_RELAY_'+ str(i+1)],0)
+        # Now check if they're alive
+        gpio.setup(RelayPins.values(), gpio.IN)
+        for i in range(_RELAY_COUNT_MAX):
+            print "gpio", i+1, gpio.input(RelayPins['PIN_RELAY_'+ str(i+1)])
+            if gpio.input(RelayPins['PIN_RELAY_'+ str(i+1)]) == 1:
+                self.relayCount += 1
+        # Now return to output mode for actual operation
+        gpio.setup(RelayPins.values(), gpio.OUT)
+
         self.delayset = []
-        for i in range(RELAY_COUNT):
+        for i in range(self.relayCount):
             self.delayset.append(copy.copy(DEFAULT_DELAYSET))
         print "Relay setup done ", self.delayset
 
@@ -115,7 +150,7 @@ class Relay():
 
 
     def device_count(self):
-        return RELAY_COUNT
+        return self.relayCount
 
     def ON(self, id):
         if self.isDelayed(id):
