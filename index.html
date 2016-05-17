@@ -60,7 +60,7 @@ sensors that can be used to 10, however that limit can be increased
 block which can also house the 4.7k ohm pull-up resistor. Jumper cables
 connect the terminal block to the
 <a href="https://www.raspberrypi.org/documentation/usage/gpio/">Raspberry Pi's GPIO pins</a>.
-If you use jumper cables with the same colour as the sensor cable,
+If you use jumper cables with colours to match the sensor cable wires,
 the red jumper is attached to pin number 1 (3.3V), the yellow jumper to pin 4
 while the black (or blue) cable is connected to pin 15 (ground).
 </p>
@@ -78,11 +78,13 @@ follows:
 <br>&nbsp;&nbsp;&nbsp;&nbsp;Relay pin IN2 connects to GPIO pin 27
 <br>&nbsp;&nbsp;&nbsp;&nbsp;Relay pin IN3 connects to GPIO pin 22
 <br>&nbsp;&nbsp;&nbsp;&nbsp;Relay pin IN4 connects to GPIO pin 10
+<br>&nbsp;&nbsp;&nbsp;&nbsp;Relay pin VCC connects to GPIO pin 5V
+<br>&nbsp;&nbsp;&nbsp;&nbsp;Relay pin GND connects to GPIO pin GND
+<br>(the GPIO connector has a number of GND &amp; 5V pins; take your pick)
+</p>
 
-<br
-At the moment the
-software is restricted to devices with four relays but auto detection of the
-number of attached relays is in the TODO queue.
+At the moment the software is "hard wired" to recognise only four relay devices
+but auto detection of attached relays is in the TODO queue.
 
 <p>
 <h3>
