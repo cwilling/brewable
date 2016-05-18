@@ -50,19 +50,22 @@ simultaneously, limited only by the connected hardware available.
 <p>
 <h3>
 <a id="hardware" class="anchor" href="#hardware" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Hardware</h3>
-The purpose of the brewable software is to turn cooling (or heating) equipment
-on or off in response to changes in temperature and time. The temperature sensors
-used in this project are the very common
+The purpose of the brewable software is to switch cooling (or heating)
+equipment on or off in response to changes in temperature and time.
+The temperature sensors used in this project are the very common
 <a href="http://www.pakronics.com.au/products/waterproof-ds18b20-digital-temperature-sensor-dfdfr0198">DS18B20</a>
 devices. By default, the Raspberry Pi system itself limits the number of these
 sensors that can be used to 10, however that limit can be increased
 (see the Notes section). The multiple sensors can be connected via a terminal
-block which can also house the 4.7k ohm pull-up resistor. Jumper cables
-connect the terminal block to the
+block which can also house the required 4.7k&#8486; pull-up resistor.
+Jumper cables connect the terminal block to the
 <a href="https://www.raspberrypi.org/documentation/usage/gpio/">Raspberry Pi's GPIO pins</a>.
 If you use jumper cables with colours to match the sensor cable wires,
-the red jumper is attached to pin number 1 (3.3V), the yellow jumper to pin 4
-while the black (or blue) cable is connected to pin 15 (ground).
+the red jumper is attached to physical pin number 1 (3.3V Power),
+the yellow jumper to physical pin 7 (BCM 4)
+while the black (or blue) cable is connected to physical pin 4 (Ground).
+Please check the <a href="http://pinout.xyz">GPIO Pinout Guide</a>
+to see the GPIO connector's pin arrangements.
 </p>
 <p>Any external equipment to be switched is connected to the Raspberry Pi
 via relays. Brewable supports the
@@ -72,19 +75,28 @@ although support for the
 is well advanced and should be complete real soon now. While it is somewhat
 more expensive, an advantage of the Seeed Relay Board is that it fits directly
 onto the Raspberry Pi GPIO strip and no further interconnection is required.
+A possible advantage of the SainSmart board modules is that they may be
+combined to provide up to twenty individual relays.
 The Sainsmart style of 4x relay boards are connected via jumper cables as
 follows:
-<br>&nbsp;&nbsp;&nbsp;&nbsp;Relay pin IN1 connects to GPIO pin 17
-<br>&nbsp;&nbsp;&nbsp;&nbsp;Relay pin IN2 connects to GPIO pin 27
-<br>&nbsp;&nbsp;&nbsp;&nbsp;Relay pin IN3 connects to GPIO pin 22
-<br>&nbsp;&nbsp;&nbsp;&nbsp;Relay pin IN4 connects to GPIO pin 10
 <br>&nbsp;&nbsp;&nbsp;&nbsp;Relay pin VCC connects to GPIO pin 5V
 <br>&nbsp;&nbsp;&nbsp;&nbsp;Relay pin GND connects to GPIO pin GND
 <br>(the GPIO connector has a number of GND &amp; 5V pins; take your pick)
+<br>&nbsp;&nbsp;&nbsp;&nbsp;Relay pins IN1, IN2, IN3 etc. connect to any of
+the GPIO's following BCM connectors:
+BCM 18, BCM 17, BCM 27, BCM 22, BCM 23, BCM 24, BCM 10, BCM 9, BCM 11, BCM 25,
+BCM 8, BCM 7, BCM 5, BCM 6, BCM 13, BCM 19, BCM 26, BCM 16, BCM 20 or BCM 21,
+using the <a href="http://pinout.xyz">GPIO Pinout Guide</a> to identify pin
+locations.
+</p>
+<p>As an example, suppose a 4x relay module has IN1 connected to
+BCM 17, IN2 connected to BCM 27, IN3 connected to BCM 22 and IN4 connected to
+BCM 10 i.e. physical pins 11, 13, 15 &amp; 19 respectively. Then the browser
+interface will show the IN1 relay as &quot;Relay 01&quot;,
+IN2 as &quot;Relay 02&quot;, IN3 as &quot;Relay 03&quot;
+and IN4 as &quot;Relay 04&quot;.
 </p>
 
-At the moment the software is "hard wired" to recognise only four relay devices
-but auto detection of attached relays is in the TODO queue.
 
 <p>
 <h3>
@@ -97,8 +109,8 @@ on the Raspberry Pi using keyboard, mouse & display if they're still connected. 
 connect with ssh or putty to the Raspberry Pi at its previously noted IP address. If installing directly,
 open a Terminal window. In either case, run the following commands:
 <br>&nbsp;&nbsp;&nbsp;&nbsp;<code>sudo apt-get install -y python-tornado</code>
-<br>&nbsp;&nbsp;&nbsp;&nbsp;<code>wget https://github.com/cwilling/brewable/archive/0.1.tar.gz</code>
-<br>&nbsp;&nbsp;&nbsp;&nbsp;<code>tar xf 0.1.tar.gz</code>
+<br>&nbsp;&nbsp;&nbsp;&nbsp;<code>wget https://github.com/cwilling/brewable/archive/0.1.1.tar.gz</code>
+<br>&nbsp;&nbsp;&nbsp;&nbsp;<code>tar xf 0.1.1.tar.gz</code>
 <br>&nbsp;&nbsp;&nbsp;&nbsp;<code>cd brewable-0.1</code>
 <br>&nbsp;&nbsp;&nbsp;&nbsp;<code>sudo make install</code>
 <br>&nbsp;&nbsp;&nbsp;&nbsp;<code>sudo ./postinst configure</code>
