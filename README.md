@@ -1,6 +1,6 @@
 # brewable
 
-# Raspberry Pi based temperature controller
+# Raspberry Pi based programmable temperature controller
 
 Basic feature list:
 * sensors & relays connect directly to Raspberry Pi (no additional Arduino or Spark etc. boards)
