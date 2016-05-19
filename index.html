@@ -23,9 +23,12 @@
         </header>
 
         <section id="downloads" class="clearfix">
+          <a href="" id="download-tar-gz" class="button"><span>Download tarball</span></a>
+<!--
           <a href="https://github.com/cwilling/brewable/zipball/master" id="download-zip" class="button"><span>Download .zip</span></a>
           <a href="https://github.com/cwilling/brewable/tarball/master" id="download-tar-gz" class="button"><span>Download .tar.gz</span></a>
           <a href="https://github.com/cwilling/brewable" id="view-on-github" class="button"><span>View on GitHub</span></a>
+-->
         </section>
 
         <hr>
@@ -108,9 +111,9 @@ on the Raspberry Pi using keyboard, mouse & display if they're still connected. 
 connect with ssh or putty to the Raspberry Pi at its previously noted IP address. If installing directly,
 open a Terminal window. In either case, run the following commands:
 <br>&nbsp;&nbsp;&nbsp;&nbsp;<code>sudo apt-get install -y python-tornado</code>
-<br>&nbsp;&nbsp;&nbsp;&nbsp;<code>wget https://github.com/cwilling/brewable/archive/0.1.1.tar.gz</code>
-<br>&nbsp;&nbsp;&nbsp;&nbsp;<code>tar xf 0.1.1.tar.gz</code>
-<br>&nbsp;&nbsp;&nbsp;&nbsp;<code>cd brewable-0.1.1</code>
+<br>&nbsp;&nbsp;&nbsp;&nbsp;<code id="code_wget"></code>
+<br>&nbsp;&nbsp;&nbsp;&nbsp;<code id="code_tar"></code>
+<br>&nbsp;&nbsp;&nbsp;&nbsp;<code id="code_cd"></code>
 <br>&nbsp;&nbsp;&nbsp;&nbsp;<code>sudo make install</code>
 <br>&nbsp;&nbsp;&nbsp;&nbsp;<code>sudo ./postinst configure</code>
 <br>Now reboot the Raspberry Pi; this is necessary to enable the GPIO
@@ -139,3 +142,29 @@ See also:
     </div>
   </body>
 </html>
+
+<script language="javascript" type="text/javascript">
+  var xmlhttp = new XMLHttpRequest();
+  var tags_url = 'https://api.github.com/repos/cwilling/brewable/tags';
+  xmlhttp.onreadystatechange = function() {
+    if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+      var tagData = JSON.parse(xmlhttp.responseText);
+      processTagData(tagData);
+    }
+  };
+  xmlhttp.open("GET", tags_url, true);
+  xmlhttp.send();
+  function processTagData(arr) {
+    var dl_version = arr[0].name;
+    var tarball_url = 'http://github.com/cwilling/brewable/archive/' + dl_version + '.tar.gz';
+    //console.log('Download: ' + tarball_url);
+    document.getElementById('download-tar-gz').setAttribute("href", tarball_url);
+    document.getElementById('code_wget').innerHTML = 'wget <a href="' + tarball_url + '">' + tarball_url + '</a>';
+    document.getElementById('code_tar').innerHTML = 'tar xf brewable-' + dl_version + '.tar.gz';
+    document.getElementById('code_cd').innerHTML = 'cd brewable-' + dl_version;
+  }
+</script>
+
+<!--
+ex:set ai shiftwidth=2 inputtab=spaces smarttab noautotab:
+-->
