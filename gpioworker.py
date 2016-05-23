@@ -27,9 +27,12 @@ try:
 except:
     _TESTING_ = False
 
-# Output relay
-from sainsmartrelay import Relay
-#from seedrelay import Relay
+# Output relays
+#from sainsmartrelay import Relay
+try:
+    from seedrelay import Relay
+except:
+    from sainsmartrelay import Relay
 
 
 # From status.js
@@ -77,10 +80,13 @@ class GPIOProcess(multiprocessing.Process):
         try:
             os.rename(os.path.join(oldbase, JOB_HISTORY_DIR), os.path.join(BREWABLE_BASE_DIR, JOB_HISTORY_DIR))
             os.rename(os.path.join(oldbase, JOB_ARCHIVE_DIR), os.path.join(BREWABLE_BASE_DIR, JOB_ARCHIVE_DIR))
+        except Exception as e:
+            print "Moving stuff 1: ", e
+        try:
             os.rename(os.path.join(oldbase, PROFILE_DATA_FILE), os.path.join(BREWABLE_BASE_DIR, PROFILE_DATA_FILE))
             os.rename(os.path.join(oldbase, JOB_TEMPLATES_FILE), os.path.join(BREWABLE_BASE_DIR, JOB_TEMPLATES_FILE))
         except Exception as e:
-            print "Moving stuff: ", e
+            print "Moving stuff 2: ", e
 
         # Next, read user config or generate default configuration
         try:
