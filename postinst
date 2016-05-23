@@ -25,6 +25,10 @@ case "$1" in
     update-rc.d brewable defaults
     grep "^dtoverlay=w1-gpio" /boot/config.txt || \
 	sed -i -e '$a\\n# OneWire temperature sensor\ndtoverlay=w1-gpio,gpiopin=4' /boot/config.txt
+    grep "^dtparam=i2c_arm=off" /boot/config.txt && \
+	sed -i -e 's:dtparam=i2c_arm=off:dtparam=i2c_arm=on:' /boot/config.txt || \
+        grep "^dtparam=i2c_arm=on" /boot/config.txt || \
+	sed -i -e '$a\\n# i2c for Seeed Relay\ndtparam=i2c_arm=on' /boot/config.txt
     exit 0
   ;;
 

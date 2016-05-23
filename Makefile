@@ -6,7 +6,7 @@ INSTALL_FILES = brewable.css \
 		LICENSE.d3 \
 		README.md \
 		sainsmartrelay.py \
-		seedrelay.py \
+		seeedrelay.py \
 		server.py \
 		sprintf.js \
 		status.html \

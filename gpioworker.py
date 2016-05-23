@@ -28,21 +28,11 @@ except:
     _TESTING_ = False
 
 # Output relays
-#from sainsmartrelay import Relay
 try:
-    from seedrelay import Relay
+    from seeedrelay import Relay
 except:
     from sainsmartrelay import Relay
 
-
-# From status.js
-# var jobTemplateData = {
-#    name: xxxxx,
-#    preheat: xxxxx,
-#    profile: xxxxx,
-#    sensors: xxxxx,
-#    relays: xxxxx,
-# };
 
 class GPIOProcess(multiprocessing.Process):
 
