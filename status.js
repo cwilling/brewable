@@ -513,6 +513,10 @@ domReady( function(){
     var holderName = holderNode.getAttribute('holderName');
     //console.log('Scale widget has holderName: ' + holderName);
     var graphWidthScale = parseInt(document.getElementById('jobItemHZBInput_' + holderName + '_' + longName).value);
+    if (graphWidthScale < 1 ) {
+      graphWidthScale = 1;
+      document.getElementById('jobItemHZBInput_' + holderName + '_' + longName).value = 1;
+    }
     var historyJobsGraphMargin = {top: 20, right: 40, bottom: 50, left: 60},
         historyJobsGraphWidth = graphWidthScale*1800 - historyJobsGraphMargin.left - historyJobsGraphMargin.right,
         historyJobsGraphHeight = 256 - historyJobsGraphMargin.top - historyJobsGraphMargin.bottom;
@@ -740,6 +744,7 @@ domReady( function(){
       var jobItemHZDown = document.createElement('Button');
         jobItemHZDown.id = 'jobItemHZDown_' + jobNameFull;
         jobItemHZDown.className = 'zoomBoxButton';
+        jobItemHZDown.textContent = '-';
         jobItemHZDown.onclick = function() {
                 var hsinput = document.getElementById(this.id.replace("jobItemHZDown", "jobItemHZBInput_" + holder));
                 hsinput.value -=  parseInt(hsinput.value)>1?1:0;
@@ -753,6 +758,7 @@ domReady( function(){
       var jobItemHZUp = document.createElement('Button');
         jobItemHZUp.id = 'jobItemHZUp_' + jobNameFull;
         jobItemHZUp.className = 'zoomBoxButton';
+        jobItemHZUp.textContent = '+';
         jobItemHZUp.onclick = function() {
                 var hsinput = document.getElementById(this.id.replace("jobItemHZUp", "jobItemHZBInput_" + holder));
                 hsinput.value = parseInt(hsinput.value,10) + 1;
@@ -764,8 +770,8 @@ domReady( function(){
                 updateJobHistoryData(0, jobLongName);
               }
       //jobItemHZoomBox.appendChild(jobItemHZBLabel);
-      jobItemHZoomBox.appendChild(jobItemHZBInput);
       jobItemHZoomBox.appendChild(jobItemHZDown);
+      jobItemHZoomBox.appendChild(jobItemHZBInput);
       jobItemHZoomBox.appendChild(jobItemHZUp);
 
 

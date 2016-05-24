@@ -714,11 +714,12 @@ div#jobComposer {
 }
 
 .zoomBoxInput {
-    font-size:  0.7em;
+    font-size:  0.9em;
     background-color: transparent;
     text-align: center;
     border-width:       0;
-    width:      100%;
+    /*width:      100%;*/
+    width:      3em;
     margin:     0px;
     color:      #fff;
 }
@@ -738,6 +739,7 @@ div#jobComposer {
     -moz-background-clip: padding; -webkit-background-clip: padding-box;
     background-clip: padding-box;
     font-weight: bold;
+    height:     1.3em;
 }
 .zoomBoxButton:hover, .zoomBoxButton:active, .zoomBoxButton:focus {
     background-color:   #cbc7ae;
@@ -746,10 +748,17 @@ div#jobComposer {
     opacity:    1.0;
 }
 .zoomBox {
+    display:    flex;
+    align-items: center;
+    justify-content: center;
+
+    display:    -webkit-flex;
+    -webkit-align-items: center;
+    -webkit-justify-content: center;
+
     background-color:      #555;
     color:      #c4be92;
     opacity:    0.0;
-    text-align: center;
 
     /* rounded corners */
     -webkit-border-radius: 8px;
@@ -757,7 +766,8 @@ div#jobComposer {
     -moz-background-clip: padding; -webkit-background-clip: padding-box;
     background-clip: padding-box;
     padding:    .1em;
-    width:      3em;
+    width:      8em;
+    height:     1.8em;
     margin:    10px;
     -webkit-box-shadow: 0px 0px 6px 0px #000;
     box-shadow: 0px 0px 6px 0px #000;
