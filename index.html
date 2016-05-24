@@ -78,8 +78,13 @@ as well as the four channel
 While it is somewhat
 more expensive, an advantage of the Seeed Relay Board is that it fits directly
 onto the Raspberry Pi GPIO strip and no further relay interconnection is required.
-A possible advantage of the SainSmart board modules is that they may be
-combined to provide up to twenty individual relays.
+The Seeed Relay Board is mounted onto the Raspberry Pi's first 26 GPIO pins but
+nevertheless extends them so that the DS18B20 sensors can be attached using the
+same pins mentioned above.
+</p>
+<p>
+Apart from their lower cost, a possible advantage of the SainSmart board modules is that
+they may be combined to provide up to twenty individual relays.
 The SainSmart relay boards are connected via jumper cables as follows:
 <br>&nbsp;&nbsp;&nbsp;&nbsp;Relay pin VCC connects to GPIO pin 5V
 <br>&nbsp;&nbsp;&nbsp;&nbsp;Relay pin GND connects to GPIO pin GND
@@ -97,6 +102,10 @@ BCM 10 i.e. physical pins 11, 13, 15 &amp; 19 respectively. The browser
 interface will then show the IN1 relay as &quot;Relay 01&quot;,
 IN2 as &quot;Relay 02&quot;, IN3 as &quot;Relay 03&quot;
 and IN4 as &quot;Relay 04&quot;.
+</p>
+<p>
+The software does not currently support using a mix of Seeed and SainSmart
+relays in the same system.
 </p>
 
 
