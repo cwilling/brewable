@@ -1,3 +1,4 @@
+SHELL = /bin/bash
 INSTALL_FILES = brewable.css \
 		d3.v3.min.js \
 		ds18b20.py \
@@ -15,7 +16,7 @@ INSTALL_FILES = brewable.css \
 DESTDIR =
 
 # Where the files to server by tornado are installed
-RUNDIR = /var/www/html/brewable
+RUNDIR = /usr/share/brewable
 
 # Who the server will be run as
 USER = pi
@@ -37,12 +38,12 @@ default.conf:	default.conf.in
 
 
 install: build $(INSTALL_FILES)
-	mkdir -p $(DESTDIR)$(RUNDIR)
 	mkdir -p $(DESTDIR)/etc/default
 	mkdir -p $(DESTDIR)/etc/init.d
-	cp -p $(INSTALL_FILES) $(DESTDIR)$(RUNDIR)/
+	python setup.py install --root=$(DESTDIR)
 	install -m 0644 default.conf $(DESTDIR)/etc/default/brewable
 	install -m 0755 rcbrewable $(DESTDIR)/etc/init.d/brewable
+	bash -c './postinst configure'
 
 clean:
 	rm -f *.pyc default.conf
