@@ -13,7 +13,7 @@ INSTALL_FILES = brewable.css \
 		status.html \
 		status.js
 
-DESTDIR =
+DESTDIR = /
 
 # Where the files to server by tornado are installed
 RUNDIR = /usr/share/brewable
@@ -26,7 +26,7 @@ LOGDIR = /var/log/brewable
 
 
 
-build: default.conf
+build: default.conf brewable
 
 
 default.conf:	default.conf.in
@@ -36,6 +36,9 @@ default.conf:	default.conf.in
 		-e 's:%LOGDIR%:$(LOGDIR):' \
 		> default.conf
 
+brewable: server.py
+	cat server.py | sed -e 's/import gpioworker/from brewable import gpioworker/' >brewable
+	chmod 0755 brewable
 
 install: build $(INSTALL_FILES)
 	mkdir -p $(DESTDIR)/etc/default
@@ -46,6 +49,6 @@ install: build $(INSTALL_FILES)
 	bash -c './postinst configure'
 
 clean:
-	rm -f *.pyc default.conf
+	rm -f *.pyc default.conf brewable
 
-.PHONY: default.conf
+.PHONY: default.conf brewable
