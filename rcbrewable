@@ -31,7 +31,7 @@ test -r $BREWABLE_CONFIG || { echo "$BREWABLE_CONFIG not found";
 . $BREWABLE_CONFIG
 
 # Check for server file
-BREWABLE_SERVER=$BREWABLE_RUN_DIR/server.py
+BREWABLE_SERVER=$BREWABLE_RUN_DIR/brewable
 test -x $BREWABLE_SERVER || { echo "$BREWABLE_SERVER not installed";
 	if [ "$1" = "stop" ]; then exit 0;
 	else exit 5; fi; }
