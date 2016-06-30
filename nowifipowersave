@@ -1,0 +1,16 @@
+#!/bin/sh
+
+set -e
+
+# Don't bother to restart sshd when lo is configured.
+if [ "$IFACE" = lo ]; then
+        exit 0
+fi
+
+# Only run from ifup.
+if [ "$MODE" != start ]; then
+        exit 0
+fi
+
+
+iw dev $IFACE set power_save off || true
