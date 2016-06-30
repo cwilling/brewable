@@ -48,6 +48,20 @@ Now reboot the Raspberry Pi for the changes to take efffect.
 </li>
 
 
+<li>
+The Raspberry Pi 3 has a built in wifi unit which also has a power save
+feature enabled by default. This should be disabled for consistent
+wifi connectivity. To check its current status, run this command in a terminal:
+<br>&nbsp;&nbsp;&nbsp;&nbsp;<code>iw dev wlan0 get power_save</code><br>
+To turn the power save off in a way that survives reboots, download this
+<a href="nowifipowersave">startup script to disable Pi3 wifi power save</a> and
+put it into a the /etc/network/if-up.d directory with the command:
+<br>&nbsp;&nbsp;&nbsp;&nbsp;<code>cp nowifipowersave /etc/network/if-up.d</code><br>
+After reboot, running the <code>iw dev wlan0 get power_save</code> command
+should confirm "Power save: off".
+</p>
+</li>
+
 
 <li>
 Brewable uses
