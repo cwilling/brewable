@@ -58,9 +58,9 @@ To turn the power save off in a way that survives reboots, download this
 browser's "Save Link As..." facility to save the script in the Home directory. Now
 copy it into the /etc/network/if-up.d directory with the command:
 <br>&nbsp;&nbsp;&nbsp;&nbsp;<code>sudo cp ~/nowifipowersave /etc/network/if-up.d</code><br>
-Ensure the the new file is executable with the command:
+Ensure that the new file is executable with the command:
 <br>&nbsp;&nbsp;&nbsp;&nbsp;<code>sudo chmod a+x /etc/network/if-up.d/nowifipowersave</code><br>
-After reboot, running the <code>iw dev wlan0 get power_save</code> command
+After a reboot, running the <code>iw dev wlan0 get power_save</code> command
 should confirm "Power save: off".
 </p>
 </li>
