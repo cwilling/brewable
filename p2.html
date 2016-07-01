@@ -54,9 +54,12 @@ feature enabled by default. This should be disabled for consistent
 wifi connectivity. To check its current status, run this command in a terminal:
 <br>&nbsp;&nbsp;&nbsp;&nbsp;<code>iw dev wlan0 get power_save</code><br>
 To turn the power save off in a way that survives reboots, download this
-<a href="nowifipowersave">startup script to disable Pi3 wifi power save</a> using the
-browser's "Save Link As..." facility to save the script in the Home directory. Now
-copy it into the /etc/network/if-up.d directory with the command:
+<a href="nowifipowersave">startup script to disable Pi3 wifi power save</a>
+using the browser's "Save Link As..." facility to save the script in the Home
+directory.
+ Alternatively, in a terminal, use the command:
+<br>&nbsp;&nbsp;&nbsp;&nbsp;<code>cd && wget https://cwilling.github.io/brewable/nowifipowersave</code><br>
+Now copy it into the /etc/network/if-up.d directory with the command:
 <br>&nbsp;&nbsp;&nbsp;&nbsp;<code>sudo cp ~/nowifipowersave /etc/network/if-up.d</code><br>
 Ensure that the new file is executable with the command:
 <br>&nbsp;&nbsp;&nbsp;&nbsp;<code>sudo chmod a+x /etc/network/if-up.d/nowifipowersave</code><br>
