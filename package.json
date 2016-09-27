@@ -1,0 +1,27 @@
+{
+  "dependencies": {
+    "osenv": "",
+    "server": "",
+    "router": "",
+    "websocket": "",
+    "http": "",
+    "url": "",
+    "xdg-basedir": "",
+    "mkdirp": "",
+    "ds18b20": "",
+    "rpio": ""
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "name": "newbrew",
+  "version": "1.0.0",
+  "description": "Nodejs version of brewable",
+  "main": "index.js",
+  "devDependencies": {},
+  "author": "Christoph Willing",
+  "license": "ISC",
+  "//": [
+"ex:set ai shiftwidth=2 inputtab=spaces smarttab noautotab:"
+  ]
+}
