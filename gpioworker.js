@@ -155,6 +155,8 @@ gpioWorker.prototype.processMessage = function () {
     this.load_startup_data(msg);
   } else if (msg.type == 'toggle_relay') {
     this.toggle_relay(msg);
+  } else if (msg.type == 'config_change') {
+    this.config_change(msg);
   } else {
     console.log("Unrecognised message:");
     for (var key in msg) {
@@ -192,6 +194,21 @@ gpioWorker.prototype.toggle_relay = function (msg) {
     this.relay.ON(relayId);
   }
   this.relayOnlyUpdate();
+}
+
+gpioWorker.prototype.config_change = function (msg) {
+  console.log("config_change() Rcvd: " + JSON.stringify(msg.data));
+  var keys = Object.keys(msg.data);
+  if (keys[0] == 'sensorFudgeFactors') {
+    console.log("config_change(): " + keys[0] + " = " + msg.data['sensorFudgeFactors'] + " (" + msg.data['fudge'] + ")");
+    sensorDevices.forEach( function(item) {
+      if (item.getId() == msg.data['sensorFudgeFactors']) {
+        item.setFudge(msg.data['fudge']);
+      }
+    });
+  } else {
+    console.log("config_change(): " + keys[0] + " = " + msg.data[keys[0]]);
+  }
 }
 
 

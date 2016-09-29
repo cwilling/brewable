@@ -38,6 +38,7 @@ SensorDevice.prototype.getTemp = function () {
 }
 
 SensorDevice.prototype.setFudge = function (fudgeFactor) {
+  console.log("setFudge(): for " + this.id + " (" + fudgeFactor + ")");
   this.fudge = parseFloat(fudgeFactor);
 }
 

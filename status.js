@@ -105,8 +105,12 @@ domReady( function(){
 
     var configHolder = document.createElement('DIV');
     configHolder.id = 'configHolder';
+
+    var testHolder = document.createElement('DIV');
+    testHolder.id = 'testHolder';
   content_4.appendChild(configTitle);
   content_4.appendChild(configHolder);
+  content_4.appendChild(testHolder);
 
 
   document.body.appendChild(main_content);
@@ -438,16 +442,94 @@ domReady( function(){
           configEntryHolder.id = 'configEntryHolder';
           document.getElementById('configHolder').appendChild(configEntryHolder);
         }
-        var configKeys = data[data_keys[k]];
-        for (var key in configKeys) {
-          console.log("configKey: " + key);
-        }
+        build_config_entries(data[data_keys[k]]);
+        //var configKeys = data[data_keys[k]];
+        //for (var key in configKeys) {
+        //  console.log("configKey: " + key);
+        //}
       } else if (data_keys[k] == 'the_end') {
         var the_end_unused = data[data_keys[k]];
         console.log("the_end: " + the_end_unused);
       } else {
         console.log("Unknown startup_data key: " + data_keys[k] + " = " + data[data_keys[k]]);
       }
+    }
+  }
+
+  function build_config_entries(configItems) {
+    var configEntryHolder = document.getElementById('configEntryHolder');
+    for (var key in configItems) {
+      console.log("configKey: " + key);
+      var configItem = document.createElement('DIV');
+      configItem.id = 'configItem_' + key;
+      configItem.className = 'configItem';
+
+      var configItemName = document.createElement('DIV');
+      configItemName.id = 'configItemName_' + key;
+      configItemName.className = 'configItemName';
+      configItemName.textContent = key;
+      var configItemData = document.createElement('DIV');
+      configItemData.id = 'configItemData_' + key;
+      configItemData.className = 'configItemData';
+
+      if (key == 'sensorFudgeFactors') {
+        console.log("Do sensorFudgeFactors here");
+        for (var sensor in configItems[key]) {
+          console.log("Sensor: " + sensor + " = " + configItems[key][sensor]);
+          var configItemDataValue = document.createElement('DIV');
+          configItemDataValue.id = 'configItemDataValue_' + sensor;
+          configItemDataValue.className = 'configItemDataValue';
+
+          var configItemSensorName = document.createElement('DIV');
+          configItemSensorName.id = 'configItemSensorName_' + sensor;
+          configItemSensorName.className = 'configItemSensorName';
+          configItemSensorName.textContent = sensor;
+          var configItemSensorFudge = document.createElement('INPUT');
+          configItemSensorFudge.id = 'configItemSensorFudge_' + sensor;
+          configItemSensorFudge.className = 'configItemSensorFudge';
+          configItemSensorFudge.setAttribute('type', 'text');
+          configItemSensorFudge.value = configItems[key][sensor];
+          configItemSensorFudge.onblur = function () {
+            console.log("key: " + this.id + "  " + this.id.replace(/.+_/,''));
+            var idata = {};
+            idata['sensorFudgeFactors'] = this.id.replace(/.+_/,'');
+            idata['fudge'] = this.value;
+            msgobj = {type:'config_change', data:idata};
+            sendMessage({data:JSON.stringify(msgobj)});
+          }
+
+          configItemDataValue.appendChild(configItemSensorName);
+          configItemDataValue.appendChild(configItemSensorFudge);
+          configItemData.appendChild(configItemDataValue);
+        }
+      } else {
+        var configItemDataValue = document.createElement('DIV');
+        configItemDataValue.id = 'configItemDataValue_' + key;
+        configItemDataValue.className = 'configItemDataValue';
+
+        var configItemDataValueInput = document.createElement('INPUT');
+        configItemDataValueInput.id = 'configItemDataValueInput_' + key;
+        configItemDataValueInput.className = 'configItemDataValueInput';
+        configItemDataValueInput.setAttribute('type', 'text');
+        configItemDataValueInput.value = configItems[key];
+
+        configItemDataValueInput.onblur = function() {
+          //console.log("key: " + this.id + "  " + this.id.replace(/.+_/,''));
+          var idata = {};
+          idata[this.id.replace(/.+_/,'')] = this.value;
+          msgobj = {type:'config_change', data:idata};
+          sendMessage({data:JSON.stringify(msgobj)});
+        }
+
+        configItemDataValue.appendChild(configItemDataValueInput);
+        configItemData.appendChild(configItemDataValue);
+      }
+
+
+      configItem.appendChild(configItemName);
+      configItem.appendChild(configItemData);
+
+      configEntryHolder.appendChild(configItem);
     }
   }
 

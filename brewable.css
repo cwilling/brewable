@@ -853,6 +853,32 @@ div#jobComposer {
 #configEntryHolder {
     border:	1px solid #000;
 }
+.configItem {
+}
+.configItemName {
+    float:      left;
+    width:      256px;
+    text-align: right;
+    margin:     3px 10px;
+}
+.configItemData {
+    float:      left;
+    width:      256px;
+    margin:     3px 10px;
+    text-align: center;
+}
+.configItemDataValue {
+    width:      10em;
+    margin:     3px 10px;
+    border:	2px solid #000;
+}
+.configItemDataValueInput,.configItemSensorFudge {
+    width:      94%;
+    text-align: center;
+}
+.configItemSensorFudge {
+    text-align: center;
+}
 .config_label {
     display:    inline-block;
     float:      left;
