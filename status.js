@@ -88,11 +88,16 @@ domReady( function(){
   content_3.id = 'content_3';
   content_3.className = 'content';
   main_content.appendChild(content_3);
-  var profilesTitle = document.createElement('DIV');
-  profilesTitle.id = 'profilesTitle';
-  profilesTitle.className = 'page_title unselectable';
-  profilesTitle.textContent = 'Profiles';
+    var profilesTitle = document.createElement('DIV');
+    profilesTitle.id = 'profilesTitle';
+    profilesTitle.className = 'page_title unselectable';
+    profilesTitle.textContent = 'Profiles';
+
+    var profilesGraphHolder = document.createElement('DIV');
+    profilesGraphHolder.id = 'profilesGraphHolder';
+
   content_3.appendChild(profilesTitle);
+  content_3.appendChild(profilesGraphHolder);
 
   var content_4 = document.createElement('DIV');
   content_4.id = 'content_4';
@@ -532,6 +537,153 @@ domReady( function(){
       configEntryHolder.appendChild(configItem);
     }
   }
+
+
+/* START PROFILES */
+
+  /* Return an array of profiles.
+     Each profile is an array of setpoints; x (time) & y (temp) fields
+  */
+  function getProfileData () {
+    // Just dummy data for now
+    console.log("Here is some data");
+  }
+
+  function updateProfileGraph () {
+    //console.log("At: updateProfileGraph()");
+    var profileData = getProfileData(); // raw data from Profiles Editor
+    var profileDisplayData = [];        // "processed" data for display
+    var setpoint = {};
+
+    // Clear any current graph
+    profileGraphHolder.selectAll("*").remove();
+
+    /* From the raw profile, generate a dataset that has accumulated times
+    */
+    //console.log("profileData length = " + profileData.length);
+    for (var profile=0;profile<profileData.length;profile++) {
+      //console.log("profile length = " + profileData[profile].length);
+      var nextStep = 0.0;
+      var lineData = [];
+      for (var sp=0;sp<profileData[profile].length;sp++) {
+        //console.log("pdata: " + profileData[profile][sp]["duration"] + " : " + profileData[profile][sp]["target"]);
+        setpoint = {"x":_TESTING_?nextStep:60*nextStep,
+                    "y":profileData[profile][sp]["target"]};
+        lineData.push(setpoint);
+        //console.log("pdata: " + setpoint["x"] + " : " + setpoint["y"]);
+
+        nextStep += resolveGraphTimeValue(profileData[profile][sp]["duration"]);
+      }
+      profileDisplayData.push(lineData);
+    }
+
+    // First find extent of data
+    var maxTime = 0.0;
+    var maxDataPoint = 0.0;
+    var minDataPoint = 1000.0;
+    for ( var profile=0;profile<profileDisplayData.length;profile++) {
+      var lineData = profileDisplayData[profile];
+      var max = 0.0;
+      var min = 1000.0;
+      var maxt = 0.0;
+
+      min = d3.min(lineData, function(d) {return parseFloat(d.y);});
+      max = d3.max(lineData, function(d) {return parseFloat(d.y);});
+      if ( min < minDataPoint ) {
+        //console.log("new min = " + min);
+        minDataPoint = min;
+      }
+      if ( max > maxDataPoint ) {
+        //console.log("new max = " + max);
+        maxDataPoint = max;
+      }
+
+      maxt = d3.max(lineData, function(d) {return parseFloat(d.x);});
+      if ( maxt > maxTime ) {
+        maxTime = maxt;
+      }
+    }
+    console.log("minData = " + minDataPoint + ", maxData = " + maxDataPoint + ", maxTime = " + maxTime);
+
+    // Scale & display data
+    if ( _TESTING_ ) {
+      var formatTime = d3.time.format("%H:%M.%S");
+    } else {
+      var formatTime = d3.time.format("%-j:%H.%M");
+    }
+    var formatSeconds = function(d) { return formatTime(new Date(1955,0, 0,0,0,d)); };
+    var linearScaleY = d3.scale.linear()
+                      .domain([minDataPoint,maxDataPoint])
+                      .range([profileGraphHeight,0]);
+    var yAxis = d3.svg.axis()
+                      .scale(linearScaleY)
+                      .orient("left").ticks(5);
+    var yAxisGroup = profileGraphHolder.append("g")
+                      .attr("transform",
+                            "translate(" + profileGraphMargin.left + "," + profileGraphMargin.top + ")")
+                      .call(yAxis);
+    var linearScaleX = d3.scale.linear()
+                      .domain([0,maxTime])
+                      .range([0,profileGraphWidth]);
+    var xAxis = d3.svg.axis()
+                      .scale(linearScaleX)
+                      .orient("bottom")
+                      .tickValues(makeTickValues(maxTime,18));
+                      //.ticks(18);
+                      //.tickFormat(formatSeconds);
+    var xAxisGroup = profileGraphHolder.append("g")
+                      .attr('class', 'x profileAxis')
+                      .attr("transform",
+                            "translate(" + profileGraphMargin.left + "," + (profileGraphHeight + profileGraphMargin.top) + ")")
+                      .call(xAxis);
+
+    // Custom tick format
+    profileGraphHolder.selectAll('.x.profileAxis text').text(function(d) { return tickText(d) });
+
+    var xaxistext = profileGraphHolder.append("g")
+                          .attr("id", "xaxistext_profileGraph")
+                          .attr("class", "axistext")
+                          .append("text")
+                          .attr("transform",
+                              "translate(" + (profileGraphWidth - profileGraphMargin.left)/2 + "," + (profileGraphHeight+ profileGraphMargin.top + profileGraphMargin.bottom) + ")")
+                              .attr("dy", "-0.35em")
+                              .style("text-anchor", "middle")
+                              .text("Duration (" + (_TESTING_?'mins:secs':'days.hours:mins') + ")");
+
+    for ( var profile=0;profile<profileDisplayData.length;profile++) {
+      var scaledLineData = [];
+      var lineData = profileDisplayData[profile];
+      for ( var sp=0;sp<lineData.length;sp++) {
+        //console.log("scaled sp = " + lineData[sp].x + " : " + lineData[sp].y);
+        scaledLineData.push({"x":linearScaleX(lineData[sp].x),
+                             "y":linearScaleY(lineData[sp].y)});
+      }
+      var profileLineFunction = d3.svg.line()
+                                .x(function(d) { return d.x; })
+                                .y(function(d) { return d.y; })
+                                .interpolate("linear");
+      var lineGraph = profileGraphHolder.append("path")
+                                .attr("transform",
+                                      "translate(" + profileGraphMargin.left + "," + profileGraphMargin.top + ")")
+                                .attr("d", profileLineFunction(scaledLineData))
+                                .attr("stroke", profileLineColours[profile])
+                                .attr("stroke-width", 3)
+                                .attr("fill", "none");
+    }
+  }
+
+  var profileGraphMargin = {top: 50, right: 40, bottom: 60, left: 80},
+    profileGraphWidth = 1800 - profileGraphMargin.left - profileGraphMargin.right,
+    profileGraphHeight = 400 - profileGraphMargin.top - profileGraphMargin.bottom;
+  var profileGraphHolder = d3.select("#profilesGraphHolder").append("svg")
+                      .attr("id", "profiles_graph")
+                      .attr("class", "generic_graph")
+                      .attr("width", profileGraphWidth + profileGraphMargin.right + profileGraphMargin.left)
+                      .attr("height", profileGraphHeight + profileGraphMargin.top + profileGraphMargin.bottom)
+                      .style("border", "1px solid black")
+
+
+/* END PROFILES */
 
 
 });
