@@ -258,7 +258,8 @@ ul#navigation a:hover {
 div#main_content {
     float:	right;
     width:	100%;
-    height:	960px;
+/*    height:	960px; */
+    height:	800px;
     background:	#444;
     overflow:	hidden
 }

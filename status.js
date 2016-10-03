@@ -2,6 +2,7 @@ var _TESTING_ = false;
 var navigationMap = {};
 var global_x = 0;
 
+var profileLineColours = ["green", "red", "orange", "blue"];
 /*
 For now, hard code the number of profiles (profilesTableRows)
 and number of steps per profile (profilesTableColumns).
@@ -9,6 +10,21 @@ Eventually we'll make these settings dynamic.
 */
 var profilesTableColumns = 10;
 var profilesTableRows = 4;
+
+/* Convert text from profile editor into time units.
+*/
+function resolveGraphTimeValue(rawval) {
+  var pieces = rawval.split(".");
+  if (pieces.length > 1 ) {
+    result = 60 * parseInt(pieces[0])
+    + parseInt(pieces[1]/60)
+    + parseInt(pieces[1]%60);
+  } else {
+    result = 60 * parseInt(pieces[0]);
+  }
+  //console.log("resolveGraphTimeValue(): " + result);
+  return result;
+}
 
 var domReady = function(callback) {
   document.readyState === "interactive" ||
@@ -547,6 +563,10 @@ domReady( function(){
   function getProfileData () {
     // Just dummy data for now
     console.log("Here is some data");
+    var result = [];
+    var p1 = [{'duration':'0.30','target':'20'},{'duration':'0.30','target':'30'},{'duration':'0.30','target':'20'}];
+    result.push(p1);
+    return result;
   }
 
   function updateProfileGraph () {
@@ -570,7 +590,7 @@ domReady( function(){
         setpoint = {"x":_TESTING_?nextStep:60*nextStep,
                     "y":profileData[profile][sp]["target"]};
         lineData.push(setpoint);
-        //console.log("pdata: " + setpoint["x"] + " : " + setpoint["y"]);
+        console.log("pdata: " + setpoint["x"] + " : " + setpoint["y"]);
 
         nextStep += resolveGraphTimeValue(profileData[profile][sp]["duration"]);
       }
@@ -672,8 +692,39 @@ domReady( function(){
     }
   }
 
+  function makeTickValues(maxValue, tickCount) {
+    var result = [];
+    for (var i=0;i<tickCount;i++) {
+      result.push(Math.floor(i*maxValue/tickCount));
+    }
+    result.push(maxValue);
+    return result;
+  }
+  function tickText(d) {
+    var secs = (d%60);
+    var hrs =  Math.floor(d/60/60);
+    var mins = Math.floor(d/60) - hrs * 60;
+    var days = Math.floor(hrs/24);
+    //return mins + ":" + secs;
+    if (_TESTING_) {
+      if (hrs < 1) {
+        return sprintf("%d:%02d", mins, secs);
+      } else {
+        return sprintf("%d.%02d:%02d", hrs, mins, secs);
+      }
+    } else {
+      if (days < 1 ) {
+        return sprintf("%d:%02d", hrs, mins);
+      } else {
+        hrs -= days*24;
+        return sprintf("%d.%02d:%02d", days, hrs, mins);
+      }
+    }
+  }
+
   var profileGraphMargin = {top: 50, right: 40, bottom: 60, left: 80},
-    profileGraphWidth = 1800 - profileGraphMargin.left - profileGraphMargin.right,
+    //profileGraphWidth = 1800 - profileGraphMargin.left - profileGraphMargin.right,
+    profileGraphWidth = window.innerWidth - 20 - profileGraphMargin.left - profileGraphMargin.right,
     profileGraphHeight = 400 - profileGraphMargin.top - profileGraphMargin.bottom;
   var profileGraphHolder = d3.select("#profilesGraphHolder").append("svg")
                       .attr("id", "profiles_graph")
@@ -683,6 +734,7 @@ domReady( function(){
                       .style("border", "1px solid black")
 
 
+var profile_graph = updateProfileGraph();
 /* END PROFILES */
 
 

@@ -42,6 +42,21 @@ function status(response) {
   });
 }
 
+function sprintf(response) {
+  console.log("Request handler 'sprintf' was called.");
+  fs.readFile(path.join(__dirname, "/sprintf.js"), function (err, data) {
+    if(err){
+      response.writeHead(404);
+      response.write("Not Found!");
+      console.log("sprintf.js not found");
+    } else {
+      response.writeHead(200, {"Content-Type": "text/plain"});
+      response.write(data);
+    }
+    response.end();
+  });
+}
+
 function d3(response) {
   console.log("Request handler 'd3' was called.");
   fs.readFile(path.join(__dirname, "/d3.v3.min.js"), function (err, data) {
@@ -80,6 +95,7 @@ function ws(response) {
 }
 
 exports.status = status;
+exports.sprintf = sprintf;
 exports.d3 = d3;
 exports.css = css;
 exports.index = index;
