@@ -112,6 +112,11 @@ td {
     font-size: 80%;
     fill: rgb(100, 100, 100);
 }
+.profileAxis path {
+    stroke:	#000;
+    stroke-width: 2px;
+    fill:       none;
+}
 
 /*.title_text text {*/
 .title_Text {
@@ -126,6 +131,14 @@ td {
     text-decoration: underline;
     fill: rgb(0, 0, 0);
 }
+.tick line {
+    stroke:     #000;
+/*    stroke-width: 2px; */
+    fill:       none;
+}
+.tick text {
+    font-size:  80%;
+}
 
 .grid .tick {
     stroke: lightgrey;
@@ -134,6 +147,19 @@ td {
 }
 .grid path {
     stroke-width: 0;
+}
+
+div.tooltip {
+    position:   absolute;
+    text-align: center;
+    width:      60px;
+    height:     28px;
+    padding:    2px;
+    font:       12px sans-serif;
+    background: lightsteelblue;
+    border:     0px;
+    border-radius: 8px;
+    pointer-events: none;
 }
 
 
