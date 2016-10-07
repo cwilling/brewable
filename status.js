@@ -7,13 +7,7 @@ var profileDisplayData = [];        // "processed" data for display
 var profileLinearScaleY = [];
 var profileLinearScaleX = [];
 var profileLineColours = ["green", "red", "orange", "blue"];
-/*
-For now, hard code the number of profiles (profilesTableRows)
-and number of steps per profile (profilesTableColumns).
-Eventually we'll make these settings dynamic.
-*/
-var profilesTableColumns = 10;
-var profilesTableRows = 4;
+
 
 /* Convert text from profile editor into time units.
 */
@@ -580,6 +574,11 @@ domReady( function(){
 
 /* START PROFILES */
 
+  var profileGraphMargin = {top: 50, right: 40, bottom: 60, left: 80},
+    //profileGraphWidth = 1800 - profileGraphMargin.left - profileGraphMargin.right,
+    profileGraphWidth = window.innerWidth - 20 - profileGraphMargin.left - profileGraphMargin.right,
+    profileGraphHeight = 400 - profileGraphMargin.top - profileGraphMargin.bottom;
+
   /* Return an array of profiles.
      Each profile is an array of setpoints; x (time) & y (temp) fields
   */
@@ -587,14 +586,10 @@ domReady( function(){
     // Just dummy data for now
     console.log("Here is some data");
     var p1 = [
-      {'duration':'7.10','target':'-5'},
-      {'duration':'1.10','target':'30'},
-      {'duration':'2.10','target':'20'},
-      {'duration':'3.10','target':'30'},
-      {'duration':'4.10','target':'25'},
-      {'duration':'5.10','target':'30'},
-      {'duration':'6.10','target':'30'},
-      {'duration':'0','target':'20'}
+      {'duration':'7.10','target':'5'},
+      {'duration':'8.10','target':'10'},
+      {'duration':'9.10','target':'1'},
+      {'duration':'0','target':'5'}
     ];
     return p1;
   }
@@ -730,6 +725,7 @@ domReady( function(){
       var dotGraph = profileGraphHolder.selectAll('dot')
           .data(scaledLineData)
         .enter().append("circle")
+        .attr("id", function(d,i){return "setpoint_" + i ;})
         .attr("class", "profileSetPoint")
         .attr("transform",
               "translate(" + profileGraphMargin.left + "," + profileGraphMargin.top + ")")
@@ -743,18 +739,24 @@ domReady( function(){
               profileTooltip.html(d.x + "<br>" + d.y)
               .style("left", (d3.event.pageX - 20) + "px")
               .style("top", (d3.event.pageY - 28) + "px");
-          })
+        })
+/*
         .on("mousedown", function(d) {
-            //console.log("CLICK1 " + profileLinearScaleX.invert(d3.event.pageX-profileGraphMargin.left));
-            //console.log("CLICK2 " + profileLinearScaleY.invert(d3.event.pageY-profileGraphMargin.top));
             console.log("CLICK1 " + profileLinearScaleX.invert(d.x));
             console.log("CLICK2 " + profileLinearScaleY.invert(d.y));
-          })
+        })
+*/
         .on("mouseout", function(d) {
             profileTooltip.transition()
               .duration(500)
               .style("opacity", 0);
-          });
+        })
+        .on("click", function(d) {
+            if (d3.event.ctrlKey) {
+              d3.event.stopPropagation();
+              removeSetPoint(this);
+            }
+        });
 
     }
   }
@@ -790,22 +792,12 @@ domReady( function(){
     }
   }
 
-  var profileGraphMargin = {top: 50, right: 40, bottom: 60, left: 80},
-    //profileGraphWidth = 1800 - profileGraphMargin.left - profileGraphMargin.right,
-    profileGraphWidth = window.innerWidth - 20 - profileGraphMargin.left - profileGraphMargin.right,
-    profileGraphHeight = 400 - profileGraphMargin.top - profileGraphMargin.bottom;
-
-/*
-  var profileGraphHolder = d3.select("#profilesGraphHolder").append("svg")
-                      .attr("id", "profiles_graph")
-                      .attr("class", "generic_graph")
-                      .attr("width", profileGraphWidth + profileGraphMargin.right + profileGraphMargin.left)
-                      .attr("height", profileGraphHeight + profileGraphMargin.top + profileGraphMargin.bottom)
-                      .style("border", "1px solid black")
-                      .on("click", newSetPoint);
-*/
 
   function newSetPoint () {
+    if (d3.event.ctrlKey) {
+      console.log("SSSSSSSSSSSSSSSSS");
+      return;
+    }
     console.log("newSetPoint()");
     var pos = d3.mouse(this);
     console.log("newSetPoint() pos: " + (pos[0]-profileGraphMargin.left) + "," + (pos[1]-profileGraphMargin.top));
@@ -857,6 +849,16 @@ domReady( function(){
     };
     //console.log("rawSetPoints = " + JSON.stringify(rawSetPoints));
     return rawSetPoints;
+  }
+
+  function removeSetPoint (e) {
+    //var datum = d3.select(e).datum();
+    //console.log("removeSetPoint() " + JSON.stringify(datum));
+
+    var index = e.id.split('_')[1];
+    if (index == 0 || index == (profileData.length - 1)) return;
+    profileData.splice(index, 1);
+    updateProfileGraph({data:profileData});
   }
 
 
