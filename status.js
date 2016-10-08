@@ -625,7 +625,7 @@ domReady( function(){
                       .attr("width", profileGraphWidth + profileGraphMargin.right + profileGraphMargin.left)
                       .attr("height", profileGraphHeight + profileGraphMargin.top + profileGraphMargin.bottom)
                       .style("border", "1px solid black")
-                      .on("click", newSetPoint);
+                      .on("dblclick", newSetPoint);
 
     /* From the raw profile, generate a dataset that has accumulated times
     */
@@ -670,7 +670,7 @@ domReady( function(){
                       .scale(profileLinearScaleY)
                       .orient("left").ticks(5);
     var yAxisGroup = profileGraphHolder.append("g")
-                      .attr('class', 'y profileAxis')
+                      .attr('class', 'y profileAxis unselectable')
                       .attr("transform",
                             "translate(" + profileGraphMargin.left + "," + profileGraphMargin.top + ")")
                       .call(yAxis);
@@ -684,7 +684,7 @@ domReady( function(){
                       //.ticks(18);
                       //.tickFormat(formatSeconds);
     var xAxisGroup = profileGraphHolder.append("g")
-                      .attr('class', 'x profileAxis')
+                      .attr('class', 'x profileAxis unselectable')
                       .attr("transform",
                             "translate(" + profileGraphMargin.left + "," + (profileGraphHeight + profileGraphMargin.top) + ")")
                       .call(xAxis);
@@ -694,7 +694,7 @@ domReady( function(){
 
       var xaxistext = profileGraphHolder.append("g")
                             .attr("id", "xaxistext_profileGraph")
-                            .attr("class", "axistext")
+                            .attr("class", "axistext unselectable")
                             .append("text")
                             .attr("transform",
                                 "translate(" + ((profileGraphWidth - profileGraphMargin.left)/2 + profileGraphMargin.left) + "," + (profileGraphHeight+ profileGraphMargin.top + profileGraphMargin.bottom) + ")")
@@ -795,7 +795,7 @@ domReady( function(){
 
   function newSetPoint () {
     if (d3.event.ctrlKey) {
-      console.log("SSSSSSSSSSSSSSSSS");
+      //console.log("SSSSSSSSSSSSSSSSS");
       return;
     }
     console.log("newSetPoint()");
@@ -851,14 +851,32 @@ domReady( function(){
     return rawSetPoints;
   }
 
+  /* To maintain the overall profile duration,
+     we add the removed setpoint's duration
+     to the previous setpoint's duration
+  */
   function removeSetPoint (e) {
     //var datum = d3.select(e).datum();
     //console.log("removeSetPoint() " + JSON.stringify(datum));
 
+    /* element index in profileData & profileDisplayData
+    */
     var index = e.id.split('_')[1];
     if (index == 0 || index == (profileData.length - 1)) return;
-    profileData.splice(index, 1);
-    updateProfileGraph({data:profileData});
+
+    profileDisplayData[0].splice(index, 1);
+    rawProfileData = convertDisplayToRawProfileData();
+    rawProfileData.forEach( function (item) {
+      if ( ! (item.duration == 0) ) {
+        item.duration = invertGraphTimeValue(item.duration);
+      } else {
+        item.duration = "0";
+      }
+    });
+
+    /* Updating graph display also updates profileData to rawProfileData
+    */
+    updateProfileGraph({data:rawProfileData});
   }
 
 
