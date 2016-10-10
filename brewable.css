@@ -166,11 +166,9 @@ div.tooltip {
 div#live_updateHolderContainer {
     display:    flex;
     align-items: center;
-    justify-content: center;
 
     display:                    -webkit-flex;
     -webkit-align-items:	center;
-    -webkit-justify-content:	center;
 
 /*    width:	80%; */
     height:	96px;
@@ -181,16 +179,17 @@ div#live_updateHolderContainer {
 div#live_updateHolder {
     display:    flex;
     align-items: center;
-    justify-content: center;
 
     display:                    -webkit-flex;
     -webkit-align-items:	center;
-    -webkit-justify-content:	center;
 
     margin:     auto;
     height:	64px;
     border-top:    2px solid black;
     border-bottom: 2px solid black;
+
+    overflow-x: auto;
+    overflow-y: hidden;
 }
 div#sensor_updateHolder {
     display:    flex;

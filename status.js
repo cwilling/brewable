@@ -352,7 +352,7 @@ domReady( function(){
       }
     }
     // Set width of bounding box
-    document.getElementById('sensor_updateHolder').style.width = (128 + 128*sensor_state.length) + "px";
+    //document.getElementById('sensor_updateHolder').style.width = (128 + 128*sensor_state.length) + "px";
 
     // Label for Relays
     elementName = 'relay_update_title';
@@ -420,7 +420,7 @@ domReady( function(){
       }
     }
     // Set width of bounding box
-    document.getElementById('relay_updateHolder').style.width = (128 + 128*relay_state.length) + "px";
+    //document.getElementById('relay_updateHolder').style.width = (128 + 128*relay_state.length) + "px";
 
   }
 
@@ -579,6 +579,88 @@ domReady( function(){
     profileGraphWidth = window.innerWidth - 20 - profileGraphMargin.left - profileGraphMargin.right,
     profileGraphHeight = 400 - profileGraphMargin.top - profileGraphMargin.bottom;
 
+  var pfZoom = d3.behavior.zoom()
+    .scaleExtent([1,10])
+    .on("zoom", zoomed);
+
+  function zoomed () {
+    //profileGraphHolder.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
+  }
+
+  var pfDrag = d3.behavior.drag()
+    .origin(function (d) { return d; })
+    .on("dragstart", dragstarted)
+    .on("drag", dragged)
+    .on("dragend", dragended);
+
+  function dragstarted (d) {
+    //console.log("dragstarted()");
+    if (d3.event.ctrlKey) {
+      console.log("dragstarted(): CTRL key pressed");
+      return;
+    }
+    d3.event.sourceEvent.stopPropagation();
+    //d3.select(this).classed("dragging", true);
+  }
+  function dragged (d) {
+    d3.select(this).attr("cx", d.x = d3.event.x).attr("cy", d.y = d3.event.y);
+
+    var pos = d3.mouse(this);
+    //console.log("dragged() pos: " + (pos[0]-profileGraphMargin.left) + "," + (pos[1]-profileGraphMargin.top));
+    //console.log("dragged() pos: " + (d.x-profileGraphMargin.left) + "," + (d.y-profileGraphMargin.top));
+    var sp = {
+      //x:parseInt(profileLinearScaleX.invert(pos[0]-profileGraphMargin.left)),
+      //y:parseInt(profileLinearScaleY.invert(pos[1]-profileGraphMargin.top))
+      x:parseInt(profileLinearScaleX.invert(pos[0])),
+      y:parseInt(profileLinearScaleY.invert(pos[1]))
+    };
+    //console.log("dragged() inverted: " + sp.x + "," + sp.y);
+    d3.select(this).classed("dragging", true);
+  }
+  function dragended (d) {
+    if ( !(d3.select(this).classed("dragging")) ) {
+      console.log("dragended(): should be a click");
+      removeSetPoint(this);
+      return;
+    }
+
+    //var datum = d3.select(this).datum();
+    //console.log("dragended() " + JSON.stringify(datum));
+
+    var index = this.id.split('_')[1];
+
+    //var pos = d3.mouse(this);
+    //console.log("dragended() pos: " + (pos[0]-profileGraphMargin.left) + "," + (pos[1]-profileGraphMargin.top));
+    var sp = {
+      //x:parseInt(profileLinearScaleX.invert(pos[0]-profileGraphMargin.left)),
+      //y:parseInt(profileLinearScaleY.invert(pos[1]-profileGraphMargin.top))
+      //x:parseInt(profileLinearScaleX.invert(pos[0])),
+      //y:parseInt(profileLinearScaleY.invert(pos[1]))
+      //x:parseInt(profileLinearScaleX.invert(parseInt(d.x))),
+      //y:parseInt(profileLinearScaleY.invert(parseInt(d.y)))
+      x:profileLinearScaleX.invert(parseInt(d.x)),
+      y:profileLinearScaleY.invert(parseInt(d.y))
+    };
+    profileDisplayData[0][index].x = sp.x;
+    profileDisplayData[0][index].y = sp.y;
+    //console.log("dragended() new pos: " + sp.x + "," + sp.y);
+    rawProfileData = convertDisplayToRawProfileData();
+    //console.log("dragended = " + JSON.stringify(rawProfileData));
+    rawProfileData.forEach( function (item) {
+      if ( ! (item.duration == 0) ) {
+        item.duration = invertGraphTimeValue(item.duration);
+      } else {
+        item.duration = "0";
+      }
+    });
+    updateProfileGraph({data:rawProfileData});
+    profileTooltip.transition()
+      .duration(200)
+      .style("opacity", 0);
+
+    d3.select(this).classed("dragging", false);
+  }
+
   /* Return an array of profiles.
      Each profile is an array of setpoints; x (time) & y (temp) fields
   */
@@ -625,7 +707,8 @@ domReady( function(){
                       .attr("width", profileGraphWidth + profileGraphMargin.right + profileGraphMargin.left)
                       .attr("height", profileGraphHeight + profileGraphMargin.top + profileGraphMargin.bottom)
                       .style("border", "1px solid black")
-                      .on("dblclick", newSetPoint);
+                      .on("dblclick", newSetPoint)
+                      .call(pfZoom);
 
     /* From the raw profile, generate a dataset that has accumulated times
     */
@@ -654,7 +737,7 @@ domReady( function(){
     maxDataPoint = maxDataPoint>defaultRange.max?maxDataPoint:defaultRange.max
     var maxTime = d3.max(profileDisplayData[0], function(d)
                                             {return parseFloat(d.x) * 1.3 ;});
-    console.log("minData = " + minDataPoint + ", maxData = " + maxDataPoint + ", maxTime = " + maxTime);
+    //console.log("minData = " + minDataPoint + ", maxData = " + maxDataPoint + ", maxTime = " + maxTime);
 
     // Scale & display data
     if ( _TESTING_ ) {
@@ -662,7 +745,6 @@ domReady( function(){
     } else {
       var formatTime = d3.time.format("%-j:%H.%M");
     }
-    var formatSeconds = function(d) { return formatTime(new Date(1955,0, 0,0,0,d)); };
     profileLinearScaleY = d3.scale.linear()
                       .domain([minDataPoint,maxDataPoint])
                       .range([profileGraphHeight,0]);
@@ -681,8 +763,6 @@ domReady( function(){
                       .scale(profileLinearScaleX)
                       .orient("bottom")
                       .tickValues(makeTickValues(maxTime,18));
-                      //.ticks(18);
-                      //.tickFormat(formatSeconds);
     var xAxisGroup = profileGraphHolder.append("g")
                       .attr('class', 'x profileAxis unselectable')
                       .attr("transform",
@@ -736,24 +816,28 @@ domReady( function(){
             profileTooltip.transition()
               .duration(200)
               .style("opacity", 0.9);
-              profileTooltip.html(d.x + "<br>" + d.y)
+              profileTooltip.html(tickText(profileLinearScaleX.invert(d.x)) + "<br>" + parseInt(profileLinearScaleY.invert(d.y)))
               .style("left", (d3.event.pageX - 20) + "px")
-              .style("top", (d3.event.pageY - 28) + "px");
+              .style("top", (d3.event.pageY - 40) + "px");
         })
-/*
-        .on("mousedown", function(d) {
-            console.log("CLICK1 " + profileLinearScaleX.invert(d.x));
-            console.log("CLICK2 " + profileLinearScaleY.invert(d.y));
-        })
-*/
         .on("mouseout", function(d) {
             profileTooltip.transition()
               .duration(500)
               .style("opacity", 0);
         })
+        .call(pfDrag)
+        //.on("dblclick", function(d) {
+        // d3.event.sourceEvent.stopPropagation();
+        // console.log("OUCH");
+        //})
         .on("click", function(d) {
+            if (d3.event.defaultPrevented) {
+              console.log("PREVENTED");
+              return
+            }
+            console.log("CLICK");
             if (d3.event.ctrlKey) {
-              d3.event.stopPropagation();
+              d3.event.sourceEvent.stopPropagation();
               removeSetPoint(this);
             }
         });
@@ -798,10 +882,10 @@ domReady( function(){
       //console.log("SSSSSSSSSSSSSSSSS");
       return;
     }
-    console.log("newSetPoint()");
+    //console.log("newSetPoint()");
     var pos = d3.mouse(this);
-    console.log("newSetPoint() pos: " + (pos[0]-profileGraphMargin.left) + "," + (pos[1]-profileGraphMargin.top));
-    console.log("newSetPoint() " + JSON.stringify(profileDisplayData));
+    //console.log("newSetPoint() pos: " + (pos[0]-profileGraphMargin.left) + "," + (pos[1]-profileGraphMargin.top));
+    //console.log("newSetPoint() " + JSON.stringify(profileDisplayData));
 
     var sp = {
       x:parseInt(profileLinearScaleX.invert(pos[0]-profileGraphMargin.left)),
@@ -822,7 +906,7 @@ domReady( function(){
     updateProfileGraph({data:rawProfileData});
   }
   function insertSetPoint (sp) {
-    console.log("insertSetPoint(): " + sp.x + "," + sp.y);
+    //console.log("insertSetPoint(): " + sp.x + "," + sp.y);
     var index = 0;
     while ( index < profileDisplayData[0].length &&
             parseInt(sp.x) > parseInt(profileDisplayData[0][index].x) ) {
@@ -830,7 +914,7 @@ domReady( function(){
       index += 1;
     }
     profileDisplayData[0].splice(index, 0, sp);
-    console.log("insertSetPoint() " + JSON.stringify(profileDisplayData));
+    //console.log("insertSetPoint() " + JSON.stringify(profileDisplayData));
   }
   function convertDisplayToRawProfileData () {
     var rawSetPoints = [];
@@ -838,7 +922,7 @@ domReady( function(){
 
     for (var i=0;i<profileDisplayData[0].length;i++) {
       sp = profileDisplayData[0][i];
-      console.log(JSON.stringify(sp));
+      //console.log(JSON.stringify(sp));
       var newSp = {"target":sp.y, "duration":0};
       if ( rawSetPoints.length > 0 ) {
         rawSetPoints[i-1]["duration"] = sp.x - runningTime;
@@ -856,7 +940,7 @@ domReady( function(){
      to the previous setpoint's duration
   */
   function removeSetPoint (e) {
-    //var datum = d3.select(e).datum();
+    var datum = d3.select(e).datum();
     //console.log("removeSetPoint() " + JSON.stringify(datum));
 
     /* element index in profileData & profileDisplayData
@@ -877,11 +961,15 @@ domReady( function(){
     /* Updating graph display also updates profileData to rawProfileData
     */
     updateProfileGraph({data:rawProfileData});
+    profileTooltip.transition()
+      .duration(200)
+      .style("opacity", 0);
   }
 
 
-
 updateProfileGraph({data:getProfileData()});
+window.onresize(updateProfileGraph({data:getProfileData()}));
+
 /* END PROFILES */
 
 
