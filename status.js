@@ -1,3 +1,7 @@
+//window.onload = function () {
+//  console.log("Window.onload()");
+//};
+
 var _TESTING_ = false;
 var navigationMap = {};
 var global_x = 0;
@@ -7,7 +11,6 @@ var profileDisplayData = [];        // "processed" data for display
 var profileLinearScaleY = [];
 var profileLinearScaleX = [];
 var profileLineColours = ["green", "red", "orange", "blue"];
-
 
 /* Convert text from profile editor into time units.
 */
@@ -43,8 +46,9 @@ var domReady = function(callback) {
 };
 
 // main()
-domReady( function(){
+//domReady( function(){
 //$(document).ready( function()
+window.onload = function () {
 
   // Layout skeleton
   var main_content = document.createElement('DIV');
@@ -584,7 +588,11 @@ domReady( function(){
     .on("zoom", zoomed);
 
   function zoomed () {
-    //profileGraphHolder.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
+    if (d3.event.ctrlKey) {
+      console.log("zoomed(): CTRL key pressed");
+      //return;
+    }
+    profileGraphHolder.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
   }
 
   var pfDrag = d3.behavior.drag()
@@ -615,6 +623,11 @@ domReady( function(){
       y:parseInt(profileLinearScaleY.invert(pos[1]))
     };
     //console.log("dragged() inverted: " + sp.x + "," + sp.y);
+
+    profileTooltip.html(tickText(profileLinearScaleX.invert(d.x)) + "<br>" + parseInt(profileLinearScaleY.invert(d.y)))
+    .style("left", (d.x + 64) + "px")
+    .style("top", (d.y + 72) + "px");
+
     d3.select(this).classed("dragging", true);
   }
   function dragended (d) {
@@ -707,7 +720,7 @@ domReady( function(){
                       .attr("width", profileGraphWidth + profileGraphMargin.right + profileGraphMargin.left)
                       .attr("height", profileGraphHeight + profileGraphMargin.top + profileGraphMargin.bottom)
                       .style("border", "1px solid black")
-                      .on("dblclick", newSetPoint)
+                      .on("click", newSetPoint)
                       .call(pfZoom);
 
     /* From the raw profile, generate a dataset that has accumulated times
@@ -836,18 +849,21 @@ domReady( function(){
               return
             }
             console.log("CLICK");
-            if (d3.event.ctrlKey) {
-              d3.event.sourceEvent.stopPropagation();
-              removeSetPoint(this);
-            }
+            d3.event.sourceEvent.stopPropagation();
+            removeSetPoint(this);
         });
-
+        
     }
   }
 
 
   function makeTickValues(maxValue, tickCount) {
     var result = [];
+    if (window.innerWidth < 1000 ) {
+      tickCount = 9;
+    } else {
+      tickCount = 18;
+    }
     for (var i=0;i<tickCount;i++) {
       result.push(Math.floor(i*maxValue/tickCount));
     }
@@ -878,8 +894,7 @@ domReady( function(){
 
 
   function newSetPoint () {
-    if (d3.event.ctrlKey) {
-      //console.log("SSSSSSSSSSSSSSSSS");
+    if ( ! (d3.event.shiftKey)) {
       return;
     }
     //console.log("newSetPoint()");
@@ -940,6 +955,9 @@ domReady( function(){
      to the previous setpoint's duration
   */
   function removeSetPoint (e) {
+    //if ( ! (d3.event.ctrlKey)) {
+    //  return;
+    //}
     var datum = d3.select(e).datum();
     //console.log("removeSetPoint() " + JSON.stringify(datum));
 
@@ -967,13 +985,20 @@ domReady( function(){
   }
 
 
+window.onresize = function() {
+  console.log("Window resize to: " + window.innerWidth + " x " + window.innerHeight);
+  profileGraphWidth = window.innerWidth - 20 - profileGraphMargin.left - profileGraphMargin.right,
+  profileGraphHeight = 400 - profileGraphMargin.top - profileGraphMargin.bottom;
+  updateProfileGraph({data:profileData})
+};
+
 updateProfileGraph({data:getProfileData()});
-window.onresize(updateProfileGraph({data:getProfileData()}));
 
 /* END PROFILES */
 
 
-});
+//});
+};
 
 /*
 ex:set ai shiftwidth=2 inputtab=spaces smarttab noautotab:
