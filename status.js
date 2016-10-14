@@ -6,11 +6,17 @@ var _TESTING_ = false;
 var navigationMap = {};
 var global_x = 0;
 
+function smallDevice () {
+  return window.innerWidth<1000?true:false;
+}
+
 var profileData = [];
 var profileDisplayData = [];        // "processed" data for display
 var profileLinearScaleY = [];
 var profileLinearScaleX = [];
 var profileLineColours = ["green", "red", "orange", "blue"];
+var pfCtrlKey = false;
+var pfCurrentDot = {"id":"none"};
 
 /* Convert text from profile editor into time units.
 */
@@ -153,6 +159,7 @@ window.onload = function () {
 
 /* popups */
   var profileTooltip = d3.select("body").append("div")
+                        .attr("id", "dotTooltip")
                         .attr("class", "tooltip")
                         .style("opacity", 0)
                         .style("left",  "0px")
@@ -301,7 +308,7 @@ window.onload = function () {
   function live_update(data) {
     var sensor_state = data.sensor_state;
     var relay_state = data.relay_state;
-    console.log("Rcvd live_update");
+    //console.log("Rcvd live_update");
 
     // Label for Sensors
     var elementName = 'sensor_update_title';
@@ -578,10 +585,19 @@ window.onload = function () {
 
 /* START PROFILES */
 
-  var profileGraphMargin = {top: 50, right: 40, bottom: 60, left: 80},
-    //profileGraphWidth = 1800 - profileGraphMargin.left - profileGraphMargin.right,
-    profileGraphWidth = window.innerWidth - 20 - profileGraphMargin.left - profileGraphMargin.right,
-    profileGraphHeight = 400 - profileGraphMargin.top - profileGraphMargin.bottom;
+  if ( smallDevice() ) {
+    console.log("smallDevice is TRUE");
+    var profileGraphMargin = {top: 50, right: 40, bottom: 60, left: 40};
+    var profileGraphHeight = 300 - (profileGraphMargin.top + profileGraphMargin.bottom);
+  } else {
+    console.log("smallDevice is FALSE");
+    var profileGraphMargin = {top: 50, right: 40, bottom: 60, left: 80};
+    var profileGraphHeight = 400 - (profileGraphMargin.top + profileGraphMargin.bottom);
+  }
+  var profileGraphWidth = window.innerWidth - (profileGraphMargin.left + profileGraphMargin.right) - 20;
+    //profileGraphHeight = 400 - profileGraphMargin.top - profileGraphMargin.bottom;
+  //profileGraphWidth = 1800 - profileGraphMargin.left - profileGraphMargin.right,
+  //profileGraphWidth = window.innerWidth - 20 - profileGraphMargin.left - profileGraphMargin.right,
 
   var pfZoom = d3.behavior.zoom()
     .scaleExtent([1,10])
@@ -602,35 +618,44 @@ window.onload = function () {
     .on("dragend", dragended);
 
   function dragstarted (d) {
-    //console.log("dragstarted()");
-    if (d3.event.ctrlKey) {
-      console.log("dragstarted(): CTRL key pressed");
+    //console.log("dragstarted() " + JSON.stringify(d));
+    d3.event.sourceEvent.stopPropagation();
+    // d3.event.ctrlKey is masked by something
+    // i.e. doesn't work here so use our own pfCtrlKey instead
+    if (pfCtrlKey) {
+      // if ctrl key is down, we're not dragging (actually deleting)
+      //console.log("dragstarted(): CTRL key is down");
       return;
     }
-    d3.event.sourceEvent.stopPropagation();
-    //d3.select(this).classed("dragging", true);
+    if (d3.event.ctrlKey) {
+      console.log("dragstarted(): CTRL key is down");
+      return;
+    }
+
+    profileTooltip.transition()
+      .duration(200)
+      .style("opacity", 0.9);
+
+    profileTooltip.text(tickText(profileLinearScaleX.invert(d.x)) + "," + parseInt(profileLinearScaleY.invert(d.y))) 
+      .style("left", (d.x + profileGraphMargin.left - 65) + "px")
+      .style("top", (d.y + profileGraphMargin.top + 43) + "px");
+
+    d3.select(this).classed("dragging", true);
   }
   function dragged (d) {
     d3.select(this).attr("cx", d.x = d3.event.x).attr("cy", d.y = d3.event.y);
 
-    var pos = d3.mouse(this);
-    //console.log("dragged() pos: " + (pos[0]-profileGraphMargin.left) + "," + (pos[1]-profileGraphMargin.top));
-    //console.log("dragged() pos: " + (d.x-profileGraphMargin.left) + "," + (d.y-profileGraphMargin.top));
-    var sp = {
-      //x:parseInt(profileLinearScaleX.invert(pos[0]-profileGraphMargin.left)),
-      //y:parseInt(profileLinearScaleY.invert(pos[1]-profileGraphMargin.top))
-      x:parseInt(profileLinearScaleX.invert(pos[0])),
-      y:parseInt(profileLinearScaleY.invert(pos[1]))
-    };
-    //console.log("dragged() inverted: " + sp.x + "," + sp.y);
-
-    profileTooltip.html(tickText(profileLinearScaleX.invert(d.x)) + "<br>" + parseInt(profileLinearScaleY.invert(d.y)))
-    .style("left", (d.x + 64) + "px")
-    .style("top", (d.y + 72) + "px");
+    profileTooltip.html(tickText(profileLinearScaleX.invert(d.x)) + "," + parseInt(profileLinearScaleY.invert(d.y)))
+    .style("opacity", 0.9)
+    .style("left", (d.x + profileGraphMargin.left - 65) + "px")
+    .style("top", (d.y + profileGraphMargin.top + 43) + "px");
 
     d3.select(this).classed("dragging", true);
   }
   function dragended (d) {
+    if (d3.event.ctrlKey) {
+      console.log("dragended(): CTRL key pressed");
+    }
     if ( !(d3.select(this).classed("dragging")) ) {
       console.log("dragended(): should be a click");
       removeSetPoint(this);
@@ -669,7 +694,7 @@ window.onload = function () {
     updateProfileGraph({data:rawProfileData});
     profileTooltip.transition()
       .duration(200)
-      .style("opacity", 0);
+      .style("opacity", 0.0);
 
     d3.select(this).classed("dragging", false);
   }
@@ -786,14 +811,14 @@ window.onload = function () {
       profileGraphHolder.selectAll('.x.profileAxis text').text(function(d) { return tickText(d) });
 
       var xaxistext = profileGraphHolder.append("g")
-                            .attr("id", "xaxistext_profileGraph")
-                            .attr("class", "axistext unselectable")
-                            .append("text")
-                            .attr("transform",
-                                "translate(" + ((profileGraphWidth - profileGraphMargin.left)/2 + profileGraphMargin.left) + "," + (profileGraphHeight+ profileGraphMargin.top + profileGraphMargin.bottom) + ")")
-                                .attr("dy", "-0.35em")
-                                .style("text-anchor", "middle")
-                                .text("Duration (" + (_TESTING_?'mins:secs':'days.hours:mins') + ")");
+                      .attr("id", "xaxistext_profileGraph")
+                      .attr("class", "axistext unselectable")
+                      .append("text")
+                      .attr("transform",
+                          "translate(" + ((profileGraphWidth - profileGraphMargin.left)/2 + profileGraphMargin.left) + "," + (profileGraphHeight+ profileGraphMargin.top + profileGraphMargin.bottom) + ")")
+                          .attr("dy", "-0.35em")
+                          .style("text-anchor", "middle")
+                          .text("Duration (" + (_TESTING_?'mins:secs':'days.hours:mins') + ")");
 
       for ( var profile=0;profile<profileDisplayData.length;profile++) {
         var scaledLineData = [];
@@ -808,50 +833,63 @@ window.onload = function () {
                                   .x(function(d) { return d.x; })
                                   .y(function(d) { return d.y; })
                                   .interpolate("step-after");
-        var lineGraph = profileGraphHolder.append("path")
+                        var lineGraph = profileGraphHolder.append("path")
                                   .attr("transform",
                                         "translate(" + profileGraphMargin.left + "," + profileGraphMargin.top + ")")
                                   .attr("d", profileLineFunction(scaledLineData))
                                   .attr("stroke", profileLineColours[profile])
                                   .attr("stroke-width", 2)
                                   .attr("fill", "none");
-      var dotGraph = profileGraphHolder.selectAll('dot')
-          .data(scaledLineData)
-        .enter().append("circle")
-        .attr("id", function(d,i){return "setpoint_" + i ;})
-        .attr("class", "profileSetPoint")
-        .attr("transform",
-              "translate(" + profileGraphMargin.left + "," + profileGraphMargin.top + ")")
-        .attr('r', 3.5)
-        .attr('cx', function(d) { return d.x; })
-        .attr('cy', function(d) { return d.y; })
-        .on("mouseover", function(d) {
-            profileTooltip.transition()
-              .duration(200)
-              .style("opacity", 0.9);
-              profileTooltip.html(tickText(profileLinearScaleX.invert(d.x)) + "<br>" + parseInt(profileLinearScaleY.invert(d.y)))
-              .style("left", (d3.event.pageX - 20) + "px")
-              .style("top", (d3.event.pageY - 40) + "px");
-        })
-        .on("mouseout", function(d) {
-            profileTooltip.transition()
-              .duration(500)
-              .style("opacity", 0);
-        })
-        .call(pfDrag)
-        //.on("dblclick", function(d) {
-        // d3.event.sourceEvent.stopPropagation();
-        // console.log("OUCH");
-        //})
-        .on("click", function(d) {
-            if (d3.event.defaultPrevented) {
-              console.log("PREVENTED");
-              return
-            }
-            console.log("CLICK");
-            d3.event.sourceEvent.stopPropagation();
-            removeSetPoint(this);
-        });
+        var dotGraphText = profileGraphHolder.selectAll('dotText')
+                          .data(scaledLineData)
+                        .enter().append("text")
+                        .attr("id", function(d,i){return "setpointText_" + i ;})
+                        .attr("class", "profileSetPointText")
+                        .attr('x', function(d) { return d.x + 1; })
+                        .attr('y', function(d) { return d.y - 5; })
+                        .attr("transform",
+                              "translate(" + profileGraphMargin.left + "," + profileGraphMargin.top + ")")
+                        .text(function(d) {return tickText(profileLinearScaleX.invert(d.x))
+                          + "," + parseInt(profileLinearScaleY.invert(d.y)); } );
+
+        var dotGraph = profileGraphHolder.selectAll('dot')
+                          .data(scaledLineData)
+                        .enter().append("circle")
+                        .attr("id", function(d,i){return "setpoint_" + i ;})
+                        .attr("class", "profileSetPoint")
+                        .attr("transform",
+                              "translate(" + profileGraphMargin.left + "," + profileGraphMargin.top + ")")
+                        .attr('r', 3.5)
+                        .attr('cx', function(d) { return d.x; })
+                        .attr('cy', function(d) { return d.y; })
+                        .on("mouseover", function(d) {
+                          // d3.event.ctrlKey is masked from pfDrag
+                          // so set our own pfCtrlKey instead
+                          if (d3.event.ctrlKey) {
+                            //console.log("mouseover + ctrl key");
+                            pfCtrlKey = true;
+                            return
+                          }
+                          pfCurrentDot = this;
+                        })
+                        .on("mouseout", function(d) {
+                          if ( !(d3.select(this).classed("dragging")) ) {
+                            profileTooltip.transition()
+                              .duration(500)
+                              .style("opacity", 0);
+                          }
+                          pfCurrentDot = {"id":"none"};
+                        })
+                        .on("click", function(d) {
+                          if (d3.event.defaultPrevented) {
+                            console.log("PREVENTED");
+                            return
+                          }
+                          console.log("CLICK");
+                          d3.event.sourceEvent.stopPropagation();
+                          removeSetPoint(this);
+                        })
+                        .call(pfDrag);
         
     }
   }
@@ -897,7 +935,7 @@ window.onload = function () {
     if ( ! (d3.event.shiftKey)) {
       return;
     }
-    //console.log("newSetPoint()");
+    console.log("newSetPoint()");
     var pos = d3.mouse(this);
     //console.log("newSetPoint() pos: " + (pos[0]-profileGraphMargin.left) + "," + (pos[1]-profileGraphMargin.top));
     //console.log("newSetPoint() " + JSON.stringify(profileDisplayData));
@@ -985,12 +1023,47 @@ window.onload = function () {
   }
 
 
-window.onresize = function() {
-  console.log("Window resize to: " + window.innerWidth + " x " + window.innerHeight);
-  profileGraphWidth = window.innerWidth - 20 - profileGraphMargin.left - profileGraphMargin.right,
-  profileGraphHeight = 400 - profileGraphMargin.top - profileGraphMargin.bottom;
-  updateProfileGraph({data:profileData})
-};
+  window.onresize = function() {
+    console.log("Window resize to: " + window.innerWidth + " x " + window.innerHeight);
+    if ( smallDevice() ) {
+      console.log("smallDevice is TRUE");
+      profileGraphMargin = {top: 30, right: 40, bottom: 60, left: 40};
+      profileGraphHeight = 300 - (profileGraphMargin.top + profileGraphMargin.bottom);
+    } else {
+      console.log("smallDevice is FALSE");
+      profileGraphMargin = {top: 50, right: 40, bottom: 60, left: 80};
+      profileGraphHeight = 400 - (profileGraphMargin.top + profileGraphMargin.bottom);
+    }
+    profileGraphWidth = window.innerWidth - (profileGraphMargin.left + profileGraphMargin.right) -20;
+      //profileGraphHeight = window.innerHeight - (profileGraphMargin.top - profileGraphMargin.bottom);
+    updateProfileGraph({data:profileData})
+
+  /*
+    profileGraphWidth = window.innerWidth - 20 - profileGraphMargin.left - profileGraphMargin.right,
+    profileGraphHeight = 400 - profileGraphMargin.top - profileGraphMargin.bottom;
+  */
+  };
+
+d3.select("body").on("keydown", function () {
+  //console.log("KEY DOWN");
+  if ( d3.event.shiftKey) {
+    //console.log("SHIFT KEY");
+  }
+  if ( d3.event.ctrlKey) {
+    //console.log("CTRL KEY pfCurrentDot = " + pfCurrentDot.id);
+    d3.selectAll('.profileSetPoint').each( function(d, i) {
+      if (this.id == pfCurrentDot.id) { pfCtrlKey = true; }
+    });
+
+  }
+})
+d3.select("body").on("keyup", function () {
+  //console.log("KEY UP");
+  if ( d3.event.ctrlKey) {
+    //console.log("CTRL KEY UP");
+    pfCtrlKey = false;
+  }
+})
 
 updateProfileGraph({data:getProfileData()});
 
