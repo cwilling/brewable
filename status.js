@@ -289,15 +289,15 @@ window.onload = function () {
       console.log("Unrecognised message: " + message.data);
     }
   }
-  socket.onclose = function () {
-    console.log("Disconnected");
 
+  socket.onclose = function () {
     // Display disconnected status
     var pageTitles = document.getElementsByClassName('page_title');
     for (var page=0;page<pageTitles.length;page++) {
       pageTitles[page].style.background = 'red';
       pageTitles[page].textContent = 'NOT CONNECTED';
     }
+    console.log("Disconnected at " + new Date().toLocaleString());
   };
 
   var sendMessage = function(message) {
