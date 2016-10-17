@@ -637,7 +637,7 @@ window.onload = function () {
       .style("opacity", 0.9);
 
     profileTooltip.text(tickText(profileLinearScaleX.invert(d.x)) + "," + parseInt(profileLinearScaleY.invert(d.y))) 
-      .style("left", (d.x + profileGraphMargin.left - 65) + "px")
+      .style("left", (d.x + profileGraphMargin.left - 67) + "px")
       .style("top", (d.y + profileGraphMargin.top + 43) + "px");
 
     d3.select(this).classed("dragging", true);
@@ -645,9 +645,9 @@ window.onload = function () {
   function dragged (d) {
     d3.select(this).attr("cx", d.x = d3.event.x).attr("cy", d.y = d3.event.y);
 
-    profileTooltip.html(tickText(profileLinearScaleX.invert(d.x)) + "," + parseInt(profileLinearScaleY.invert(d.y)))
+    profileTooltip.html(tickText(profileLinearScaleX.invert(d.x)) + ", " + parseInt(profileLinearScaleY.invert(d.y)))
     .style("opacity", 0.9)
-    .style("left", (d.x + profileGraphMargin.left - 65) + "px")
+    .style("left", (d.x + profileGraphMargin.left - 67) + "px")
     .style("top", (d.y + profileGraphMargin.top + 43) + "px");
 
     d3.select(this).classed("dragging", true);
@@ -850,7 +850,7 @@ window.onload = function () {
                         .attr("transform",
                               "translate(" + profileGraphMargin.left + "," + profileGraphMargin.top + ")")
                         .text(function(d) {return tickText(profileLinearScaleX.invert(d.x))
-                          + "," + parseInt(profileLinearScaleY.invert(d.y)); } );
+                          + ", " + parseInt(profileLinearScaleY.invert(d.y)); } );
 
         var dotGraph = profileGraphHolder.selectAll('dot')
                           .data(scaledLineData)
