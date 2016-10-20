@@ -11,6 +11,7 @@ function smallDevice () {
 }
 
 var availableSensors = [];
+var availableRelays  = [];
 
 var profileData = [];
 var profileDisplayData = [];        // "processed" data for display
@@ -147,9 +148,14 @@ window.onload = function () {
       // Item 5: Sensors
       var jobSensorsHolder = document.createElement('DIV');
       jobSensorsHolder.id = 'jobSensorsHolder';
+      jobSensorsHolder.className = 'jobDevicesHolder';
       jobItemsHolder.appendChild(jobSensorsHolder);
 
       // Item 6: Relays
+      var jobRelaysHolder = document.createElement('DIV');
+      jobRelaysHolder.id = 'jobRelaysHolder';
+      jobRelaysHolder.className = 'jobDevicesHolder';
+      jobItemsHolder.appendChild(jobRelaysHolder);
 
       // Item 7: Dismiss
       var dismissJobComposerButton = document.createElement('DIV');
@@ -334,6 +340,18 @@ window.onload = function () {
           availableSensors.push(jmsg.data[i]);
         }
         createSensorSelector(availableSensors);
+      } else if (jmsg.type === 'relay_list' ) {
+        console.log("relay_list " + message.data);
+        availableRelays = [];
+        while (availableRelays.length > 0) {availableRelays.pop();}
+        for (var i=0;i<jmsg.data.length;i++) {
+          availableRelays.push(jmsg.data[i]);
+        }
+        createRelaySelector(availableRelays);
+      }
+      else
+      {
+        console.log("Unrecognised message type: " + message.data);
       }
     }
     catch (err) {
@@ -1132,8 +1150,8 @@ d3.select("body").on("keyup", function () {
     var msgobj = {type:'list_sensors', data:[]};
     sendMessage({data:JSON.stringify(msgobj)});
 
-//    msgobj = {type:'list_relays', data:[]};
-//    sendMessage({data:JSON.stringify(msgobj)});
+    msgobj = {type:'list_relays', data:[]};
+    sendMessage({data:JSON.stringify(msgobj)});
 //
 //    // Request job data
 //    msgobj = {type:'load_jobs', data:[]};
@@ -1175,6 +1193,13 @@ d3.select("body").on("keyup", function () {
       selector.removeChild(selector.firstChild);
     }
 
+    var sensorSelectorLabel = document.createElement("LABEL");
+    sensorSelectorLabel.textContent = "Sensors";
+    sensorSelectorLabel.id = 'sensorSelectorLabel';
+    sensorSelectorLabel.className = 'selectorLabel';
+
+    selector.appendChild(sensorSelectorLabel);
+
     for(var i=0;i<sensors.length;i++) {
         console.log("Adding sensor: " + sensors[i]);
 
@@ -1189,6 +1214,46 @@ d3.select("body").on("keyup", function () {
         checkLabel.setAttribute("for", "as_" + i);
         checkLabel.textContent = sensors[i];
         checkLabel.id = "label_as_" + i;
+
+        selectorItem.appendChild(check);
+        selectorItem.appendChild(checkLabel);
+
+        selector.appendChild(selectorItem);
+    }
+  }
+
+  // Create a relay selector based on data from server
+  function createRelaySelector(relays) {
+    console.log("Reached createRelaySelector() " + relays);
+
+    var selector = document.getElementById("jobRelaysHolder");
+
+    // First remove existing list elements
+    while ( selector.hasChildNodes() ) {
+      selector.removeChild(selector.firstChild);
+    }
+
+    var relaySelectorLabel = document.createElement("LABEL");
+    relaySelectorLabel.textContent = "Relays";
+    relaySelectorLabel.id = 'relaySelectorLabel';
+    relaySelectorLabel.className = 'selectorLabel';
+
+    selector.appendChild(relaySelectorLabel);
+
+    for(var i=0;i<relays.length;i++) {
+        console.log("Adding relay: " + relays[i]);
+
+        var selectorItem = document.createElement("DIV");
+        selectorItem.id = 'selectorItem';
+
+        var check = document.createElement("INPUT");
+        check.type = "checkbox";
+        check.id = "ar_" + i;
+
+        var checkLabel = document.createElement("LABEL");
+        checkLabel.setAttribute("for", "ar_" + i);
+        checkLabel.textContent = relays[i];
+        checkLabel.id = "label_ar_" + i;
 
         selectorItem.appendChild(check);
         selectorItem.appendChild(checkLabel);

@@ -159,6 +159,8 @@ gpioWorker.prototype.processMessage = function () {
     this.config_change(msg);
   } else if (msg.type == 'list_sensors') {
     this.list_sensors(msg);
+  } else if (msg.type == 'list_relays') {
+    this.list_relays(msg);
   } else {
     console.log("Unrecognised message:");
     for (var key in msg) {
@@ -227,6 +229,21 @@ gpioWorker.prototype.list_sensors = function (msg) {
   });
   this.output_queue.enqueue(jdata);
   console.log("list_sensors(): " + jdata);
+}
+
+gpioWorker.prototype.list_relays = function (msg) {
+  var relay_ids = [];
+
+  for (var i=0;i<this.relay.deviceCount();i++) {
+    relay_ids.push('Relay ' + ((i+1)/100).toString().split('.')[1]);
+  }
+
+  var jdata = JSON.stringify({
+    'type':'relay_list',
+    'data':relay_ids
+  });
+  this.output_queue.enqueue(jdata);
+  console.log("list_relays(): " + jdata);
 }
 
 

@@ -477,10 +477,27 @@ div#content_4 {
     text-align: center;
     border:	1px solid white;
 }
+.selectorLabel {
+    display:    flex;
+    justify-content: center;
+    text-decoration: underline;
+    margin-bottom:   0.4em;
+
+    display:                 -webkit-flex;
+    -webkit-justify-content: center;
+}
 #jobSensorsHolder {
     float:	left;
-    width:      12em;
-    padding:	0.5em 0em 0.5em 0.2em;
+    width:      10em;
+    padding:	0.5em 0.5em 0.5em 0.4em;
+    margin-right: 5px;
+    border:	1px solid white;
+    border-radius: 4px;
+}
+#jobRelaysHolder {
+    float:	left;
+    width:      6em;
+    padding:	0.5em 0.5em 0.5em 0.5em;
     margin-right: 5px;
     border:	1px solid white;
     border-radius: 4px;
@@ -527,13 +544,6 @@ div#content_4 {
     padding:	0;
     margin:	14px 28px;
     background:	#aaa;
-}
-#jobRelaysHolder {
-    float:	left;
-    width:      192px;
-    margin:	0;
-    padding:	3px 0px 3px 0px;
-    border:	1px solid white;
 }
 
 #jobsListHolder {
