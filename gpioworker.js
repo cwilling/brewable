@@ -157,6 +157,8 @@ gpioWorker.prototype.processMessage = function () {
     this.toggle_relay(msg);
   } else if (msg.type == 'config_change') {
     this.config_change(msg);
+  } else if (msg.type == 'list_sensors') {
+    this.list_sensors(msg);
   } else {
     console.log("Unrecognised message:");
     for (var key in msg) {
@@ -211,6 +213,21 @@ gpioWorker.prototype.config_change = function (msg) {
   }
 }
 
+gpioWorker.prototype.list_sensors = function (msg) {
+  console.log("list_sensors() Rcvd: " + JSON.stringify(msg.data));
+  var sensor_ids = [];
+
+  sensorDevices.forEach( function(item) {
+    sensor_ids.push(item['id']);
+  });
+
+  var jdata = JSON.stringify({
+    'type':'sensor_list',
+    'data':sensor_ids
+  });
+  this.output_queue.enqueue(jdata);
+  console.log("list_sensors(): " + jdata);
+}
 
 
 

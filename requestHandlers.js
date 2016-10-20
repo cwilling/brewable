@@ -27,6 +27,20 @@ function index(response) {
   });
 }
 
+function favicon(response) {
+  console.log("Request handler 'favicon' was called.");
+  fs.readFile(path.join(__dirname, "/favicon.ico"), function (err, data) {
+    if(err){
+      response.writeHead(404);
+      response.write("Not Found!");
+    } else {
+      response.writeHead(200, {"Content-Type": "image/x-icon"});
+      response.write(data);
+    }
+    response.end();
+  });
+}
+
 function status(response) {
   console.log("Request handler 'status' was called.");
   fs.readFile(path.join(__dirname, "/status.js"), function (err, data) {
@@ -99,6 +113,7 @@ exports.sprintf = sprintf;
 exports.d3 = d3;
 exports.css = css;
 exports.index = index;
+exports.favicon = favicon;
 exports.ws = ws;
 
 /* ex:set ai shiftwidth=2 inputtab=spaces smarttab noautotab: */

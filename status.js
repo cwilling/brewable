@@ -10,6 +10,8 @@ function smallDevice () {
   return window.innerWidth<1000?true:false;
 }
 
+var availableSensors = [];
+
 var profileData = [];
 var profileDisplayData = [];        // "processed" data for display
 var profileLinearScaleY = [];
@@ -55,6 +57,8 @@ var domReady = function(callback) {
 //domReady( function(){
 //$(document).ready( function()
 window.onload = function () {
+
+  var profilesLoadedEvent = new Event('profilesLoadedEvent');
 
   // Layout skeleton
   var main_content = document.createElement('DIV');
@@ -104,8 +108,7 @@ window.onload = function () {
   jobTemplatesTitle.textContent = 'Job Templates';
 
   var jobTemplatesHolder = document.createElement('DIV');
-  jobTemplatesHolder.id = 'jobTemplatesHolder';
-    var jobTemplatesListHolder = document.createElement('DIV');
+  jobTemplatesHolder.id = 'jobTemplatesHolder'; var jobTemplatesListHolder = document.createElement('DIV');
     jobTemplatesListHolder.id = 'jobTemplatesListHolder';
     jobTemplatesHolder.appendChild(jobTemplatesListHolder);
 
@@ -116,6 +119,45 @@ window.onload = function () {
     jobComposerTitle.className = 'section_title unselectable';
     jobComposerTitle.textContent = 'Job Composer';
     jobComposer.appendChild(jobComposerTitle);
+    var jobItemsHolder = document.createElement('DIV');
+    jobItemsHolder.id = 'jobItemsHolder';
+      // Item 1: Save button
+      var jobSaveButton = document.createElement('DIV');
+      jobSaveButton.id = 'jobSaveButton';
+      jobSaveButton.textContent = 'Save';
+      jobItemsHolder.appendChild(jobSaveButton);
+
+      // Item 2: Job name
+      var jobNameHolder = document.createElement('DIV');
+      jobNameHolder.id = 'jobNameHolder';
+      jobNameHolder.text = 'jobNameHolder';
+        var jobNameLabel = document.createElement('LABEL');
+        jobNameLabel.for = 'jobName';
+        jobNameLabel.textContent = 'Job Name';
+        var jobName = document.createElement('INPUT');
+        jobName.id = 'jobName';
+        jobName.type = 'text';
+        jobNameHolder.appendChild(jobNameLabel);
+        jobNameHolder.appendChild(jobName);
+      jobItemsHolder.appendChild(jobNameHolder);
+
+      // Item 3: Preheat
+      // Item 4: Profile?
+
+      // Item 5: Sensors
+      var jobSensorsHolder = document.createElement('DIV');
+      jobSensorsHolder.id = 'jobSensorsHolder';
+      jobItemsHolder.appendChild(jobSensorsHolder);
+
+      // Item 6: Relays
+
+      // Item 7: Dismiss
+      var dismissJobComposerButton = document.createElement('DIV');
+      dismissJobComposerButton.id = 'dismissJobComposerButton';
+      dismissJobComposerButton.textContent = 'Dismiss';
+      jobItemsHolder.appendChild(dismissJobComposerButton);
+
+    jobComposer.appendChild(jobItemsHolder);
 
   content_2.appendChild(jobTemplatesTitle);
   content_2.appendChild(jobTemplatesHolder);
@@ -283,6 +325,15 @@ window.onload = function () {
         startup_data(jmsg);
       } else if (jmsg.type === 'relay_update') {
         relay_update(jmsg);
+      } else if (jmsg.type === 'sensor_list' ) {
+        console.log("sensor_list " + message.data);
+        // Keep a copy for later
+        availableSensors = [];
+        while (availableSensors.length > 0) {availableSensors.pop();}
+        for (var i=0;i<jmsg.data.length;i++) {
+          availableSensors.push(jmsg.data[i]);
+        }
+        createSensorSelector(availableSensors);
       }
     }
     catch (err) {
@@ -503,6 +554,7 @@ window.onload = function () {
         console.log("Unknown startup_data key: " + data_keys[k] + " = " + data[data_keys[k]]);
       }
     }
+    document.dispatchEvent(profilesLoadedEvent);
   }
 
   function build_config_entries(configItems) {
@@ -1065,7 +1117,86 @@ d3.select("body").on("keyup", function () {
   }
 })
 
-updateProfileGraph({data:getProfileData()});
+//updateProfileGraph({data:getProfileData()});
+
+/* END PROFILES */
+
+/***************** START JOBS Templates/Composer/History  *********************/
+  console.log("START JOBS");
+
+  document.addEventListener('profilesLoadedEvent', function (e) {
+    //Clear the job name
+    //document.getElementById("jobName").value = "";
+
+    // Ask for available sensors & relays
+    var msgobj = {type:'list_sensors', data:[]};
+    sendMessage({data:JSON.stringify(msgobj)});
+
+//    msgobj = {type:'list_relays', data:[]};
+//    sendMessage({data:JSON.stringify(msgobj)});
+//
+//    // Request job data
+//    msgobj = {type:'load_jobs', data:[]};
+//    sendMessage({data:JSON.stringify(msgobj)});
+
+  }, false);
+
+  // Display the job Composer
+  var jobTemplatesHolder = document.getElementById('jobTemplatesHolder');
+  jobTemplatesHolder.onclick = function(e) {
+    //console.log('Target: ' + e.target.id);
+    if (e.target.id != 'jobTemplatesHolder') return;
+
+    var jobComposer = document.getElementById("jobComposer");
+    if ( jobComposer.style.display != 'block') {
+      jobComposer.style.display = 'block';
+    }
+    e.stopPropagation();
+    return false;
+  }
+
+  // Dismiss the job composer
+  var dismissJobComposerButton = document.getElementById('dismissJobComposerButton');
+  dismissJobComposerButton.onclick = function() {
+    var jobComposer = document.getElementById("jobComposer");
+    if ( jobComposer.style.display != 'none') {
+      jobComposer.style.display = 'none';
+    }
+  }
+
+  // Create a sensor selector based on data from server (availableSensors)
+  function createSensorSelector(sensors) {
+    console.log("Reached createSensorSelector() " + sensors);
+
+    var selector = document.getElementById("jobSensorsHolder");
+
+    // First remove existing list elements
+    while ( selector.hasChildNodes() ) {
+      selector.removeChild(selector.firstChild);
+    }
+
+    for(var i=0;i<sensors.length;i++) {
+        console.log("Adding sensor: " + sensors[i]);
+
+        var selectorItem = document.createElement("DIV");
+        selectorItem.id = 'selectorItem';
+
+        var check = document.createElement("INPUT");
+        check.type = "checkbox";
+        check.id = "as_" + i;
+
+        var checkLabel = document.createElement("LABEL");
+        checkLabel.setAttribute("for", "as_" + i);
+        checkLabel.textContent = sensors[i];
+        checkLabel.id = "label_as_" + i;
+
+        selectorItem.appendChild(check);
+        selectorItem.appendChild(checkLabel);
+
+        selector.appendChild(selectorItem);
+    }
+  }
+
 
 /* END PROFILES */
 

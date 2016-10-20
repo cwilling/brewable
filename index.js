@@ -42,6 +42,7 @@ handle["/"] = requestHandlers.index;
 handle["/index"] = requestHandlers.index;
 handle["/index.htm"] = requestHandlers.index;
 handle["/index.html"] = requestHandlers.index;
+handle["/favicon.ico"] = requestHandlers.favicon;
 handle["/status.js"] = requestHandlers.status;
 handle["/sprintf.js"] = requestHandlers.sprintf;
 handle["/d3.v3.min.js"] = requestHandlers.d3;

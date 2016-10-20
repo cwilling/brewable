@@ -427,11 +427,20 @@ div#content_4 {
 #jobSaveButton {
     float:	left;
     margin-right: 5px;
+    padding:	1em;
+/*
     padding:	0;
-    text-decoration: none;
     background:	#000;
-    width:      72px;
+*/
+    text-decoration: none;
+    background:	#036;
+    width:      3.6em;
     border:	1px solid white;
+    border-radius: 4px;
+    text-align: center;
+
+    -webkit-align-items:	center;
+    -webkit-justify-content:	center;
 }
 #jobSaveButton a {
     display:    block;
@@ -441,20 +450,23 @@ div#content_4 {
     margin:     0;
     padding:	16px;
 }
-#jobSaveButton a:hover {
+#jobSaveButton:hover {
     color:      #000;
     background: #69c;
+    cursor:     pointer;
 }
 #jobNameHolder {
     text-align: center;
     float:	left;
     width:      226px;
     margin-right: 5px;
-    padding-top: 10px;
+    padding-top: 6px;
     border:	1px solid white;
+    border-radius: 4px;
 }
 #jobName {
-    padding:	0;
+    width:      220px;
+    padding:	0px;
 }
 #jobPreHeat {
     float:	left;
@@ -465,6 +477,14 @@ div#content_4 {
     text-align: center;
     border:	1px solid white;
 }
+#jobSensorsHolder {
+    float:	left;
+    width:      12em;
+    padding:	0.5em 0em 0.5em 0.2em;
+    margin-right: 5px;
+    border:	1px solid white;
+    border-radius: 4px;
+}
 #dismissJobComposerButton {
     float:	left;
     margin-left: 5px;
@@ -473,6 +493,11 @@ div#content_4 {
     background:	#036;
     width:      3.6em;
     border:	1px solid white;
+    border-radius: 4px;
+    text-align: center;
+
+    -webkit-align-items:	center;
+    -webkit-justify-content:	center;
 }
 #dismissJobComposerButton:hover {
     color:      #000;
@@ -502,13 +527,6 @@ div#content_4 {
     padding:	0;
     margin:	14px 28px;
     background:	#aaa;
-}
-#jobSensorsHolder {
-    float:	left;
-    width:      192px;
-    margin-right: 5px;
-    padding:	3px 0px 3px 0px;
-    border:	1px solid white;
 }
 #jobRelaysHolder {
     float:	left;
