@@ -143,6 +143,22 @@ window.onload = function () {
       jobItemsHolder.appendChild(jobNameHolder);
 
       // Item 3: Preheat
+      var jobPreHeat = document.createElement('DIV');
+      jobPreHeat.id = 'jobPreHeat';
+
+      var selectPreHeat = document.createElement("INPUT");
+      selectPreHeat.type = "checkbox";
+      selectPreHeat.id = 'selectPreHeat';
+      selectPreHeat.name = 'selectPreHeat';
+
+      var selectPreHeatLabel = document.createElement("LABEL");
+      selectPreHeatLabel.setAttribute("for", "selectPreHeat");
+      selectPreHeatLabel.textContent = 'Pre Heat/Cool';
+
+      jobPreHeat.appendChild(selectPreHeat);
+      jobPreHeat.appendChild(selectPreHeatLabel);
+      jobItemsHolder.appendChild(jobPreHeat);
+
       // Item 4: Profile?
 
       // Item 5: Sensors

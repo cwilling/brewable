@@ -469,13 +469,20 @@ div#content_4 {
     padding:	0px;
 }
 #jobPreHeat {
-    float:	left;
+    display:    flex;
+    justify-content: center;
+    align-items: center;
+
     margin-right: 5px;
-    padding-top: 15px;
-    width:      172px;
-    height:     36px;
-    text-align: center;
+    padding:	0.5em;
+    width:      9em;
+    height:     2.3em;
     border:	1px solid white;
+    border-radius: 4px;
+
+    display:                 -webkit-flex;
+    -webkit-justify-content: center;
+    -webkit-align-items:     center;
 }
 .selectorLabel {
     display:    flex;
