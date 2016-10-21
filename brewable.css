@@ -428,13 +428,10 @@ div#content_4 {
     float:	left;
     margin-right: 5px;
     padding:	1em;
-/*
-    padding:	0;
-    background:	#000;
-*/
     text-decoration: none;
     background:	#036;
     width:      3.6em;
+    min-width:  3.6em;
     border:	1px solid white;
     border-radius: 4px;
     text-align: center;
@@ -456,16 +453,20 @@ div#content_4 {
     cursor:     pointer;
 }
 #jobNameHolder {
+    width:      11em;
+    min-width:  11em;
     text-align: center;
     float:	left;
-    width:      226px;
     margin-right: 5px;
     padding-top: 6px;
     border:	1px solid white;
     border-radius: 4px;
 }
 #jobName {
-    width:      220px;
+    width:      100%;
+    width:      -moz-available;
+    width:	-webkit-fill-available;
+
     padding:	0px;
 }
 #jobPreHeat {
@@ -476,6 +477,7 @@ div#content_4 {
     margin-right: 5px;
     padding:	0.5em;
     width:      9em;
+    min-width:  9em;
     height:     2.3em;
     border:	1px solid white;
     border-radius: 4px;
@@ -493,9 +495,32 @@ div#content_4 {
     display:                 -webkit-flex;
     -webkit-justify-content: center;
 }
+#jobProfileHolder {
+    display:    flex;
+    align-items: center;
+    justify-content: center;
+
+    display:                    -webkit-flex;
+    -webkit-align-items:	center;
+    -webkit-justify-content:	center;
+
+    padding:	0.5em;
+    margin-right: 5px;
+    width:      9em;
+    min-width:  9em;
+    height:     2.3em;
+    border:	1px solid white;
+    border-radius: 4px;
+}
+#jobProfileHolder:hover {
+    color:      #000;
+    background: #69c;
+    cursor:     pointer;
+}
 #jobSensorsHolder {
     float:	left;
-    width:      10em;
+    width:      11em;
+    min-width:  11em;
     padding:	0.5em 0.5em 0.5em 0.4em;
     margin-right: 5px;
     border:	1px solid white;
@@ -504,6 +529,7 @@ div#content_4 {
 #jobRelaysHolder {
     float:	left;
     width:      6em;
+    min-width:  6em;
     padding:	0.5em 0.5em 0.5em 0.5em;
     margin-right: 5px;
     border:	1px solid white;
@@ -516,6 +542,7 @@ div#content_4 {
     text-decoration: none;
     background:	#036;
     width:      3.6em;
+    min-width:      3.6em;
     border:	1px solid white;
     border-radius: 4px;
     text-align: center;
@@ -529,30 +556,7 @@ div#content_4 {
     cursor:     pointer;
 }
 
-/* Profiles page */
-#jobProfileHolder {
-    display:    flex;
-    align-items: center;
-    justify-content: center;
-
-    display:                    -webkit-flex;
-    -webkit-align-items:	center;
-    -webkit-justify-content:	center;
-
-    float:	left;
-    padding:	0;
-    margin-right: 5px;
-    height:     51px;
-    border:	1px solid white;
-}
-#jobProfileSelector {
-    float:	left;
-    width:      192px;
-    padding:	0;
-    margin:	14px 28px;
-    background:	#aaa;
-}
-
+/* Templates page */
 #jobsListHolder {
     border-bottom:	5px solid red;
     float:      left;
@@ -719,6 +723,9 @@ div#jobComposer {
     top:	0;
     display:    none;
 }
+#jobItemsHolderContainer {
+    overflow-x: auto;
+}
 #jobItemsHolder {
     display:    flex;
     align-items: center;
@@ -728,8 +735,12 @@ div#jobComposer {
     -webkit-align-items: center;
     -webkit-justify-content: center;
 
+    min-width:  63em;
+    min-width:  -moz-min-content;
+    min-width:  -webkit-min-content;
+
     padding:    1em;
-    overflow-x: auto;
+    overflow-x: hidden;
 }
 #historyList {
     display:    flex;

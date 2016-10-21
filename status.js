@@ -120,17 +120,23 @@ window.onload = function () {
     jobComposerTitle.className = 'section_title unselectable';
     jobComposerTitle.textContent = 'Job Composer';
     jobComposer.appendChild(jobComposerTitle);
+
+    var jobItemsHolderContainer = document.createElement('DIV');
+    jobItemsHolderContainer.id = 'jobItemsHolderContainer';
+
     var jobItemsHolder = document.createElement('DIV');
     jobItemsHolder.id = 'jobItemsHolder';
       // Item 1: Save button
       var jobSaveButton = document.createElement('DIV');
       jobSaveButton.id = 'jobSaveButton';
+      jobSaveButton.className = 'unselectable';
       jobSaveButton.textContent = 'Save';
       jobItemsHolder.appendChild(jobSaveButton);
 
       // Item 2: Job name
       var jobNameHolder = document.createElement('DIV');
       jobNameHolder.id = 'jobNameHolder';
+      jobNameHolder.className = 'unselectable';
       jobNameHolder.text = 'jobNameHolder';
         var jobNameLabel = document.createElement('LABEL');
         jobNameLabel.for = 'jobName';
@@ -152,6 +158,7 @@ window.onload = function () {
       selectPreHeat.name = 'selectPreHeat';
 
       var selectPreHeatLabel = document.createElement("LABEL");
+      selectPreHeatLabel.className = 'unselectable';
       selectPreHeatLabel.setAttribute("for", "selectPreHeat");
       selectPreHeatLabel.textContent = 'Pre Heat/Cool';
 
@@ -160,6 +167,18 @@ window.onload = function () {
       jobItemsHolder.appendChild(jobPreHeat);
 
       // Item 4: Profile?
+      var jobProfileHolder = document.createElement('DIV');
+      jobProfileHolder.id = 'jobProfileHolder';
+      jobProfileHolder.className = 'unselectable';
+      var jobProfileHolderLabel = document.createElement("LABEL");
+      jobProfileHolderLabel.id = 'jobProfileHolderLabel';
+      jobProfileHolderLabel.textContent = 'Profile';
+      jobProfileHolder.onclick = function (e) {
+        console.log("Edit the profile");
+      }
+
+      jobProfileHolder.appendChild(jobProfileHolderLabel);
+      jobItemsHolder.appendChild(jobProfileHolder);
 
       // Item 5: Sensors
       var jobSensorsHolder = document.createElement('DIV');
@@ -176,10 +195,12 @@ window.onload = function () {
       // Item 7: Dismiss
       var dismissJobComposerButton = document.createElement('DIV');
       dismissJobComposerButton.id = 'dismissJobComposerButton';
+      dismissJobComposerButton.className = 'unselectable';
       dismissJobComposerButton.textContent = 'Dismiss';
       jobItemsHolder.appendChild(dismissJobComposerButton);
 
-    jobComposer.appendChild(jobItemsHolder);
+    jobItemsHolderContainer.appendChild(jobItemsHolder);
+    jobComposer.appendChild(jobItemsHolderContainer);
 
   content_2.appendChild(jobTemplatesTitle);
   content_2.appendChild(jobTemplatesHolder);
@@ -1212,7 +1233,7 @@ d3.select("body").on("keyup", function () {
     var sensorSelectorLabel = document.createElement("LABEL");
     sensorSelectorLabel.textContent = "Sensors";
     sensorSelectorLabel.id = 'sensorSelectorLabel';
-    sensorSelectorLabel.className = 'selectorLabel';
+    sensorSelectorLabel.className = 'selectorLabel unselectable';
 
     selector.appendChild(sensorSelectorLabel);
 
@@ -1252,7 +1273,7 @@ d3.select("body").on("keyup", function () {
     var relaySelectorLabel = document.createElement("LABEL");
     relaySelectorLabel.textContent = "Relays";
     relaySelectorLabel.id = 'relaySelectorLabel';
-    relaySelectorLabel.className = 'selectorLabel';
+    relaySelectorLabel.className = 'selectorLabel unselectable';
 
     selector.appendChild(relaySelectorLabel);
 
