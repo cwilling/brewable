@@ -175,6 +175,8 @@ window.onload = function () {
       jobProfileHolderLabel.textContent = 'Profile';
       jobProfileHolder.onclick = function (e) {
         console.log("Edit the profile");
+        location.href = '#content_3';
+        updateProfileGraph({data:defaultJobProfileData()});
       }
 
       jobProfileHolder.appendChild(jobProfileHolderLabel);
@@ -809,6 +811,14 @@ window.onload = function () {
   /* Return an array of profiles.
      Each profile is an array of setpoints; x (time) & y (temp) fields
   */
+  function defaultJobProfileData () {
+    //console.log("Here is some data");
+    var p1 = [
+      {'duration':'25.10','target':'2'},
+      {'duration':'0','target':'2'}
+    ];
+    return p1;
+  }
   function getProfileData () {
     // Just dummy data for now
     console.log("Here is some data");

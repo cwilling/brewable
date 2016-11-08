@@ -511,6 +511,8 @@ div#content_4 {
     height:     2.3em;
     border:	1px solid white;
     border-radius: 4px;
+
+    background-color: #cfb484;
 }
 #jobProfileHolder:hover {
     color:      #000;
