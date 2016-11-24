@@ -43,7 +43,7 @@ Queue.prototype.dequeue = function() {
  
 Queue.prototype.start = function() {
   setInterval( function() {
-    console.log("\nChecking queue");
+    //console.log("\nChecking queue");
     this._action();
 
     if (this.size > 0) {

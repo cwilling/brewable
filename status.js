@@ -172,11 +172,18 @@ window.onload = function () {
       jobProfileHolder.className = 'unselectable';
       var jobProfileHolderLabel = document.createElement("LABEL");
       jobProfileHolderLabel.id = 'jobProfileHolderLabel';
-      jobProfileHolderLabel.textContent = 'Profile';
+      jobProfileHolderLabel.innerHTML = '<center>Profile<br>qwerty</center>';
+      /* setAttribute seems to want value to be a string */
+      jobProfileHolder.setAttribute('pdata', JSON.stringify(defaultJobProfileData()));
       jobProfileHolder.onclick = function (e) {
         console.log("Edit the profile");
         location.href = '#content_3';
-        updateProfileGraph({data:defaultJobProfileData()});
+
+        /* updateProfile() wants data to be an object */
+        //updateProfileGraph({data:defaultJobProfileData()});
+        updateProfileGraph(
+          {data:JSON.parse(document.getElementById("jobProfileHolder").getAttribute('pdata')),
+          owner:'jobProfileHolder'});
       }
 
       jobProfileHolder.appendChild(jobProfileHolderLabel);
@@ -800,7 +807,7 @@ window.onload = function () {
         item.duration = "0";
       }
     });
-    updateProfileGraph({data:rawProfileData});
+    updateProfileGraph({data:rawProfileData, owner:profileOwner});
     profileTooltip.transition()
       .duration(200)
       .style("opacity", 0.0);
@@ -849,10 +856,12 @@ window.onload = function () {
   function updateProfileGraph (options) {
     var options = options || {};
     profileData = options.data || [];
+    profileOwner = options.owner || 'unknown';
     profileDisplayData = [];
     var defaultRange = {"min":-5,"max":30};
     var setpoint = {};
-    //console.log("At: updateProfileGraph() " + JSON.stringify(profileData));
+    console.log("At: updateProfileGraph() " + JSON.stringify(profileData)
+      + " for owner " + profileOwner);
 
     // Clear any current graph
     d3.select("#profilesGraphHolder").selectAll("*").remove();
@@ -1007,8 +1016,40 @@ window.onload = function () {
                           removeSetPoint(this);
                         })
                         .call(pfDrag);
-        
+
     }
+    profileButtonGroup = profileGraphHolder.append("g")
+                              .attr("id", "profileButtonGroup")
+                              .attr("class", "profileButtonGroup")
+                              .attr("transform",
+                                "translate(" +
+                                (smallDevice()?profileGraphWidth-20:profileGraphWidth-40) + "," + 40 + ")")
+
+
+    profileSaveButton = d3.select("#profileButtonGroup")
+                              .append("rect")
+                                .attr('id', 'profileSaveButton')
+                                .attr('class', 'profileSaveButton')
+                                .attr('x', 0) .attr('y', 0)
+                                .attr('width', 96).attr('height', 40)
+                                .attr('rx', 6).attr('ry', 6)
+                                .on("click", function() {
+                                      console.log("SAVE & RETURN to " + profileOwner);
+                                      if (profileOwner == "jobProfileHolder") {
+                                        jobProfileHolder.setAttribute('pdata', JSON.stringify(profileData));
+                                        d3.select("#profilesGraphHolder").selectAll("*").remove();
+                                        location.href = '#content_2';
+                                      }
+
+                                    })
+
+    profileSaveButtonText = d3.select("#profileButtonGroup")
+                                .append("text")
+                                .attr('class', 'profileSaveButtonText')
+                                .attr('dx', '0.1em')
+                                .attr('dy', '1.6em')
+                                .text("Save & Return")
+
   }
 
 
@@ -1073,7 +1114,7 @@ window.onload = function () {
       }
     });
 
-    updateProfileGraph({data:rawProfileData});
+    updateProfileGraph({data:rawProfileData,owner:profileOwner});
   }
   function insertSetPoint (sp) {
     //console.log("insertSetPoint(): " + sp.x + "," + sp.y);
@@ -1133,7 +1174,7 @@ window.onload = function () {
 
     /* Updating graph display also updates profileData to rawProfileData
     */
-    updateProfileGraph({data:rawProfileData});
+    updateProfileGraph({data:rawProfileData, owner:profileOwner});
     profileTooltip.transition()
       .duration(200)
       .style("opacity", 0);
@@ -1153,7 +1194,7 @@ window.onload = function () {
     }
     profileGraphWidth = window.innerWidth - (profileGraphMargin.left + profileGraphMargin.right) -20;
       //profileGraphHeight = window.innerHeight - (profileGraphMargin.top - profileGraphMargin.bottom);
-    updateProfileGraph({data:profileData})
+    updateProfileGraph({data:profileData, owner:profileOwner})
 
   /*
     profileGraphWidth = window.innerWidth - 20 - profileGraphMargin.left - profileGraphMargin.right,

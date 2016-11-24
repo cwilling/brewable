@@ -117,6 +117,20 @@ td {
     stroke-width: 2px;
     fill:       none;
 }
+.profileSaveButton {
+    stroke:	black;
+    stroke-width: 1px;
+    fill:       #555;
+}
+.profileSaveButton:hover {
+    fill:       #777;
+}
+.profileSaveButtonText {
+    font-size:  90%;
+    stroke:	none;
+    fill:       white;
+    pointer-events: none;
+}
 
 /*.title_text text {*/
 .title_Text {
