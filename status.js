@@ -860,8 +860,7 @@ window.onload = function () {
     profileDisplayData = [];
     var defaultRange = {"min":-5,"max":30};
     var setpoint = {};
-    console.log("At: updateProfileGraph() " + JSON.stringify(profileData)
-      + " for owner " + profileOwner);
+    //console.log("At: updateProfileGraph() " + JSON.stringify(profileData) + " for owner " + profileOwner);
 
     // Clear any current graph
     d3.select("#profilesGraphHolder").selectAll("*").remove();
@@ -1026,6 +1025,7 @@ window.onload = function () {
                                 (smallDevice()?profileGraphWidth-20:profileGraphWidth-40) + "," + 40 + ")")
 
 
+    // Save & Return button
     profileSaveButton = d3.select("#profileButtonGroup")
                               .append("rect")
                                 .attr('id', 'profileSaveButton')
@@ -1034,7 +1034,7 @@ window.onload = function () {
                                 .attr('width', 96).attr('height', 40)
                                 .attr('rx', 6).attr('ry', 6)
                                 .on("click", function() {
-                                      console.log("SAVE & RETURN to " + profileOwner);
+                                      //console.log("SAVE & RETURN to " + profileOwner);
                                       if (profileOwner == "jobProfileHolder") {
                                         jobProfileHolder.setAttribute('pdata', JSON.stringify(profileData));
                                         d3.select("#profilesGraphHolder").selectAll("*").remove();
@@ -1049,6 +1049,30 @@ window.onload = function () {
                                 .attr('dx', '0.1em')
                                 .attr('dy', '1.6em')
                                 .text("Save & Return")
+
+    // Cancel button
+    profileSaveButton = d3.select("#profileButtonGroup")
+                              .append("rect")
+                                .attr('id', 'profileSaveButton')
+                                .attr('class', 'profileSaveButton')
+                                .attr('x', 0) .attr('y', '3.6em')
+                                .attr('width', 96).attr('height', 40)
+                                .attr('rx', 6).attr('ry', 6)
+                                .on("click", function() {
+                                      //console.log("CANCEL to " + profileOwner);
+                                      if (profileOwner == "jobProfileHolder") {
+                                        d3.select("#profilesGraphHolder").selectAll("*").remove();
+                                        location.href = '#content_2';
+                                      }
+
+                                    })
+
+    profileSaveButtonText = d3.select("#profileButtonGroup")
+                                .append("text")
+                                .attr('class', 'profileSaveButtonText')
+                                .attr('dx', '1.8em')
+                                .attr('dy', '5.6em')
+                                .text("Cancel")
 
   }
 

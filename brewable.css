@@ -120,10 +120,11 @@ td {
 .profileSaveButton {
     stroke:	black;
     stroke-width: 1px;
-    fill:       #555;
+    fill:       #036;
 }
 .profileSaveButton:hover {
-    fill:       #777;
+    fill:       #69c;
+    cursor:     pointer;
 }
 .profileSaveButtonText {
     font-size:  90%;
