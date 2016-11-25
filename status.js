@@ -172,8 +172,8 @@ window.onload = function () {
       jobProfileHolder.className = 'unselectable';
       var jobProfileHolderLabel = document.createElement("LABEL");
       jobProfileHolderLabel.id = 'jobProfileHolderLabel';
-      jobProfileHolderLabel.innerHTML = '<center>Profile<br>qwerty</center>';
-      /* setAttribute seems to want value to be a string */
+      jobProfileHolderLabel.innerHTML = '<center>Profile</center>';
+      /* setAttribute wants value to be a string */
       jobProfileHolder.setAttribute('pdata', JSON.stringify(defaultJobProfileData()));
       jobProfileHolder.onclick = function (e) {
         console.log("Edit the profile");
@@ -1280,6 +1280,9 @@ d3.select("body").on("keyup", function () {
     var jobComposer = document.getElementById("jobComposer");
     if ( jobComposer.style.display != 'block') {
       jobComposer.style.display = 'block';
+      // Reset jobName & profile data
+      document.getElementById("jobName").value = "";
+      document.getElementById("jobProfileHolder").setAttribute('pdata', JSON.stringify(defaultJobProfileData()));
     }
     e.stopPropagation();
     return false;
