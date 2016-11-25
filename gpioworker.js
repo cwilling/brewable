@@ -45,6 +45,13 @@ function gpioWorker (input_queue, output_queue) {
     sensor.setFudge(parseFloat(configuration['sensorFudgeFactors'][sensor.getId()]));
   });
 
+  // 'Raw" jobs i.e. templates, not instances
+  this.jobs = []
+
+  // Running & stopped job instances
+  this.runningJobs = []
+  this.stoppedJobs = []
+
   // eventEmitter is global (from index.js)
   eventEmitter.on('sensor_read', allSensorsRead);
   eventEmitter.on('msg_waiting', this.processMessage.bind(this));
@@ -161,6 +168,8 @@ gpioWorker.prototype.processMessage = function () {
     this.list_sensors(msg);
   } else if (msg.type == 'list_relays') {
     this.list_relays(msg);
+  } else if (msg.type == 'save_job') {
+    this.save_job(msg);
   } else {
     console.log("Unrecognised message:");
     for (var key in msg) {
@@ -246,6 +255,13 @@ gpioWorker.prototype.list_relays = function (msg) {
   console.log("list_relays(): " + jdata);
 }
 
+/* Save a newly received job template to
+   - file of job templates
+   - live list of job templates (self.jobs in python version)
+*/
+gpioWorker.prototype.save_job = function (msg) {
+  console.log("save_job() Rcvd: " + JSON.stringify(msg.data));
+}
 
 
 /* ex:set ai shiftwidth=2 inputtab=spaces smarttab noautotab: */

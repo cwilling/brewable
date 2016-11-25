@@ -1283,6 +1283,16 @@ d3.select("body").on("keyup", function () {
       // Reset jobName & profile data
       document.getElementById("jobName").value = "";
       document.getElementById("jobProfileHolder").setAttribute('pdata', JSON.stringify(defaultJobProfileData()));
+      // Reset Sensors selector
+      var sensorItems = document.getElementsByClassName("sensorSelectorItem");
+      for (var i=0;i<sensorItems.length;i++ ) {
+        document.getElementById("as_" + i).checked = false;
+      }
+      // Reset Relays selector
+      var relayItems = document.getElementsByClassName("relaySelectorItem");
+      for (var i=0;i<relayItems.length;i++ ) {
+        document.getElementById("ar_" + i).checked = false;
+      }
     }
     e.stopPropagation();
     return false;
@@ -1294,6 +1304,101 @@ d3.select("body").on("keyup", function () {
     var jobComposer = document.getElementById("jobComposer");
     if ( jobComposer.style.display != 'none') {
       jobComposer.style.display = 'none';
+    }
+  }
+
+  // Save a new job from job composer
+  var saveNewJobButton = document.getElementById("jobSaveButton");
+  saveNewJobButton.onclick = function() {
+    console.log("SAVE new job");
+    var OKtoSave = true;
+
+    // Collect the job name, substituting whitespaces with single underscores
+    var jobName = document.getElementById('jobName').value
+                                                    .trim()
+                                                    .replace(/\s+/g, '_');
+    if ( jobName.length == 0 ) {
+      OKtoSave = false;
+      alert("Please set a name for this job");
+      return;
+    }
+    // Check for name duplication
+    // TODO
+
+    // Disallowed characters in job name?
+    if ( /\./g.test(jobName) ) {
+      alert("\".\" character not allowed in job name - please change it");
+      return;
+    }
+
+    // Collect whether to preheat/cool
+    var jobPreHeat = false;
+    if (document.getElementById("selectPreHeat").checked) {
+      jobPreHeat = true;
+    }
+
+    // Collect time/temp steps from job composer profile.
+    var saveJobProfile = JSON.parse(document.getElementById("jobProfileHolder").getAttribute("pdata"));
+
+/*
+    // Add a "zero,zero" setpoint.
+    if (tempType == 'F') {
+        setpoint = {target:32.0, duration:'0.0'};
+    } else {
+        setpoint = {target:0.0, duration:'0.0'};
+    }
+    saveJobProfile.push(setpoint);
+    console.log("Added setpoint " + setpoint);
+*/
+
+    // Collect which sensor(s) to use
+    var table = document.getElementsByClassName("sensorSelectorItem");
+    var useSensors = [];
+
+    for (var i=0;i<table.length;i++) {
+      var cell = document.getElementById("as_" + i);
+      //console.log("checking " + document.getElementById("label_as_" + i).textContent);
+      if ( cell.checked ) {
+        useSensors.push(document.getElementById("label_as_" + i).textContent);
+      }
+    }
+    //console.log("Sensors checked: " + useSensors);
+    if ( useSensors.length == 0 ) {
+      OKtoSave = false;
+      alert("Please select a temperature sensor");
+      return;
+    }
+
+    // Collect which relay(s) to use
+    var table = document.getElementsByClassName("relaySelectorItem");
+    var useRelays = [];
+
+    for (var i=0;i<table.length;i++) {
+      var cell = document.getElementById("ar_" + i);
+      //console.log("checking " + document.getElementById("label_ar_" + i).textContent);
+      if ( cell.checked ) {
+        useRelays.push(document.getElementById("label_ar_" + i).textContent);
+      }
+    }
+    //console.log("Relays checked: " + useRelays);
+    if ( useRelays.length == 0 ) {
+      OKtoSave = false;
+      alert("Please select a relay");
+      return;
+    }
+
+    if ( OKtoSave ) {
+      var jobData = {
+        name: jobName,
+        preheat: jobPreHeat,
+        profile: saveJobProfile,
+        sensors: useSensors,
+        relays:	useRelays
+      };
+      var msgobj = {type:'save_job', data:jobData};
+      sendMessage({data:JSON.stringify(msgobj)});
+    } else {
+      console.log("NOT OKtoSave");
     }
   }
 
@@ -1319,7 +1424,8 @@ d3.select("body").on("keyup", function () {
         console.log("Adding sensor: " + sensors[i]);
 
         var selectorItem = document.createElement("DIV");
-        selectorItem.id = 'selectorItem';
+        selectorItem.id = 'sensorSelectorItem_' + i;
+        selectorItem.className = 'sensorSelectorItem';
 
         var check = document.createElement("INPUT");
         check.type = "checkbox";
@@ -1359,7 +1465,8 @@ d3.select("body").on("keyup", function () {
         console.log("Adding relay: " + relays[i]);
 
         var selectorItem = document.createElement("DIV");
-        selectorItem.id = 'selectorItem';
+        selectorItem.id = 'relaySelectorItem_' + i;
+        selectorItem.className = 'relaySelectorItem';
 
         var check = document.createElement("INPUT");
         check.type = "checkbox";
