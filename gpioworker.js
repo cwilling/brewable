@@ -1,8 +1,12 @@
+var osenv = require('osenv');
+var path = require('path');
+var fs = require('fs');
 var events = require('events');
 var sensordevice = require("./sensor");
 var sensorLister = require("./sensorLister");
 var Relay = require("./sainsmartrelay");
 var Configuration = require("./configuration");
+
 
 var sensorDevices = [];
 var sensorResults = [];
@@ -27,6 +31,7 @@ function gpioWorker (input_queue, output_queue) {
   this.configObj = new Configuration();
   var configuration = this.configObj.getConfiguration();
   //console.log("configuration: " + JSON.stringify(configuration));
+  this.jobTemplateDataFile = path.join(this.configObj.dir(), 'jobTemplateData.txt');
 
   // Relay device
   this.relay = new Relay();
@@ -45,12 +50,21 @@ function gpioWorker (input_queue, output_queue) {
     sensor.setFudge(parseFloat(configuration['sensorFudgeFactors'][sensor.getId()]));
   });
 
-  // 'Raw" jobs i.e. templates, not instances
-  this.jobs = []
+  // Populate this.jobs from saved data
+  // "Raw" jobs i.e. templates, not instances
+  this.jobs = [];
+  var data = fs.readFileSync(this.jobTemplateDataFile);
+  var job_data = JSON.parse(data).job_data;
+  for (var d=0;d<job_data.length;d++) {
+    this.jobs.push(job_data[d]);
+  }
+  //console.log("this.jobs (from file): " + JSON.stringify(this.jobs));
 
   // Running & stopped job instances
   this.runningJobs = []
   this.stoppedJobs = []
+
+console.log("WORK DIR = " + this.configObj.dir('history'));
 
   // eventEmitter is global (from index.js)
   eventEmitter.on('sensor_read', allSensorsRead);
@@ -131,7 +145,7 @@ gpioWorker.prototype.liveUpdate = function () {
     'sensor_state':sensor_state,
     'relay_state':relay_state
   });
-  console.log("liveUpdate(): " + jdata);
+  //console.log("liveUpdate(): " + jdata);
   this.output_queue.enqueue(jdata);
 }
 
@@ -170,6 +184,12 @@ gpioWorker.prototype.processMessage = function () {
     this.list_relays(msg);
   } else if (msg.type == 'save_job') {
     this.save_job(msg);
+  } else if (msg.type == 'replace_job') {
+    this.replace_job(msg);
+  } else if (msg.type == 'delete_job') {
+    this.delete_job(msg);
+  } else if (msg.type == 'load_jobs') {
+    this.load_jobs(msg);
   } else {
     console.log("Unrecognised message:");
     for (var key in msg) {
@@ -260,8 +280,99 @@ gpioWorker.prototype.list_relays = function (msg) {
    - live list of job templates (self.jobs in python version)
 */
 gpioWorker.prototype.save_job = function (msg) {
-  console.log("save_job() Rcvd: " + JSON.stringify(msg.data));
+  //console.log("save_job() Rcvd: " + JSON.stringify(msg.data));
+  this.jobs.push(msg.data);
+
+  var jobTemplateDataFile = this.jobTemplateDataFile;
+  //console.log("JOBS " + JSON.stringify(this.jobs));
+  fs.writeFile(jobTemplateDataFile, JSON.stringify({'job_data':this.jobs}),
+          function(err) {
+            if (err)
+              console.log("Failed to write " + jobTemplateDataFile + ": ", err);
+            else
+              console.log("File " + jobTemplateDataFile + " written OK.");
+          });
+
+  /* Maybe thois should be in writeFile's callback? */
+  var jdata = JSON.stringify({
+    'type':'loaded_jobs',
+    'data':this.jobs
+  });
+  this.output_queue.enqueue(jdata);
+  //console.log("this.jobs: " + JSON.stringify(this.jobs));
 }
 
+/* Update an existing job template */
+gpioWorker.prototype.replace_job = function (msg) {
+  var jobName = msg.data["name"];
+
+  /* First remove it from this.jobs */
+  var targetIndex = -1;
+  for (var j=0;j<this.jobs.length;j++ ) {
+    if (this.jobs[j].name == jobName ) { targetIndex = j; }
+  }
+  if (targetIndex > -1) {
+    this.jobs[targetIndex] = msg.data;
+  } else return;
+
+  console.log("REPLACED: " + JSON.stringify(this.jobs));
+
+  /* Update jobTemplateDataFile */
+  var jobTemplateDataFile = this.jobTemplateDataFile;
+  fs.writeFile(jobTemplateDataFile, JSON.stringify({'job_data':this.jobs}),
+    function(err) {
+      if (err)
+        console.log("Failed to write " + jobTemplateDataFile + ": ", err);
+      else
+        console.log("File " + jobTemplateDataFile + " written OK.");
+    });
+
+  var jdata = JSON.stringify({
+    'type':'loaded_jobs',
+    'data':this.jobs
+  });
+  this.output_queue.enqueue(jdata);
+}
+
+/* Remove a job template */
+gpioWorker.prototype.delete_job = function (msg) {
+  var jobIndex = msg.data["index"];
+  var jobName = msg.data["name"];
+  //console.log("delete_job() index = " + jobIndex + ", name = " + jobName);
+
+  /* First remove it from this.jobs */
+  var targetIndex = -1;
+  for (var j=0;j<this.jobs.length;j++ ) {
+    if (this.jobs[j].name == jobName ) { targetIndex = j; }
+  }
+  if (targetIndex > -1) { this.jobs.splice(targetIndex, 1); }
+
+  /* Update jobTemplateDataFile */
+  var jobTemplateDataFile = this.jobTemplateDataFile;
+  fs.writeFile(jobTemplateDataFile, JSON.stringify({'job_data':this.jobs}),
+    function(err) {
+      if (err)
+        console.log("Failed to write " + jobTemplateDataFile + ": ", err);
+      else
+        console.log("File " + jobTemplateDataFile + " written OK.");
+    });
+
+  var jdata = JSON.stringify({
+    'type':'loaded_jobs',
+    'data':this.jobs
+  });
+  this.output_queue.enqueue(jdata);
+  //console.log("UPDATED JOBS: " + JSON.stringify(this.jobs));
+}
+
+/* Load job templates from jobTemplateData.txt and send to client */
+gpioWorker.prototype.load_jobs = function (msg) {
+  var jdata = JSON.stringify({
+    'type':'loaded_jobs',
+    'data':this.jobs
+  });
+  this.output_queue.enqueue(jdata);
+  console.log("this.jobs: " + JSON.stringify(this.jobs));
+}
 
 /* ex:set ai shiftwidth=2 inputtab=spaces smarttab noautotab: */

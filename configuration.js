@@ -17,15 +17,15 @@ var defaultConfigValues = function() {
 function Configuration (options) {
     var options = options || {};
     this._project = options.name || 'brewable';
-    this._projectConfigDir = osenv.home() + '/' + this._project;
+    this._projectConfigDir = path.join(osenv.home(), this._project);
     this.topicDirs = ['jobs', 'history', 'archive'];
-    this._configFileName = this._projectConfigDir + '/' + this._project + '.conf';
+    this._configFileName = path.join(this._projectConfigDir, this._project + '.conf');
     this._configuration = {};
 
     //console.log("this._projectConfigDir: " + this._projectConfigDir);
 
     this.topicDirs.forEach(function (dir) {
-      var target = this._projectConfigDir + '/' + dir;
+      var target = path.join(this._projectConfigDir, dir);
       //console.log("Creating topic dir path : " + target);
       mkdirp(target, function (err) {
         if (err) {
@@ -44,7 +44,7 @@ module.exports = Configuration;
 /* Read the user's configuration (or generate a new one)
 */
 Configuration.prototype.loadConfigFromFile = function () {
-  console.log("conf file: " + this._projectConfigDir + "/" + this._project + ".conf");
+  console.log("conf file: " + path.join(this._projectConfigDir, this._project + ".conf"));
   try {
     this._configuration = JSON.parse(fs.readFileSync(this._configFileName, 'utf8'));
   }
@@ -57,6 +57,22 @@ Configuration.prototype.loadConfigFromFile = function () {
 
 Configuration.prototype.getConfiguration = function () {
   return this._configuration;
+}
+
+Configuration.prototype.dir = function (topic) {
+  if ( topic == '' ) {
+    return this._projectConfigDir;
+  } else if ( typeof topic == 'undefined' ) {
+    return this._projectConfigDir;
+  } else if ( topic == 'jobs' ) {
+    return path.join(this._projectConfigDir, 'jobs');
+  } else if ( topic == 'history' ) {
+    return path.join(this._projectConfigDir, 'history');
+  } else if ( topic == 'archive' ) {
+    return path.join(this._projectConfigDir, 'archive');
+  } else {
+    return '/tmp';
+  }
 }
 
 Configuration.prototype.updateFudgeEntry = function (sensorIds) {

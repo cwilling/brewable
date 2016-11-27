@@ -27,7 +27,7 @@ var messageWaiting = function () {
   }
 }
 
-var input_queue = new Queue({'name':'input_queue','interval':400, 'action':messageWaiting});
+var input_queue = new Queue({'name':'input_queue','interval':200, 'action':messageWaiting});
 //var output_queue = new Queue({'name':'output_queue'});
 //var output_queue = new Queue({'action':function(){console.log("SOME action!");}});
 var output_queue = new Queue({'name':'output_queue', 'action':updateClients});

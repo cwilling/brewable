@@ -6,6 +6,9 @@ var _TESTING_ = false;
 var navigationMap = {};
 var global_x = 0;
 
+var INTERPOLATE_profile_template = "step-after";
+var INTERPOLATE_profile_editor = "step-after";
+
 function smallDevice () {
   return window.innerWidth<1000?true:false;
 }
@@ -53,6 +56,32 @@ var domReady = function(callback) {
   document.readyState === "interactive" ||
   document.readyState === "complete" ? callback() : document.addEventListener("DOMContentLoaded", callback);
 };
+
+/* Return top left corner of enclosing element
+   From: http://javascript.info/tutorial/coordinates
+*/
+function getOffsetRect(elem) {
+  // (1)
+  var box = elem.getBoundingClientRect()
+
+  var body = document.body
+  var docElem = document.documentElement
+
+  // (2)
+  var scrollTop = window.pageYOffset || docElem.scrollTop || body.scrollTop
+  var scrollLeft = window.pageXOffset || docElem.scrollLeft || body.scrollLeft
+
+  // (3)
+  var clientTop = docElem.clientTop || body.clientTop || 0
+  var clientLeft = docElem.clientLeft || body.clientLeft || 0
+
+  // (4)
+  var top  = box.top +  scrollTop - clientTop
+  var left = box.left + scrollLeft - clientLeft
+
+  return { top: Math.round(top), left: Math.round(left) }
+}
+
 
 // main()
 //domReady( function(){
@@ -366,19 +395,23 @@ window.onload = function () {
     msgobj = {type:'load_startup_data', data:[]};
     sendMessage({data:JSON.stringify(msgobj)});
   };
+
+  // Handle received messages
   socket.onmessage = function (message) {
     var jmsg;
     try {
       jmsg = JSON.parse(message.data);
       if (jmsg.type === 'live_update') {
+        //console.log("RCVD live_update " + message.data);
         live_update(jmsg);
       } else if (jmsg.type === 'startup_data') {
-        console.log("XXXXX " + message.data);
+        console.log("RCVD startup_data " + message.data);
         startup_data(jmsg);
       } else if (jmsg.type === 'relay_update') {
+        //console.log("RCVD relay_update " + message.data);
         relay_update(jmsg);
       } else if (jmsg.type === 'sensor_list' ) {
-        console.log("sensor_list " + message.data);
+        console.log("RCVD sensor_list " + message.data);
         // Keep a copy for later
         availableSensors = [];
         while (availableSensors.length > 0) {availableSensors.pop();}
@@ -387,13 +420,16 @@ window.onload = function () {
         }
         createSensorSelector(availableSensors);
       } else if (jmsg.type === 'relay_list' ) {
-        console.log("relay_list " + message.data);
+        console.log("RCVD relay_list " + message.data);
         availableRelays = [];
         while (availableRelays.length > 0) {availableRelays.pop();}
         for (var i=0;i<jmsg.data.length;i++) {
           availableRelays.push(jmsg.data[i]);
         }
         createRelaySelector(availableRelays);
+      } else if (jmsg.type === 'loaded_jobs' ) {
+        console.log("RCVD loaded_jobs " + message.data);
+        createJobTemplatesList(jmsg.data);
       }
       else
       {
@@ -860,7 +896,7 @@ window.onload = function () {
     profileDisplayData = [];
     var defaultRange = {"min":-5,"max":30};
     var setpoint = {};
-    //console.log("At: updateProfileGraph() " + JSON.stringify(profileData) + " for owner " + profileOwner);
+    console.log("At: updateProfileGraph() " + JSON.stringify(profileData) + " for owner " + profileOwner);
 
     // Clear any current graph
     d3.select("#profilesGraphHolder").selectAll("*").remove();
@@ -957,7 +993,7 @@ window.onload = function () {
         var profileLineFunction = d3.svg.line()
                                   .x(function(d) { return d.x; })
                                   .y(function(d) { return d.y; })
-                                  .interpolate("step-after");
+                                  .interpolate(INTERPOLATE_profile_editor);
                         var lineGraph = profileGraphHolder.append("path")
                                   .attr("transform",
                                         "translate(" + profileGraphMargin.left + "," + profileGraphMargin.top + ")")
@@ -1027,21 +1063,25 @@ window.onload = function () {
 
     // Save & Return button
     profileSaveButton = d3.select("#profileButtonGroup")
-                              .append("rect")
-                                .attr('id', 'profileSaveButton')
-                                .attr('class', 'profileSaveButton')
-                                .attr('x', 0) .attr('y', 0)
-                                .attr('width', 96).attr('height', 40)
-                                .attr('rx', 6).attr('ry', 6)
-                                .on("click", function() {
-                                      //console.log("SAVE & RETURN to " + profileOwner);
-                                      if (profileOwner == "jobProfileHolder") {
-                                        jobProfileHolder.setAttribute('pdata', JSON.stringify(profileData));
-                                        d3.select("#profilesGraphHolder").selectAll("*").remove();
-                                        location.href = '#content_2';
-                                      }
+                        .append("rect")
+                          .attr('id', 'profileSaveButton')
+                          .attr('class', 'profileSaveButton')
+                          .attr('x', 0) .attr('y', 0)
+                          .attr('width', 96).attr('height', 40)
+                          .attr('rx', 6).attr('ry', 6)
+                          .on("click", function() {
+                                //console.log("SAVE & RETURN to " + profileOwner);
+                                d3.select("#profilesGraphHolder").selectAll("*").remove();
+                                location.href = '#content_2';
+                                if (profileOwner == "jobProfileHolder") {
+                                  jobProfileHolder.setAttribute('pdata', JSON.stringify(profileData));
+                                } else if (profileOwner.search("tiProfile_") == 0) {
+                                  document.getElementById(profileOwner).setAttribute('pdata', JSON.stringify(profileData));
+                                  updateTemplateProfile({owner:profileOwner});
+                                  replace_job(profileOwner);
+                                }
 
-                                    })
+                              })
 
     profileSaveButtonText = d3.select("#profileButtonGroup")
                                 .append("text")
@@ -1052,20 +1092,17 @@ window.onload = function () {
 
     // Cancel button
     profileSaveButton = d3.select("#profileButtonGroup")
-                              .append("rect")
-                                .attr('id', 'profileSaveButton')
-                                .attr('class', 'profileSaveButton')
-                                .attr('x', 0) .attr('y', '3.6em')
-                                .attr('width', 96).attr('height', 40)
-                                .attr('rx', 6).attr('ry', 6)
-                                .on("click", function() {
-                                      //console.log("CANCEL to " + profileOwner);
-                                      if (profileOwner == "jobProfileHolder") {
-                                        d3.select("#profilesGraphHolder").selectAll("*").remove();
-                                        location.href = '#content_2';
-                                      }
-
-                                    })
+                        .append("rect")
+                          .attr('id', 'profileSaveButton')
+                          .attr('class', 'profileSaveButton')
+                          .attr('x', 0) .attr('y', '3.6em')
+                          .attr('width', 96).attr('height', 40)
+                          .attr('rx', 6).attr('ry', 6)
+                          .on("click", function() {
+                                //console.log("CANCEL to " + profileOwner);
+                                d3.select("#profilesGraphHolder").selectAll("*").remove();
+                                location.href = '#content_2';
+                              })
 
     profileSaveButtonText = d3.select("#profileButtonGroup")
                                 .append("text")
@@ -1247,7 +1284,148 @@ d3.select("body").on("keyup", function () {
   }
 })
 
-//updateProfileGraph({data:getProfileData()});
+
+  /* Display only some profile - probably job template (or even composer?) */
+  //function updateTemplateProfile(profileData, profileDivName) {
+  function updateTemplateProfile(options) {
+    profileOwner = options.owner || 'unknown';
+    console.log("Reached updateTemplateProfile(): " + profileOwner);
+    //profileData = options.data || [];
+    profileData = JSON.parse(document.getElementById(profileOwner).getAttribute('pdata'));
+
+    var templateProfileGraphMargin = {top: 2, right: 4, bottom: 1, left: 1},
+        templateProfileGraphWidth = 576 - templateProfileGraphMargin.left - templateProfileGraphMargin.right,
+        templateProfileGraphHeight = 40 - templateProfileGraphMargin.top - templateProfileGraphMargin.bottom;
+
+    // Draw the graph of profile
+    d3.select('#profile_' + profileOwner).remove();
+    var templateProfileGraphHolder = d3.select('#' + profileOwner).append("svg")
+                      .attr("id", "profile_" + profileOwner)
+                      .attr("class", "template_profileGraph")
+                      .attr("width", templateProfileGraphWidth + templateProfileGraphMargin.right + templateProfileGraphMargin.left)
+                      .attr("height", templateProfileGraphHeight + templateProfileGraphMargin.top + templateProfileGraphMargin.bottom)
+                      .style("border", "1px solid black")
+
+    // Extract profileData into local array
+    var profileLineData = [];
+    var setpoint = {};
+    var nextStep = 0.0;
+    for (var sp=0;sp<profileData.length;sp++) {
+      setpoint = {"x":nextStep.toFixed(2),
+                  "y":profileData[sp]["target"]};
+      profileLineData.push(setpoint);
+      nextStep += parseFloat(profileData[sp]["duration"]);
+      //console.log("*** updateTemplateProfile() profile: " + setpoint["x"] + " : " + setpoint["y"]);
+    }
+    //console.log("profileLineData: " + profileLineData);
+
+    // Find extent of values in profileLineData
+    var maxTime = 0.0;
+    //var maxDataPoint = 0.0;
+    //var minDataPoint = 1000.0;
+    //var minProfile = d3.min(profileLineData, function(d) {return parseFloat(d.y);});
+    //var maxProfile = d3.max(profileLineData, function(d) {return parseFloat(d.y);}) + 1.0;
+    var maxProfileTime = d3.max(profileLineData, function(d) {return parseFloat(d.x);});
+
+    var maxDataPoint = d3.max(profileLineData, function(d) {
+                                                  return parseFloat(d.y) + 5;
+                                                });
+    var minDataPoint = d3.min(profileLineData, function(d) {
+                                                  return parseFloat(d.y) - 5;
+                                                });
+    //if ( minProfile < minDataPoint ) minDataPoint = minProfile;
+    //if ( maxProfile > maxDataPoint ) maxDataPoint = maxProfile;
+    if ( maxProfileTime > maxTime ) maxTime = maxProfileTime;
+
+    // Scale & axes
+    var templateLinearScaleY = d3.scale.linear()
+                      .domain([minDataPoint,maxDataPoint])
+                      .range([templateProfileGraphHeight,0]);
+    var templateYAxis = d3.svg.axis()
+                      .scale(templateLinearScaleY)
+                      .orient("left")
+                      .tickSize(-4)
+                      .ticks(2);
+                      //.tickValues(makeTickValues(maxDataPoint,4));
+    var templateYAxisGroup = templateProfileGraphHolder.append("g")
+                      .attr("transform",
+                            "translate(" + templateProfileGraphMargin.left + "," + templateProfileGraphMargin.top + ")")
+                      .attr('stroke-width', 2)
+                      .attr('stroke', 'black')
+                      .attr('fill', 'none')
+                      .call(templateYAxis);
+    var templateLinearScaleX = d3.scale.linear()
+                      .domain([0,maxTime])
+                      .range([0,templateProfileGraphWidth]);
+    var templateXAxis = d3.svg.axis()
+                      .scale(templateLinearScaleX)
+                      .orient("bottom")
+                      .tickSize(-4)
+                      .ticks(5);
+                      //.tickValues(makeTickValues(maxTime,18*graphWidthScale));
+    var templateXAxisGroup = templateProfileGraphHolder.append("g")
+                      .attr('class', 'x templateAxis')
+                      .attr("transform",
+                            "translate(" + templateProfileGraphMargin.left + "," + (templateProfileGraphHeight + templateProfileGraphMargin.top) + ")")
+                      .attr('stroke-width', 2)
+                      .attr('stroke', 'black')
+                      .attr('fill', 'none')
+                      .call(templateXAxis);
+    // Custom tick format
+    //templateProfileGraphHolder.selectAll('.x.templateAxis text').text(function(d) { return tickText(d) });
+
+    // Scale profile data
+    var scaledProfileLineData = [];
+    for (var sp=0;sp<profileLineData.length;sp++) {
+      //console.log("scaled sp = " + profileLineData[sp].x + " : " + profileLineData[sp].y);
+      scaledProfileLineData.push({"x":templateLinearScaleX(profileLineData[sp].x),
+                                  "y":templateLinearScaleY(profileLineData[sp].y)});
+    }
+    // Draw profile graph
+    var templateProfileLineFunction = d3.svg.line()
+                              .x(function(d) { return d.x; })
+                              .y(function(d) { return d.y; })
+                              .interpolate(INTERPOLATE_profile_template);
+    var lineGraph = templateProfileGraphHolder.append("path")
+                              .attr("transform",
+                                    "translate(" + templateProfileGraphMargin.left + "," + templateProfileGraphMargin.top + ")")
+                              .attr("d", templateProfileLineFunction(scaledProfileLineData))
+                              .attr("stroke", "gray")
+                              .attr("stroke-width", 2)
+                              .attr("fill", "none");
+
+
+  }
+
+  function replace_job(profileOwner) {
+    console.log("Don't forget to save the changed job!");
+    var elemId = profileOwner.replace('tiProfile_', '');
+    console.log("template id = " + elemId);
+
+    var jobName = document.getElementById('tiName_' + elemId).innerHTML;
+    var jobPreHeat = document.getElementById('tiPreheat_' + elemId).getAttribute('isset')=="true"?true:false;
+    var saveJobProfile = JSON.parse(document.getElementById(profileOwner).getAttribute('pdata'));
+
+    var sensors = document.getElementById('tiSensors_' + elemId).getAttribute ('sensors').split(',');
+    var useSensors = [];
+    for (var i=0;i<sensors.length;i++) { useSensors.push(sensors[i]); }
+
+    var relays = document.getElementById('tiRelays_' + elemId).getAttribute ('relays').split(',');
+    var useRelays = [];
+    for (var i=0;i<relays.length;i++) { useRelays.push(relays[i]); }
+
+    var jobData = {
+      name: jobName,
+      preheat: jobPreHeat,
+      profile: saveJobProfile,
+      sensors: useSensors,
+      relays:	useRelays
+    };
+    console.log("jobData = " + JSON.stringify(jobData));
+    var msgobj = {type:'replace_job', data:jobData};
+    sendMessage({data:JSON.stringify(msgobj)});
+  }
+
 
 /* END PROFILES */
 
@@ -1264,12 +1442,278 @@ d3.select("body").on("keyup", function () {
 
     msgobj = {type:'list_relays', data:[]};
     sendMessage({data:JSON.stringify(msgobj)});
-//
-//    // Request job data
-//    msgobj = {type:'load_jobs', data:[]};
-//    sendMessage({data:JSON.stringify(msgobj)});
+
+    // Request job data
+    msgobj = {type:'load_jobs', data:[]};
+    sendMessage({data:JSON.stringify(msgobj)});
 
   }, false);
+
+  // Generate a listing of stored job templates
+  function createJobTemplatesList(data) {
+    console.log("Reached createJobTemplatesList() ...");
+    var jobTemplatesListHolder = document.getElementById("jobTemplatesListHolder");
+    var toolTipDiv = d3.select("body").append("div")
+                                      .attr('class', 'templateItemTooltip')
+                                      .style('opacity', 0.0)
+                                      .style('left', '200px')
+                                      .style('top', '200px');
+                                      //.style('display', 'none');
+
+    // First remove existing list elements
+    while ( jobTemplatesListHolder.hasChildNodes() ) {
+      jobTemplatesListHolder.removeChild(jobTemplatesListHolder.firstChild);
+    }
+
+    for (var i=0;i<data.length;i++) {
+      var thisJob = data[i];
+      var name = thisJob['name'];
+      var preheat = "Preheat OFF";
+      if ( thisJob['preheat'] ) {
+        preheat = "Preheat  ON";
+      }
+
+      var templateItem = document.createElement('DIV');
+      templateItem.id = 'ti_' + i;
+      templateItem.className = 'templateItem';
+
+
+      var templateItemName = document.createElement('LABEL');
+      templateItemName.id = 'tiName_' + i;
+      templateItemName.className = 'templateItemName unselectable';
+      templateItemName.textContent = name;
+      templateItemName.setAttribute('templateItemIndex', i);
+
+      var templateItemPreheat = document.createElement('LABEL');
+      templateItemPreheat.id = 'tiPreheat_' + i;
+      templateItemPreheat.className = 'templateItemPreheat unselectable';
+      templateItemPreheat.innerHTML = '<center>Preset<br>Heat/Cool</center>';
+      templateItemPreheat.setAttribute('isSet', thisJob['preheat']);
+      if (templateItemPreheat.getAttribute('isSet') === 'true') {
+        templateItemPreheat.innerHTML = '<center>Pre Heat<br><b>ON</b></center>';
+      } else {
+        templateItemPreheat.innerHTML = '<center>Pre Heat<br><b>OFF</b></center>';
+      }
+
+      var templateItemSensors = document.createElement('LABEL');
+      templateItemSensors.id = 'tiSensors_' + i;
+      templateItemSensors.className = 'templateItemSensors unselectable';
+      templateItemSensors.textContent = 'Sensors';
+      var loadedSensors = [];
+      for (var j=0;j<thisJob['sensors'].length;j++) {
+        loadedSensors.push(thisJob['sensors'][j]);
+      }
+      //console.log(name + ' sensors: ' + loadedSensors);
+      templateItemSensors.setAttribute('sensors', loadedSensors);
+
+      var templateItemRelays = document.createElement('LABEL');
+      templateItemRelays.id = 'tiRelays_' + i;
+      templateItemRelays.className = 'templateItemRelays unselectable';
+      templateItemRelays.textContent = 'Relays';
+      var loadedRelays = [];
+      for (var j=0;j<thisJob['relays'].length;j++) {
+        loadedRelays.push(thisJob['relays'][j]);
+      }
+      //console.log(name + ' relays: ' + loadedRelays);
+      templateItemRelays.setAttribute('relays', loadedRelays);
+
+      var templateItemProfile = document.createElement('DIV');
+      templateItemProfile.id = 'tiProfile_' + i;
+      templateItemProfile.className = 'templateItemProfile generic_graph';
+      var loadedProfile = [];
+      for (k=0;k<thisJob['profile'].length;k++) {
+        //console.log('profile step for ' + name + ': ' + thisJob['profile'][k].target + ' . ' + thisJob['profile'][k].duration);
+        //loadedProfile.push({'target':parseFloat(thisJob['profile'][k].target),'duration':parseFloat(thisJob['profile'][k].duration)});
+        loadedProfile.push({'target':thisJob['profile'][k].target,'duration':thisJob['profile'][k].duration});
+      }
+      //templateItemProfile.setAttribute('profile', loadedProfile);
+      templateItemProfile.setAttribute('pdata', JSON.stringify(loadedProfile));
+
+
+      templateItem.appendChild(templateItemName);
+      templateItem.appendChild(templateItemPreheat);
+      templateItem.appendChild(templateItemSensors);
+      templateItem.appendChild(templateItemRelays);
+      templateItem.appendChild(templateItemProfile);
+
+      jobTemplatesListHolder.appendChild(templateItem);
+
+      // Draw the profile graph for this template item
+      //updateTemplateProfile(loadedProfile, templateItemProfile.id);
+      updateTemplateProfile({owner:templateItemProfile.id});
+
+      // Start of templateItemName menu
+      var templateItemNameMenu = [{
+        title: 'Delete',
+        action: function(elm, data, index) {
+          console.log('menu item #3 from ' + elm.id + " " + data.title + " " + index);
+          var templateItemIndex = elm.getAttribute('templateItemIndex');
+          var jobName = elm.textContent;
+
+          if ( templateItemIndex < 0 )
+              return;
+
+          var confirmDelete = confirm("Delete job " + jobName + "?");
+          if ( confirmDelete == true ) {
+            // Request job deletion
+            //var jobData = { index: parseInt(templateItemIndex) };
+            var msgobj = {type:'delete_job',
+                    data:{index: parseInt(templateItemIndex), name: jobName }};
+            sendMessage({data:JSON.stringify(msgobj)});
+          } else {
+            return;
+          }
+        }
+      }, {
+        title: 'New',
+        action: function(elm, data, index) {
+          console.log('menu item #2 from ' + elm.id + " " + data.title + " " + index);
+
+          var jobComposer = document.getElementById("jobComposer");
+          if ( jobComposer.style.display == 'block') {
+            jobComposer.style.display = 'none';
+          } else {
+            jobComposer.style.display = 'block';
+            var c = document.getElementById("jobItemsHolder").children;
+            var itemsWidth = 0;
+            var tallest = 0;
+            for (var i=0;i<c.length;i++) {
+              itemsWidth += parseInt(window.getComputedStyle(c[i]).width.replace(/\D+/g, ''));
+              var itemHeight = parseInt(window.getComputedStyle(c[i]).height.replace(/\D+/g, ''));
+              if (itemHeight > tallest ) tallest = itemHeight;
+            }
+          }
+        }
+      }, {
+        title: 'Refresh',
+        action: function(elm, data, index) {
+          console.log('menu item #1 from ' + elm.id + " " + data.title + " " + index);
+          console.log("REFRESH job button clicked");
+
+          // Request job data
+          var msgobj = {type:'load_jobs', data:[]};
+          sendMessage({data:JSON.stringify(msgobj)});
+        }
+      }, {
+        title: 'Run',
+        action: function(elm, data, index) {
+          //console.log('menu item #4 from ' + elm.id + " " + data.title + " " + index);
+          var templateItemIndex = elm.getAttribute('templateItemIndex');
+          var jobName = elm.textContent;
+
+          var confirmRun = confirm("Run job " + jobName + "?");
+          if ( confirmRun == true ) {
+            // Request job run
+            var msgobj = {type:'run_job', data:{ index: parseInt(templateItemIndex) }};
+            sendMessage({data:JSON.stringify(msgobj)});
+
+            // Now go to status page to view job progress
+            document.getElementById("no_running_jobs").innerHTML = "Waiting for job " + jobName + " to start";
+            location.href = "#content_1";
+          } else {
+            return;
+          }
+      }
+      }];
+      // End of popup menu
+
+      d3.selectAll('.templateItemName').on('click', function(data, index) {
+                                          var elm = this;
+
+                                          // create the div element that will hold the context menu
+                                          d3.selectAll('.context-menu').data([1])
+                                            .enter()
+                                            .append('div')
+                                            .attr('class', 'context-menu');
+
+                                            // an ordinary click anywhere closes menu
+                                            d3.select('body').on('click.context-menu', function() {
+                                              d3.select('.context-menu').style('display', 'none');
+                                            });
+
+                                            // this is executed when a contextmenu event occurs
+                                            d3.selectAll('.context-menu')
+                                              .html('<center><p><b>Template Options</b></p></center><hr>')
+                                              .append('ul')
+                                              .selectAll('li')
+                                              .data(templateItemNameMenu).enter()
+                                              .append('li')
+                                              .on('click',function(d) {
+                                                          console.log('popup selected: ' + d.title);
+                                                          d.action(elm, d, i);
+                                                          d3.select('.context-menu')
+                                                            .style('display', 'none');
+                                                          return d;
+                                                        })
+                                              .text(function(d) {return d.title;});
+                                            d3.select('.context-menu').style('display', 'none');
+
+                                            // show the context menu
+                                            d3.select('.context-menu')
+                                              .style('left', (d3.event.pageX - 96) + 'px')
+                                              .style('top', (d3.event.pageY - 148) + 'px')
+                                              .style('display', 'block');
+                                            d3.event.preventDefault();
+
+                                            d3.event.stopPropagation();
+                                        });
+
+
+      // templateItemSensors tooltip
+      d3.selectAll('.templateItemSensors').on('click', function() {
+                                      //console.log('click on Sensors');
+                                      if (toolTipDiv.style('opacity') == 0.0) {
+                                        var sensors = this.getAttribute('sensors').split(',');
+                                        var sensorsText = '<center>';
+                                        for (var i=0;i<sensors.length;i++) {
+                                          sensorsText = sensorsText + sensors[i] + '<br>';
+                                        }
+                                        sensorsText = sensorsText + '</center>';
+                                        toolTipDiv.style('opacity', 0.9)
+                                            .html(sensorsText)
+                                            .style('left', (getOffsetRect(this).left - 34) + 'px')
+                                            .style('top', (getOffsetRect(this).top + 12) + 'px');
+                                      } else {
+                                        toolTipDiv.style('opacity', 0.0);
+                                      }
+                                    })
+
+      // templateItemRelays tooltip
+      d3.selectAll('.templateItemRelays').on('click', function() {
+                                      //console.log('click on Relays');
+                                      if (toolTipDiv.style('opacity') == 0.0) {
+                                        var relays = this.getAttribute('relays').split(',');
+                                        var relaysText = '<center>';
+                                        for (var i=0;i<relays.length;i++) {
+                                          relaysText = relaysText + relays[i] + '<br>';
+                                        }
+                                        relaysText = relaysText + '</center>';
+                                        toolTipDiv.style('opacity', 0.9)
+                                            .html(relaysText)
+                                            .style('left', (getOffsetRect(this).left - 34) + 'px')
+                                            .style('top', (getOffsetRect(this).top + 12) + 'px');
+                                      } else {
+                                        toolTipDiv.style('opacity', 0.0);
+                                      }
+                                    })
+
+
+
+    }
+    for (var i=0;i<data.length;i++) {
+      (function(i) {
+        document.getElementById("tiProfile_" + i).onclick = function() {
+          location.href = '#content_3';
+          var templateItemProfile = document.getElementById("tiProfile_" + i);
+          console.log("XXXX: " + templateItemProfile.getAttribute('pdata'));
+          updateProfileGraph(
+              {data:JSON.parse(templateItemProfile.getAttribute('pdata')),
+              owner:templateItemProfile.id});
+        };
+      })(i);
+    }
+
+  } // End function createJobTemplatesList()
 
   // Display the job Composer
   var jobTemplatesHolder = document.getElementById('jobTemplatesHolder');
@@ -1324,6 +1768,13 @@ d3.select("body").on("keyup", function () {
     }
     // Check for name duplication
     // TODO
+    var tiNames = document.getElementsByClassName("templateItemName");
+    for (var i=0;i<tiNames.length;i++) {
+      if ( tiNames[i].innerHTML == jobName ) {
+          alert("The name " + jobName + " is already used. Please choose a new name");
+          return;
+        }
+    }
 
     // Disallowed characters in job name?
     if ( /\./g.test(jobName) ) {
@@ -1397,6 +1848,12 @@ d3.select("body").on("keyup", function () {
       };
       var msgobj = {type:'save_job', data:jobData};
       sendMessage({data:JSON.stringify(msgobj)});
+
+      // Dismiss the composer
+      var jobComposer = document.getElementById("jobComposer");
+      if ( jobComposer.style.display != 'none') {
+        jobComposer.style.display = 'none';
+      }
     } else {
       console.log("NOT OKtoSave");
     }
@@ -1435,6 +1892,7 @@ d3.select("body").on("keyup", function () {
         checkLabel.setAttribute("for", "as_" + i);
         checkLabel.textContent = sensors[i];
         checkLabel.id = "label_as_" + i;
+        checkLabel.className = "unselectable";
 
         selectorItem.appendChild(check);
         selectorItem.appendChild(checkLabel);
@@ -1476,6 +1934,7 @@ d3.select("body").on("keyup", function () {
         checkLabel.setAttribute("for", "ar_" + i);
         checkLabel.textContent = relays[i];
         checkLabel.id = "label_ar_" + i;
+        checkLabel.className = "unselectable";
 
         selectorItem.appendChild(check);
         selectorItem.appendChild(checkLabel);
@@ -1486,7 +1945,6 @@ d3.select("body").on("keyup", function () {
 
 
 /* END PROFILES */
-
 
 //});
 };
