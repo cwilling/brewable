@@ -6,7 +6,7 @@ var sensordevice = require("./sensor");
 var sensorLister = require("./sensorLister");
 var Relay = require("./sainsmartrelay");
 var Configuration = require("./configuration");
-
+var JobProcessor = require("./jobprocessor");
 
 var sensorDevices = [];
 var sensorResults = [];
@@ -29,8 +29,9 @@ function gpioWorker (input_queue, output_queue) {
 
   // Configuration
   this.configObj = new Configuration();
-  var configuration = this.configObj.getConfiguration();
-  //console.log("configuration: " + JSON.stringify(configuration));
+  var config = this.configObj.getConfiguration();
+  this.configuration = config;
+  //console.log("configuration: " + JSON.stringify(this.configuration));
   this.jobTemplateDataFile = path.join(this.configObj.dir(), 'jobTemplateData.txt');
 
   // Relay device
@@ -43,11 +44,11 @@ function gpioWorker (input_queue, output_queue) {
 
   // Update their configuration
   this.configObj.updateFudgeEntry(sensorDevices);
-  console.log("Using configuration: " + JSON.stringify(configuration));
+  console.log("Using configuration: " + JSON.stringify(this.configuration));
 
   // Set sensor fudge according to configuration
   sensorDevices.forEach( function (sensor) {
-    sensor.setFudge(parseFloat(configuration['sensorFudgeFactors'][sensor.getId()]));
+    sensor.setFudge(parseFloat(config['sensorFudgeFactors'][sensor.getId()]));
   });
 
   // Populate this.jobs from saved data
@@ -60,7 +61,7 @@ function gpioWorker (input_queue, output_queue) {
   }
   //console.log("this.jobs (from file): " + JSON.stringify(this.jobs));
 
-  // Running & stopped job instances
+  // Running & stopped JobProcessor instances
   this.runningJobs = []
   this.stoppedJobs = []
 
@@ -188,6 +189,8 @@ gpioWorker.prototype.processMessage = function () {
     this.replace_job(msg);
   } else if (msg.type == 'delete_job') {
     this.delete_job(msg);
+  } else if (msg.type == 'run_job') {
+    this.run_job(msg);
   } else if (msg.type == 'load_jobs') {
     this.load_jobs(msg);
   } else {
@@ -213,7 +216,7 @@ gpioWorker.prototype.load_startup_data = function (msg) {
   this.output_queue.enqueue(jdata);
 
   // Also send these data (each sends own data to output queue)
-  //this.load_running_jobs();
+  this.load_running_jobs(msg);
   //this.load_saved_jobs();
   //this.load_profiles();
 }
@@ -239,6 +242,8 @@ gpioWorker.prototype.config_change = function (msg) {
         item.setFudge(msg.data['fudge']);
       }
     });
+  } else if (keys[0] == 'multiSensorMeanWeight') {
+    this.configObj.setMultiSensorMeanWeight(msg.data['multiSensorMeanWeight']);
   } else {
     console.log("config_change(): " + keys[0] + " = " + msg.data[keys[0]]);
   }
@@ -306,7 +311,7 @@ gpioWorker.prototype.save_job = function (msg) {
 gpioWorker.prototype.replace_job = function (msg) {
   var jobName = msg.data["name"];
 
-  /* First remove it from this.jobs */
+  /* First find index in this.jobs */
   var targetIndex = -1;
   for (var j=0;j<this.jobs.length;j++ ) {
     if (this.jobs[j].name == jobName ) { targetIndex = j; }
@@ -340,7 +345,7 @@ gpioWorker.prototype.delete_job = function (msg) {
   var jobName = msg.data["name"];
   //console.log("delete_job() index = " + jobIndex + ", name = " + jobName);
 
-  /* First remove it from this.jobs */
+  /* First find index in this.jobs */
   var targetIndex = -1;
   for (var j=0;j<this.jobs.length;j++ ) {
     if (this.jobs[j].name == jobName ) { targetIndex = j; }
@@ -373,6 +378,120 @@ gpioWorker.prototype.load_jobs = function (msg) {
   });
   this.output_queue.enqueue(jdata);
   console.log("this.jobs: " + JSON.stringify(this.jobs));
+}
+
+gpioWorker.prototype.run_job = function (msg) {
+  var jobIndex = msg.data["index"];
+  var jobName = msg.data["name"];
+  console.log("run_job() index = " + jobIndex + ", name = " + jobName);
+
+  // First check that this job isn't already running
+  var isRunning = false;
+  //console.log("Running jobs ... " + JSON.stringify(this.runningJobs));
+  for (var j=0;j<this.runningJobs.length;j++ ) {
+    if (this.runningJobs[j].name == jobName ) {
+      isRunning = true;
+      console.log("Job " + jobName + " = " + this.runningJobs[j].name + " is already running");
+      break;
+    }
+  }
+  var targetIndex = -1;
+  if ( ! isRunning ) {
+    for (var j=0;j<this.jobs.length;j++ ) {
+      if (this.jobs[j].name == jobName ) {
+        targetIndex = j;
+        console.log("Job " + jobName + " is available to run");
+        break;
+      }
+    }
+    if (targetIndex < 0 ) {
+      console.log("Can't find " + jobName + " to run");
+      return;
+    }
+    console.log("Ready to run " + jobName);
+
+    if ( (! this.setupJobRun(targetIndex)) ) {
+      console.log("Couldn't start job " + jobName);
+    } else {
+      console.log("Started job " + jobName);
+    }
+  }
+  /* Do an initial processing of the new job */
+  this.runningJobs.forEach( function (job, index) {
+    //console.log("run_job() job.name  1 = " + job.jobName);
+    //console.log("run_job() job.name  2 = " + jobName);
+    if (job.jobName == jobName) {
+      job.process();
+      console.log("DONE INITIAL PROCESS() of " + jobName);
+    }
+  });
+  this.load_running_jobs(msg);
+
+}
+
+gpioWorker.prototype.setupJobRun = function (jobIndex) {
+//  var jobInstance = new JobProcessor({job:JSON.parse(JSON.stringify(this.jobs[jobIndex])),parent:this});
+
+  try {
+    this.runningJobs.push(new JobProcessor({job:JSON.parse(JSON.stringify(this.jobs[jobIndex])),parent:this}));
+    //return true;
+  }
+  catch (err) {
+    console.log("Couldn't create JobPocessor for job " + this.jobs[jobIndex].name + " ERR: " + err);
+    return false;
+  }
+  return true;
+}
+
+gpioWorker.prototype.processRunningJobs = function () {
+  console.log("processRunningJobs()");
+  this.runningJobs.forEach( function (job, index) {
+    console.log("Process job: " + index + " (" + job.jobName + ")");
+    //console.log("Process job: " + index + " " + JSON.stringify(job.jobProfile));
+    job.process();
+  });
+}
+
+/* Send a list of running jobs back to the client */
+gpioWorker.prototype.load_running_jobs = function (jmsg) {
+  /* We reach here for a variety of reasons,
+    depending on the type of jmsg
+  */
+  if (jmsg['type'] == 'load_running_jobs') {
+    console.log("Send running jobs list after LOAD_RUNNING_JOBS request");
+  } else if (jmsg['type'] == 'run_job') {
+    console.log("Send running jobs list after RUN_JOBS request");
+  } else if (jmsg['type'] == 'load_startup_data') {
+    console.log("Send running jobs list after LOAD_STARTUP_DATA request");
+  } else {
+    console.log("Send running jobs list after UNKNOWN request");
+  }
+
+  /* We send only job info
+    since client doesn't need stuff like local file name etc.
+    Also send collected status reports
+    (history without "private" header).
+  */
+  var running_jobs = [];
+  if (this.runningJobs.length > 0) {
+    console.log("Send list of running jobs here");
+    running_jobs = [];
+    this.runningJobs.forEach( function (job, index) {
+      if (jmsg['type'] == 'run_job') {
+        job.process();
+      }
+      var job_info = {};
+      job_info['header'] = job.jobInfo();
+      job_info['updates'] = job.history.slice(1);
+      running_jobs.push(job_info);
+    });
+    console.log("running_jobs list: " + JSON.stringify(running_jobs));
+  } else {
+    console.log("No jobs running");
+  }
+  var jdata = JSON.stringify({'type':'running_jobs','data':running_jobs});
+  console.log("load_running_jobs() returning: " + jdata);
+  this.output_queue.enqueue(jdata);
 }
 
 /* ex:set ai shiftwidth=2 inputtab=spaces smarttab noautotab: */

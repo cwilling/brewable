@@ -8,10 +8,7 @@ var global_x = 0;
 
 var INTERPOLATE_profile_template = "step-after";
 var INTERPOLATE_profile_editor = "step-after";
-
-function smallDevice () {
-  return window.innerWidth<1000?true:false;
-}
+var INTERPOLATE_profile_history = "step-after";
 
 var availableSensors = [];
 var availableRelays  = [];
@@ -23,6 +20,14 @@ var profileLinearScaleX = [];
 var profileLineColours = ["green", "red", "orange", "blue"];
 var pfCtrlKey = false;
 var pfCurrentDot = {"id":"none"};
+
+/* Save JobHistory data here */
+var historyData = {};
+var runningData = {};
+
+function smallDevice () {
+  return window.innerWidth<1000?true:false;
+}
 
 /* Convert text from profile editor into time units.
 */
@@ -120,6 +125,7 @@ window.onload = function () {
 
     var no_running_jobs = document.createElement('DIV');
     no_running_jobs.id = 'no_running_jobs';
+    no_running_jobs.innerHTML = "No &nbsp<a href=#content_2>jobs</a>&nbsp are currently running"
   content_1.appendChild(no_running_jobs);
 
     var running_jobsHolder = document.createElement('DIV');
@@ -251,7 +257,7 @@ window.onload = function () {
     var profilesTitle = document.createElement('DIV');
     profilesTitle.id = 'profilesTitle';
     profilesTitle.className = 'page_title unselectable';
-    profilesTitle.textContent = 'Profiles';
+    profilesTitle.textContent = 'Profile Editor';
 
     var profilesGraphHolder = document.createElement('DIV');
     profilesGraphHolder.id = 'profilesGraphHolder';
@@ -407,6 +413,12 @@ window.onload = function () {
       } else if (jmsg.type === 'startup_data') {
         console.log("RCVD startup_data " + message.data);
         startup_data(jmsg);
+      } else if (jmsg.type === 'running_jobs') {
+        console.log("RCVD running_jobs " + message.data);
+        createRunningJobsList(jmsg.data);
+      } else if (jmsg.type === 'running_job_status') {
+        console.log("RCVD running_jobs " + message.data);
+        updateRunningJob(jmsg.data);
       } else if (jmsg.type === 'relay_update') {
         //console.log("RCVD relay_update " + message.data);
         relay_update(jmsg);
@@ -657,6 +669,55 @@ window.onload = function () {
     document.dispatchEvent(profilesLoadedEvent);
   }
 
+  /* Generate a display listing of running jobs for front Status page */
+  function createRunningJobsList (data) {
+    console.log("Reached createRunningJobsList(): " + data.length);
+    if ( data.length < 1 ) {
+      document.getElementById("no_running_jobs").style.display = 'flex';
+      document.getElementById("no_running_jobs").style.display = '-webkit-flex';
+    } else {
+      document.getElementById("no_running_jobs").style.display = 'none';
+    }
+
+    /* Clean out any existing stuff in the running_jobsHolder div. */
+    var runningJobsHolder = document.getElementById("running_jobsHolder");
+    var last;
+    while (last = runningJobsHolder.lastChild) runningJobsHolder.removeChild(last);
+
+    var longJobNames = [];
+    data.forEach( function (job, index) {
+      var header = job['header'];
+      var updates = job['updates'];
+      var longName = header['jobName'] + '-' + header['jobInstance'];
+      var saveData = {};
+
+      console.log("Creating listing for job: " + index + " (" + longName + ")");
+      longJobNames.push(longName);
+      console.log("XXX");
+
+      // Save the data for later use. It should consist of two arrays,
+      // 1st with just the job header and 2nd with an array of status updates
+      // (for a running job, updates will periodically be added to
+      saveData['header'] = [header];
+      saveData['updates'] = updates;
+      runningData[longName] = saveData;
+    });
+    updateJobsList(longJobNames, 'running_jobsHolder');
+  }
+
+  function updateRunningJob(data) {
+    console.log("updateRunningJob() " + JSON.stringify(data));
+    if ( 'sensors' in data ) {
+      var longJobName = data['jobName'] + '-' + data['jobInstance'];
+      console.log("updateRunningJob() longJobName " + longJobName);
+      runningData[longJobName]['updates'].push(data);
+      console.log("Received running_job_status for " + longJobName );//+ " (" + runningData[longJobName]['updates'].length + ")");
+      updateJobHistoryData(0, longJobName)
+    } else {
+      console.log("Received dummy update for " + data.jobName);
+    }
+  }
+
   function build_config_entries(configItems) {
     var configEntryHolder = document.getElementById('configEntryHolder');
     for (var key in configItems) {
@@ -733,6 +794,514 @@ window.onload = function () {
       configEntryHolder.appendChild(configItem);
     }
   }
+
+  /* This is where a graph is (re)drawn.
+    We can arrive here for a number of reasons:
+      - a graph needs to ber drawn for the first time
+      - a graph needs to be redrawn because something has changed
+        e.g. additional data e.g. zoomed view requested
+    In any case, its cheap enough to just (re)draw everything,
+    the main difference between cases is how to determine which
+    graph is to be (re)drawn, as well as which data is to be used
+    (so that the 'header' and 'updates' variables can be set).
+  */
+  function updateJobHistoryData(data, jobLongName) {
+    // data should consist of  two arrays,
+    // 1st with just the job header and 2nd with an array of status updates
+    //console.log("Received msg: saved_job_data " + data);
+    console.log("updateJobHistoryData(): jobLongName " + jobLongName);
+
+    // Is it new (via data parameter) or are we redrawing stored data?
+    if ( jobLongName === undefined ) {
+      // We must have data supplied by parameter
+      var header = data['header'];
+      var updates = data['updates'];
+      var longName = header[0]['jobName'] + '-' + header[0]['jobInstance'];
+      historyData[longName] = data;
+    } else {
+      // Must have previously saved data
+
+      if ( historyData.hasOwnProperty(jobLongName) ) {
+        // It's a saved job
+        var header = historyData[jobLongName]['header'];
+        var updates = historyData[jobLongName]['updates'];
+        var longName = header[0]['jobName'] + '-' + header[0]['jobInstance'];
+      } else {
+        // Must be a running job
+        var header = runningData[jobLongName]['header'];
+        var updates = runningData[jobLongName]['updates'];
+        var longName = header[0]['jobName'] + '-' + header[0]['jobInstance'];
+        //console.log("updateJobHistoryData() 1 longName: " + longName);
+        //console.log("updateJobHistoryData() 2 updates =  " + updates.length);
+      }
+      //var longName = header[0]['jobName'] + '-' + header[0]['jobInstance'];
+    }
+    //console.log("updateJobHistoryData() longName: " + longName);
+
+/* Examples of extracting various fields
+    console.log("updateJobHistoryData() jobProfile: " + header[0]['jobProfile'] + " " + header[0]['jobProfile'].length);
+    console.log("updateJobHistoryData() jobName: " + header[0]['jobName'] + " " + header.length);
+    console.log("updateJobHistoryData() updates: " + updates + " " + updates.length);
+    for (var i=0;i<updates.length;i++) {
+      console.log("updateJobHistoryData() temp at " + parseFloat(updates[i]['elapsed']).toFixed(2) + " = " + updates[i][updates[i]['sensors'][0]]);
+    }
+*/
+
+    var holderNode = document.getElementById('jobElementGraph_' + longName)
+    if (holderNode == null) {
+      console.log('updateJobHistoryData(): jobElementGraph_' + longName + ' does not exist');
+      return;
+    }
+    var holderName = holderNode.getAttribute('holderName');
+    //console.log('Scale widget has holderName: ' + holderName);
+    var graphWidthScale = parseInt(document.getElementById('jobItemHZBInput_' + holderName + '_' + longName).value);
+    if (graphWidthScale < 1 ) {
+      graphWidthScale = 1;
+      document.getElementById('jobItemHZBInput_' + holderName + '_' + longName).value = 1;
+    }
+    var historyJobsGraphMargin = {top: 20, right: 40, bottom: 50, left: 60},
+        historyJobsGraphWidth = graphWidthScale*1800 - historyJobsGraphMargin.left - historyJobsGraphMargin.right,
+        historyJobsGraphHeight = 256 - historyJobsGraphMargin.top - historyJobsGraphMargin.bottom;
+
+    // Draw the graph of job history
+    d3.select("#history_" + longName.replace('%', '\\%')).remove();
+    var historyJobsGraphHolder = d3.select("#jobElementGraph_" + longName.replace('%', '\\%')).append("svg")
+                      .attr("id", "history_" + longName.replace('%', '\%'))
+                      .attr("class", "history_job")
+                      .attr("width", historyJobsGraphWidth + historyJobsGraphMargin.right + historyJobsGraphMargin.left)
+                      .attr("height", historyJobsGraphHeight + historyJobsGraphMargin.top + historyJobsGraphMargin.bottom)
+                      .style("border", "1px solid black")
+
+    // Extract profile & temperature data into local arrays
+    var profileData = header[0]['jobProfile'];
+    var profileLineData = [];
+    var temperatureLineDataHolder = []
+    var temperatureLineData = []
+    var setpoint = {};
+    var nextStep = 0.0;
+    for (var sp=0;sp<profileData.length;sp++) {
+      setpoint = {"x":nextStep,
+                  "y":profileData[sp]["target"]};
+      profileLineData.push(setpoint);
+      nextStep += parseFloat(profileData[sp]["duration"]);
+      //console.log("**** updateJobHistoryData() profile: " + setpoint["x"] + " : " + setpoint["y"]);
+    }
+    // Extract temperature data for all sensors
+    for (var sensor_instance=0;sensor_instance<header[0]['jobSensorIds'].length;sensor_instance++) {
+      //console.log("updateJobHistoryData() sensor name: " + header[0]['jobSensorIds'][sensor_instance]);
+      var sensorName = header[0]['jobSensorIds'][sensor_instance];
+
+      temperatureLineData = [];
+      for (var i=0;i<updates.length;i++) {
+        setpoint = {"x":parseFloat(updates[i]['elapsed']).toFixed(2),
+                    "y":updates[i][updates[i]['sensors'][sensor_instance]]};
+        // Now build a path for this sensor by going through all the history entries
+        temperatureLineData.push(setpoint);
+        //console.log("**** updateJobHistoryData() temperature: " + setpoint["x"] + " : " + setpoint["y"]);
+      }
+      temperatureLineDataHolder[sensor_instance] = temperatureLineData;
+    }
+
+    // Find extent of values in both profileLineData & all the temperatureLineData arrays (1 for each sensor)
+    // N.B. could maybe do this while populating the *LineData arrays
+    var maxTime = 0.0;
+    var maxDataPoint = 0.0;
+    var minDataPoint = 1000.0;
+    var minProfile = d3.min(profileLineData, function(d) {return parseFloat(d.y);});
+    var maxProfile = d3.max(profileLineData, function(d) {return parseFloat(d.y);}) + 1.0;
+    var maxProfileTime = d3.max(profileLineData, function(d) {return parseFloat(d.x);}) + 60;
+
+    if ( minProfile < minDataPoint ) minDataPoint = minProfile;
+    if ( maxProfile > maxDataPoint ) maxDataPoint = maxProfile;
+    if ( maxProfileTime > maxTime ) maxTime = maxProfileTime;
+
+    for (var sensor_instance=0;sensor_instance<header[0]['jobSensorIds'].length;sensor_instance++) {
+      var temperature = d3.min(temperatureLineDataHolder[sensor_instance], function(d) {return parseFloat(d.y);});
+      if (temperature < minDataPoint ) minDataPoint = temperature;
+      temperature = d3.max(temperatureLineDataHolder[sensor_instance], function(d) {return parseFloat(d.y);}) + 1.0;
+      if (temperature > maxDataPoint ) maxDataPoint = temperature;
+      temperature = d3.max(temperatureLineDataHolder[sensor_instance], function(d) {return parseFloat(d.x);}) + 60;
+      if ( temperature > maxTime ) maxTime = temperature;
+    }
+
+
+    // Sanity check
+    //minDataPoint = (minDataPoint<0)?0:minDataPoint;
+    //maxDataPoint = (maxDataPoint>60)?60:maxDataPoint;
+    //console.log("**** minDataPoint = " + minDataPoint + ", maxDataPoint = " + maxDataPoint + ", maxTime = " + maxTime);
+
+
+    // Scale & axes
+    var historyLinearScaleY = d3.scale.linear()
+                      .domain([minDataPoint,maxDataPoint])
+                      .range([historyJobsGraphHeight,0]);
+    var historyYAxis = d3.svg.axis()
+                      .scale(historyLinearScaleY)
+                      .orient("left")
+                      .tickValues(makeTickValues(maxDataPoint,4));
+                      //.ticks(4);
+    var historyYAxisGroup = historyJobsGraphHolder.append("g")
+                      .attr("transform",
+                            "translate(" + historyJobsGraphMargin.left + "," + historyJobsGraphMargin.top + ")")
+                      .call(historyYAxis);
+    var historyLinearScaleX = d3.scale.linear()
+                      .domain([0,maxTime])
+                      .range([0,historyJobsGraphWidth]);
+    var xAxis = d3.svg.axis()
+                      .scale(historyLinearScaleX)
+                      .orient("bottom")
+                      .tickValues(makeTickValues(maxTime,18*graphWidthScale));
+                      //.ticks(20);
+    var xAxisGroup = historyJobsGraphHolder.append("g")
+                      .attr('class', 'x historyAxis')
+                      .attr("transform",
+                            "translate(" + historyJobsGraphMargin.left + "," + (historyJobsGraphHeight + historyJobsGraphMargin.top) + ")")
+                      .call(xAxis);
+
+    // Custom tick format
+    historyJobsGraphHolder.selectAll('.x.historyAxis text').text(function(d) { return tickText(d) });
+
+    // Scale profile data
+    var scaledProfileLineData = [];
+    for ( var sp=0;sp<profileLineData.length;sp++) {
+      //console.log("scaled sp = " + profileLineData[sp].x + " : " + profileLineData[sp].y);
+      scaledProfileLineData.push({"x":historyLinearScaleX(profileLineData[sp].x),
+                           "y":historyLinearScaleY(profileLineData[sp].y)});
+    }
+    // Draw profile graph
+    var historyProfileLineFunction = d3.svg.line()
+                              .x(function(d) { return d.x; })
+                              .y(function(d) { return d.y; })
+                              .interpolate(INTERPOLATE_profile_history);
+    var lineGraph = historyJobsGraphHolder.append("path")
+                              .attr("transform",
+                                    "translate(" + historyJobsGraphMargin.left + "," + historyJobsGraphMargin.top + ")")
+                              .attr("d", historyProfileLineFunction(scaledProfileLineData))
+                              .attr("stroke", "gray")
+                              .attr("stroke-width", 2)
+                              .attr("fill", "none");
+//    }
+  }
+
+  function updateJobsList(jobfiles, holder) {
+    console.log("Reached updateJobsList()");
+    var jobFiles = jobfiles;
+    var jobsListHolder = document.getElementById(holder);
+    var instancePattern = /[0-9]{8}_[0-9]{6}/;
+
+    // First remove existing items
+    while ( jobsListHolder.hasChildNodes() ) {
+      jobsListHolder.removeChild(jobsListHolder.firstChild);
+    }
+
+    // Reverse sort the received list (by instancePattern)
+    sortedJobFiles = jobFiles.sort(function(a,b) {
+                    var to_sort = [instancePattern.exec(a),instancePattern.exec(b)];
+                    var to_sort_orig = to_sort.slice();
+                    to_sort.sort();
+                    if (to_sort_orig[0] == to_sort[0]) {
+                      return 1;
+                    } else {
+                      return -1;
+                    }
+                  });
+
+    for (var i=0;i<jobFiles.length;i++) {
+      //console.log("              " + jobFiles[i]);
+      // Extract some identifiers from the filename
+      var jobInstance = instancePattern.exec(jobFiles[i]);
+      console.log("updateJobsList() jobInstance = " + jobInstance);
+      var jobName = jobfiles[i].slice(0,(jobFiles[i].indexOf(jobInstance)-1));
+      console.log("updateJobsList() jobName = " + jobName);
+      var jobNameFull = jobName + '-' + jobInstance;
+      console.log(jobFiles[i] + ': ' + jobName + ' ' + jobInstance);
+
+      var jobElement = document.createElement('DIV');
+      jobElement.id = 'jobElement_' + jobNameFull;
+      jobElement.className = 'jobElement';
+
+      var jobElementGraph = document.createElement('DIV');
+      jobElementGraph.id = 'jobElementGraph_' + jobNameFull;
+      jobElementGraph.className = 'jobElementGraph';
+      jobElementGraph.setAttribute('holderName', holder);
+
+      var jobItemName = document.createElement('DIV');
+      jobItemName.id = 'jobItemName_' + i;
+      jobItemName.className = 'jobItemName';
+      jobItemName.innerHTML = "<html>" + jobName + "</html>"
+
+      var jobItemInstance = document.createElement('DIV');
+      jobItemInstance.id = 'jobItemInstance_' + jobNameFull;
+      jobItemInstance.className = 'jobItemInstance jobItemInstance_' + holder;
+      jobItemInstance.innerHTML = "<html>" + jobInstance + "</html>"
+
+      // Horizontal Zoom box
+      var jobItemHZoomBox = document.createElement('DIV');
+        jobItemHZoomBox.id = 'jobItemHZoomBox_' + jobNameFull;
+        jobItemHZoomBox.className = 'zoomBox'
+        jobItemHZoomBox.title = 'Horizontal Zoom Factor'
+      var jobItemHZBLabel = document.createElement('LABEL');
+        jobItemHZBLabel.for = 'jobItemHZBInput_'+ holder + '_' + jobNameFull;
+        jobItemHZBLabel.className = 'zoomBoxLabel';
+      var jobItemHZBInput = document.createElement('INPUT');
+        jobItemHZBInput.id = 'jobItemHZBInput_'+ holder + '_' + jobNameFull;
+        jobItemHZBInput.className = 'zoomBoxInput';
+        jobItemHZBInput.value = 1;
+        jobItemHZBInput.onblur = function() {
+                var jobLongName = this.id.replace("jobItemHZBInput_" + holder + '_', "");
+                //console.log('INPUT ' + this.id + " : " + this.value + " : " + jobLongName);
+                //if ( historyData.hasOwnProperty(jobLongName) ) {
+                //  updateJobHistoryData(0, jobLongName);
+                //}
+                updateJobHistoryData(0, jobLongName);
+              }
+        jobItemHZBInput.addEventListener('keypress', function(event) {
+                if (event.keyCode == 13) {
+                  this.onblur();
+                }
+              });
+
+      var jobItemHZDown = document.createElement('Button');
+        jobItemHZDown.id = 'jobItemHZDown_' + jobNameFull;
+        jobItemHZDown.className = 'zoomBoxButton';
+        jobItemHZDown.textContent = '-';
+        jobItemHZDown.onclick = function() {
+                var hsinput = document.getElementById(this.id.replace("jobItemHZDown", "jobItemHZBInput_" + holder));
+                hsinput.value -=  parseInt(hsinput.value)>1?1:0;
+                var jobLongName = this.id.replace("jobItemHZDown_", "");
+                //console.log('DOWN ' + this.id + " : " + hsinput.value + " : " + jobLongName);
+                //if ( historyData.hasOwnProperty(jobLongName) ) {
+                //  updateJobHistoryData(0, jobLongName);
+                //}
+                updateJobHistoryData(0, jobLongName);
+              }
+      var jobItemHZUp = document.createElement('Button');
+        jobItemHZUp.id = 'jobItemHZUp_' + jobNameFull;
+        jobItemHZUp.className = 'zoomBoxButton';
+        jobItemHZUp.textContent = '+';
+        jobItemHZUp.onclick = function() {
+                var hsinput = document.getElementById(this.id.replace("jobItemHZUp", "jobItemHZBInput_" + holder));
+                hsinput.value = parseInt(hsinput.value,10) + 1;
+                var jobLongName = this.id.replace("jobItemHZUp_", "");
+                //console.log('UP ' + this.id + " : " + hsinput.value + " : " + jobLongName);
+                //if ( historyData.hasOwnProperty(jobLongName) ) {
+                //  updateJobHistoryData(0, jobLongName);
+                //}
+                updateJobHistoryData(0, jobLongName);
+              }
+      //jobItemHZoomBox.appendChild(jobItemHZBLabel);
+      jobItemHZoomBox.appendChild(jobItemHZDown);
+      jobItemHZoomBox.appendChild(jobItemHZBInput);
+      jobItemHZoomBox.appendChild(jobItemHZUp);
+
+
+      jobElement.appendChild(jobItemName);
+      jobElement.appendChild(jobItemInstance);
+      jobElement.appendChild(jobItemHZoomBox);
+      jobsListHolder.appendChild(jobElement);
+      jobsListHolder.appendChild(jobElementGraph);
+
+      if (holder === 'running_jobsHolder') {
+        jobElementGraph.style.display = 'block';
+        updateJobHistoryData(0, jobNameFull);
+      }
+    }
+
+    // Popup menu - content could vary depending on where the jobs list is parented
+    if (holder === 'historyListJobsHolder' ) {
+      // Start of popup menu
+      var jobElementMenu = [{
+        title: 'Display',
+        action: function(elm, data, index) {
+          console.log('menu item #1 from ' + elm.id + " " + data.title + " " + index);
+          var jobElementGraphName = 'jobElementGraph_' +
+                                  elm.id.slice('jobItemInstance_'.length);
+          var jobLongName = elm.id.slice('jobItemInstance_'.length);
+          //console.log('jobElementGraphName = ' + jobElementGraphName);
+          var jobElementGraph = document.getElementById(jobElementGraphName);
+          if ( jobElementGraph.style.display == 'block') {
+            jobElementGraph.style.display = 'none';
+          } else {
+            jobElementGraph.style.display = 'block';
+
+            // Only download job data if we don't already have it
+            if ( (!historyData.hasOwnProperty(jobLongName)) ) {
+              msgobj = {type:'load_saved_job_data', data:{'fileName':jobElementGraphName.slice('jobElementGraph_'.length)}};
+                sendMessage({data:JSON.stringify(msgobj)});
+              } else {
+                updateJobHistoryData(0, jobLongName);
+              }
+            }
+          }
+        }, {
+        // At the server, move from history to archive directory
+        // In the browser, remove item from list
+        title: 'Archive',
+        action: function(elm, data, index) {
+          console.log('menu item #2 from ' + elm.id + " " + data.title + " " + index);
+          var longName = elm.id.replace('jobItemInstance_', '');
+          var jobName = longName.slice(0, (longName.length - 16)); // e.g. '-20160504_103213'
+          var jobInstance = longName.replace(jobName + '-', '');
+          var confirmArchive = confirm("Archive job: " + jobName + "?");
+          if ( confirmArchive == true ) {
+            var msgobj = {type:'archive_saved_job',
+                          data:{'jobName':jobName, 'instance':jobInstance}};
+            sendMessage({data:JSON.stringify(msgobj)});
+          }
+        }
+      }, {
+        title: 'Delete',
+        action: function(elm, data, index) {
+          console.log('menu item #3 from ' + elm.id + " " + data.title + " " + index);
+          var longName = elm.id.replace('jobItemInstance_', '');
+          var jobName = longName.slice(0, (longName.length - 16)); // e.g. '-20160504_103213'
+          var jobInstance = longName.replace(jobName + '-', '');
+          console.log('menu jobName ' + jobName + ' instance: ' + jobInstance);
+          var confirmDelete = confirm("Completely DELETE job: " + jobName + " from the system?");
+          if ( confirmDelete == true ) {
+            var msgobj = {type:'delete_saved_job',
+                          data:{'jobName':jobName, 'instance':jobInstance}};
+            sendMessage({data:JSON.stringify(msgobj)});
+          }
+        }
+      }];
+      // End of popup menu
+    } else if (holder === 'running_jobsHolder') {
+      // Start of popup menu
+      var jobElementMenu = [{
+        title: 'Hide/Display',
+        action: function(elm, data, index) {
+          console.log('menu item #1 from ' + elm.id + " " + data.title + " " + index);
+          var jobElementGraphName = 'jobElementGraph_' +
+                                  elm.id.slice('jobItemInstance_'.length);
+          var jobLongName = elm.id.slice('jobItemInstance_'.length);
+          //console.log('jobElementGraphName = ' + jobElementGraphName);
+          var jobElementGraph = document.getElementById(jobElementGraphName);
+          if ( jobElementGraph.style.display == 'block') {
+            jobElementGraph.style.display = 'none';
+          } else {
+            jobElementGraph.style.display = 'block';
+            updateJobHistoryData(0, jobLongName);
+          }
+        }
+      }, {
+        title: 'Stop',
+        action: function(elm, data, index) {
+          console.log('menu item #2 from ' + elm.id + " " + data.title + " " + index);
+          var longJobName = elm.id.replace('jobItemInstance_', '');
+          var jobInstance = instancePattern.exec(longJobName);
+          var nodeName = longJobName.slice(0,(longJobName.indexOf(jobInstance)-1));
+          var msgobj = {type:'stop_running_job', data:{'jobName':nodeName}};
+          sendMessage({data:JSON.stringify(msgobj)});
+        }
+      }, {
+        title: 'Remove',
+        action: function(elm, data, index) {
+          console.log('menu item #3 from ' + elm.id + " " + data.title + " " + index);
+          var longJobName = elm.id.replace('jobItemInstance_', '');
+          var jobInstance = instancePattern.exec(longJobName);
+          var nodeName = longJobName.slice(0,(longJobName.indexOf(jobInstance)-1));
+          var confirmRemove = confirm("Remove job " + nodeName + "?");
+          if ( confirmRemove == true ) {
+            var msgobj = {type:'remove_running_job',
+                          data:{'jobName':nodeName,'longName':longJobName}};
+            sendMessage({data:JSON.stringify(msgobj)});
+          }
+        }
+      }, {
+        title: 'Save',
+        action: function(elm, data, index) {
+          console.log('menu item #4 from ' + elm.id + " " + data.title + " " + index);
+          var longJobName = elm.id.replace('jobItemInstance_', '');
+          var jobInstance = instancePattern.exec(longJobName);
+          var nodeName = longJobName.slice(0,(longJobName.indexOf(jobInstance)-1));
+          var msgobj = {type:'save_running_job', data:{'jobName':nodeName}};
+          sendMessage({data:JSON.stringify(msgobj)});
+        }
+      }];
+      // End of popup menu
+    } else if (holder === 'testHolder') {
+      // Start of popup menu
+      var jobElementMenu = [{
+        title: 'Display',
+        action: function(elm, data, index) {
+          console.log('menu item #1 from ' + elm.id + " " + data.title + " " + index);
+          var jobElementGraphName = 'jobElementGraph_' +
+                                  elm.id.slice('jobItemInstance_'.length);
+          var jobLongName = elm.id.slice('jobItemInstance_'.length);
+          //console.log('jobElementGraphName = ' + jobElementGraphName);
+          var jobElementGraph = document.getElementById(jobElementGraphName);
+          if ( jobElementGraph.style.display == 'block') {
+            jobElementGraph.style.display = 'none';
+          } else {
+            jobElementGraph.style.display = 'block';
+
+            // Only download job data if we don't already have it
+            if ( (!historyData.hasOwnProperty(jobLongName)) ) {
+              msgobj = {type:'load_saved_job_data', data:{'fileName':jobElementGraphName.slice('jobElementGraph_'.length)}};
+                sendMessage({data:JSON.stringify(msgobj)});
+              } else {
+                updateJobHistoryData(0, jobLongName);
+              }
+            }
+          }
+        }, {
+          title: 'Delete',
+          action: function(elm, data, index) {
+            console.log('menu item #2 from ' + elm.id + " " + data.title + " " + index);
+          }
+        }, {
+          title: 'Is this the Status Page?',
+          action: function(elm, data, index) {
+            console.log('menu item #3 from ' + elm.id + " " + data.title + " " + index);
+          }
+      }];
+      // End of popup menu
+    }
+
+    d3.selectAll('.jobItemInstance_' + holder).on('click', function(data, index) {
+                                        var elm = this;
+
+                                        // create the div element that will hold the context menu
+                                        d3.selectAll('.context-menu').data([1])
+                                          .enter()
+                                          .append('div')
+                                          .attr('class', 'context-menu');
+
+                                          // an ordinary click anywhere closes menu
+                                          d3.select('body').on('click.context-menu', function() {
+                                            d3.select('.context-menu').style('display', 'none');
+                                          });
+
+                                          // this is executed when a contextmenu event occurs
+                                          d3.selectAll('.context-menu')
+                                            .html('<center><p><b>Job Options</b></p></center><hr>')
+                                            .append('ul')
+                                            .selectAll('li')
+                                            .data(jobElementMenu).enter()
+                                            .append('li')
+                                            .on('click',function(d) {
+                                                        console.log('popup selected: ' + d.title);
+                                                        d.action(elm, d, i);
+                                                        d3.select('.context-menu')
+                                                          .style('display', 'none');
+                                                        return d;
+                                                      })
+                                            .text(function(d) {return d.title;});
+                                          d3.select('.context-menu').style('display', 'none');
+
+                                          // show the context menu
+                                          d3.select('.context-menu')
+                                            .style('left', (d3.event.pageX - 12) + 'px')
+                                            .style('top', (d3.event.pageY - 72) + 'px')
+                                            .style('display', 'block');
+                                          d3.event.preventDefault();
+
+                                          d3.event.stopPropagation();
+                                      });
+
+  }
+
 
 
 /* START PROFILES */
@@ -1113,7 +1682,6 @@ window.onload = function () {
 
   }
 
-
   function makeTickValues(maxValue, tickCount) {
     var result = [];
     if (window.innerWidth < 1000 ) {
@@ -1289,8 +1857,7 @@ d3.select("body").on("keyup", function () {
   //function updateTemplateProfile(profileData, profileDivName) {
   function updateTemplateProfile(options) {
     profileOwner = options.owner || 'unknown';
-    console.log("Reached updateTemplateProfile(): " + profileOwner);
-    //profileData = options.data || [];
+    //console.log("Reached updateTemplateProfile(): " + profileOwner);
     profileData = JSON.parse(document.getElementById(profileOwner).getAttribute('pdata'));
 
     var templateProfileGraphMargin = {top: 2, right: 4, bottom: 1, left: 1},
@@ -1604,7 +2171,8 @@ d3.select("body").on("keyup", function () {
           var confirmRun = confirm("Run job " + jobName + "?");
           if ( confirmRun == true ) {
             // Request job run
-            var msgobj = {type:'run_job', data:{ index: parseInt(templateItemIndex) }};
+            var msgobj = {type:'run_job',
+                    data:{index: parseInt(templateItemIndex), name: jobName }};
             sendMessage({data:JSON.stringify(msgobj)});
 
             // Now go to status page to view job progress

@@ -131,6 +131,18 @@ Configuration.prototype.updateFudgeEntry = function (sensorIds) {
   return;
 }
 
+Configuration.prototype.setMultiSensorMeanWeight = function (value) {
+  console.log("updateMultiSensorMeanWeight(" + value + ")");
+  var config = this._configuration;
+  if (value < 0 ) {
+    value = 0;
+  } else if (value > 100 ) {
+    value = 100;
+  }
+  config['multiSensorMeanWeight'] = value;
+  fs.writeFileSync(this._configFileName, JSON.stringify(config));
+}
+
 
 /********
 atest = new Configuration();
