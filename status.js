@@ -17,6 +17,7 @@ var profileData = [];
 var profileDisplayData = [];        // "processed" data for display
 var profileLinearScaleY = [];
 var profileLinearScaleX = [];
+var temperatureColours = ["blue", "green", "red", "orange"];
 var profileLineColours = ["green", "red", "orange", "blue"];
 var pfCtrlKey = false;
 var pfCurrentDot = {"id":"none"};
@@ -417,7 +418,7 @@ window.onload = function () {
         console.log("RCVD running_jobs " + message.data);
         createRunningJobsList(jmsg.data);
       } else if (jmsg.type === 'running_job_status') {
-        console.log("RCVD running_jobs " + message.data);
+        console.log("RCVD running_job_status " + message.data);
         updateRunningJob(jmsg.data);
       } else if (jmsg.type === 'relay_update') {
         //console.log("RCVD relay_update " + message.data);
@@ -686,6 +687,7 @@ window.onload = function () {
 
     var longJobNames = [];
     data.forEach( function (job, index) {
+      console.log("WWW");
       var header = job['header'];
       var updates = job['updates'];
       var longName = header['jobName'] + '-' + header['jobInstance'];
@@ -693,7 +695,6 @@ window.onload = function () {
 
       console.log("Creating listing for job: " + index + " (" + longName + ")");
       longJobNames.push(longName);
-      console.log("XXX");
 
       // Save the data for later use. It should consist of two arrays,
       // 1st with just the job header and 2nd with an array of status updates
@@ -701,7 +702,9 @@ window.onload = function () {
       saveData['header'] = [header];
       saveData['updates'] = updates;
       runningData[longName] = saveData;
+      console.log("XXX " + JSON.stringify(runningData[longName]));
     });
+    console.log("ZZZ");
     updateJobsList(longJobNames, 'running_jobsHolder');
   }
 
@@ -711,7 +714,7 @@ window.onload = function () {
       var longJobName = data['jobName'] + '-' + data['jobInstance'];
       console.log("updateRunningJob() longJobName " + longJobName);
       runningData[longJobName]['updates'].push(data);
-      console.log("Received running_job_status for " + longJobName );//+ " (" + runningData[longJobName]['updates'].length + ")");
+      console.log("updateRunningJob() longJobName 2 " + longJobName);
       updateJobHistoryData(0, longJobName)
     } else {
       console.log("Received dummy update for " + data.jobName);
@@ -833,6 +836,7 @@ window.onload = function () {
         var longName = header[0]['jobName'] + '-' + header[0]['jobInstance'];
         //console.log("updateJobHistoryData() 1 longName: " + longName);
         //console.log("updateJobHistoryData() 2 updates =  " + updates.length);
+        console.log("updateJobHistoryData() 3 updates =  " + JSON.stringify(updates));
       }
       //var longName = header[0]['jobName'] + '-' + header[0]['jobInstance'];
     }
@@ -980,7 +984,31 @@ window.onload = function () {
                               .attr("stroke", "gray")
                               .attr("stroke-width", 2)
                               .attr("fill", "none");
-//    }
+
+      console.log("pre sensor data: ");
+      for (var sensor_instance=0;sensor_instance<header[0]['jobSensorIds'].length;sensor_instance++) {
+        console.log("sensor data: " + sensor_instance);
+        // Scale temperature data
+        var scaledTemperatureLineData = [];
+        var temperatureLineData = temperatureLineDataHolder[sensor_instance];
+        for ( var sp=0;sp<temperatureLineData.length;sp++) {
+          //console.log("scaled sp = " + temperatureLineData[sp].x + " : " + temperatureLineData[sp].y);
+          scaledTemperatureLineData.push({"x":historyLinearScaleX(temperatureLineData[sp].x),
+                                          "y":historyLinearScaleY(temperatureLineData[sp].y)});
+        }
+        // Draw temperature graph
+        var historyTemperatureLineFunction = d3.svg.line()
+                                  .x(function(d) { return d.x; })
+                                  .y(function(d) { return d.y; })
+                                  .interpolate("linear");
+        var lineGraph = historyJobsGraphHolder.append("path")
+                                  .attr("transform",
+                                        "translate(" + historyJobsGraphMargin.left + "," + historyJobsGraphMargin.top + ")")
+                                  .attr("d", historyTemperatureLineFunction(scaledTemperatureLineData))
+                                  .attr("stroke", temperatureColours[sensor_instance])
+                                  .attr("stroke-width", 2)
+                                  .attr("fill", "none");
+    }
   }
 
   function updateJobsList(jobfiles, holder) {

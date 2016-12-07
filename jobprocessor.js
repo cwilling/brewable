@@ -67,7 +67,7 @@ function JobProcessor(options) {
   var job_status = {'jobName'    :this.jobName,
                     'jobInstance':this.instanceId,
                     'type'       :'status',
-                    'elapsed'    : this.startTime - this.startTime,
+                    'elapsed'    : Math.floor((this.startTime - this.startTime)/1000),
                     'sensors'    : []
                    }
   this.jobSensorIds.forEach( function (sensor, index) {
@@ -88,7 +88,8 @@ function JobProcessor(options) {
     job_status['msmw'] = options.parent.configObj.getConfiguration()['multiSensorMeanWeight']
   }
   job_status['running'] = 'startup';
-  //console.log("job_status: " + JSON.stringify(job_status));
+  console.log("job_status: " + JSON.stringify(job_status));
+  this.history.push(job_status);
 
 
   fs.appendFileSync(this.historyFilePath, JSON.stringify(header) + os.EOL);
@@ -106,7 +107,7 @@ JobProcessor.prototype.jobInfo = function () {
               'jobSensorIds':this.jobSensorIds,
               'jobRelays':this.jobRelays,
   };
-  console.log("jobInfo(): " + JSON.stringify(info));
+  //console.log("jobInfo(): " + JSON.stringify(info));
   return info;
 }
 
@@ -115,7 +116,7 @@ JobProcessor.prototype.jobStatus = function (nowTime, obj) {
   var job_status = {'jobName'    :obj.jobName,
                     'jobInstance':obj.instanceId,
                     'type'       :'status',
-                    'elapsed'    : nowTime - obj.startTime,
+                    'elapsed'    : Math.floor((nowTime - obj.startTime)/1000),
                     'sensors'    : []
                    }
   obj.jobSensorIds.forEach( function (sensor, index) {
@@ -180,19 +181,11 @@ JobProcessor.prototype.validateSensors = function (sensorIds) {
 
 JobProcessor.prototype.makeStamp = function (now) {
   var timestamp = now.getFullYear();
-      timestamp = timestamp + '' + (now.getMonth() + 1);
+      timestamp = timestamp + '' + ("00" + (now.getMonth() + 1)).slice(-2);
       timestamp = timestamp + '' + ("00" + now.getDate()).slice(-2);
-      timestamp = timestamp + '_' + now.getHours();
-      if (parseInt(now.getMinutes()) < 10) {
-        timestamp = timestamp + '0' + now.getMinutes();
-      } else {
-        timestamp = timestamp + '' + now.getMinutes();
-      }
-      if (parseInt(now.getSeconds()) < 10) {
-        timestamp = timestamp + '0' + now.getSeconds();
-      } else {
-        timestamp = timestamp + '' + now.getSeconds();
-      }
+      timestamp = timestamp + '_' + ("00" + now.getHours()).slice(-2);
+      timestamp = timestamp + '' + ("00" + now.getMinutes()).slice(-2);
+      timestamp = timestamp + '' + ("00" + now.getSeconds()).slice(-2);
 
   //console.log("Time stamp: " + timestamp);
 return timestamp;
@@ -219,7 +212,7 @@ JobProcessor.prototype.target_temperature = function (current_time) {
     cumulative_time += entry[0];
   });
 
-  var elapsed_time = current_time - this.startTime;
+  var elapsed_time = Math.floor((current_time - this.startTime)/1000);
   //console.log("elapsed_time = " + elapsed_time);
   //console.log("control_steps = " + JSON.stringify(control_steps));
 
@@ -265,13 +258,14 @@ JobProcessor.prototype.process = function () {
   } else {
     status['running'] = 'running';
   }
-  console.log("process() status: " + JSON.stringify(status));
+  //console.log("process() status: " + JSON.stringify(status));
 
   var jdata = JSON.stringify({
     'type':'running_job_status',
     'data':status
   });
   this.output_queue.enqueue(jdata);
+  this.history.push(status);
   fs.appendFileSync(this.historyFilePath, JSON.stringify(status) + os.EOL);
 
   this.processing = false;
@@ -280,8 +274,8 @@ JobProcessor.prototype.process = function () {
 /* Switch relays on/off based on current and target temperature.
 */
 JobProcessor.prototype.temperatureAdjust = function (target) {
-  console.log("temperatureAdjust(" + target + ")");
-  console.log("temperatureAdjust(" + target + "), " + JSON.stringify(this.jobSensors) + " (" + this.jobSensors.length + ")");
+  //console.log("temperatureAdjust(" + target + ")");
+  //console.log("temperatureAdjust(" + target + "), " + JSON.stringify(this.jobSensors) + " (" + this.jobSensors.length + ")");
   var relayIds = [];
   var temp = target;
 
@@ -315,7 +309,7 @@ JobProcessor.prototype.temperatureAdjust = function (target) {
       we use the first two and ignore the rest.
     */
   }
-  console.log("temperatureAdjust() calculated temp = " + temp);
+  //console.log("temperatureAdjust() calculated temp = " + temp);
 }
 
 

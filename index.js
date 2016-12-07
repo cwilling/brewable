@@ -10,7 +10,7 @@ var clients = [];
 
 // This function passed to output_queue for periodic processing
 var updateClients = function () {
-  console.log("updateClients() for " + clients.length + " clients");
+  //console.log("updateClients() for " + clients.length + " clients");
   if (output_queue.size() > 0) {
     message = output_queue.dequeue();
     clients.forEach( function(client) {
@@ -55,7 +55,7 @@ output_queue.start();
 server.start(router.route, handle, clients, input_queue);
 
 setInterval( function() {
-  console.log("\nDoing updates");
+  //console.log("\nDoing device updates");
   worker.updateDevices();
 }, 2000);
 

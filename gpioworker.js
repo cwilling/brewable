@@ -458,13 +458,13 @@ gpioWorker.prototype.load_running_jobs = function (jmsg) {
     depending on the type of jmsg
   */
   if (jmsg['type'] == 'load_running_jobs') {
-    console.log("Send running jobs list after LOAD_RUNNING_JOBS request");
+    console.log("Send running_jobs list after LOAD_RUNNING_JOBS request");
   } else if (jmsg['type'] == 'run_job') {
-    console.log("Send running jobs list after RUN_JOBS request");
+    console.log("Send running_jobs list after RUN_JOBS request");
   } else if (jmsg['type'] == 'load_startup_data') {
-    console.log("Send running jobs list after LOAD_STARTUP_DATA request");
+    console.log("Send running_jobs list after LOAD_STARTUP_DATA request");
   } else {
-    console.log("Send running jobs list after UNKNOWN request");
+    console.log("Send running_jobs list after UNKNOWN request");
   }
 
   /* We send only job info
@@ -477,9 +477,11 @@ gpioWorker.prototype.load_running_jobs = function (jmsg) {
     console.log("Send list of running jobs here");
     running_jobs = [];
     this.runningJobs.forEach( function (job, index) {
+      console.log("runningJobs history 1: " + JSON.stringify(job.history));
       if (jmsg['type'] == 'run_job') {
         job.process();
       }
+      console.log("runningJobs history 2: " + JSON.stringify(job.history));
       var job_info = {};
       job_info['header'] = job.jobInfo();
       job_info['updates'] = job.history.slice(1);
