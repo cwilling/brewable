@@ -1881,7 +1881,9 @@ d3.select("body").on("keyup", function () {
 })
 
 
-  /* Display only some profile - probably job template (or even composer?) */
+  /* "Display only" some profile (not editable)
+    probably job template (or even composer?)
+  */
   //function updateTemplateProfile(profileData, profileDivName) {
   function updateTemplateProfile(options) {
     profileOwner = options.owner || 'unknown';
@@ -1905,14 +1907,26 @@ d3.select("body").on("keyup", function () {
     var profileLineData = [];
     var setpoint = {};
     var nextStep = 0.0;
+/*
     for (var sp=0;sp<profileData.length;sp++) {
       setpoint = {"x":nextStep.toFixed(2),
                   "y":profileData[sp]["target"]};
       profileLineData.push(setpoint);
       nextStep += parseFloat(profileData[sp]["duration"]);
-      //console.log("*** updateTemplateProfile() profile: " + setpoint["x"] + " : " + setpoint["y"]);
+      //nextStep += resolveGraphTimeValue(parseFloat(profileData[sp]["duration"]));
+      console.log("*** updateTemplateProfile() profile: " + setpoint["x"] + "(" + profileData[sp]["duration"] + "): " + setpoint["y"]);
     }
-    //console.log("profileLineData: " + profileLineData);
+*/
+    for (var sp=0;sp<profileData.length;sp++) {
+      //console.log("pdata: " + profileData[sp]["duration"] + " : " + profileData[sp]["target"]);
+      setpoint = {"x":_TESTING_?nextStep:60*nextStep,
+                  "y":profileData[sp]["target"]};
+      profileLineData.push(setpoint);
+      //console.log("pdata: " + setpoint["x"] + " : " + setpoint["y"]);
+
+      nextStep += resolveGraphTimeValue(profileData[sp]["duration"]);
+    }
+    //console.log("profileLineData: " + JSON.stringify(profileLineData));
 
     // Find extent of values in profileLineData
     var maxTime = 0.0;
@@ -2122,6 +2136,7 @@ d3.select("body").on("keyup", function () {
         loadedProfile.push({'target':thisJob['profile'][k].target,'duration':thisJob['profile'][k].duration});
       }
       //templateItemProfile.setAttribute('profile', loadedProfile);
+      console.log("Proposed pdata = " + JSON.stringify(loadedProfile));
       templateItemProfile.setAttribute('pdata', JSON.stringify(loadedProfile));
 
 

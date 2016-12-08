@@ -140,9 +140,10 @@ JobProcessor.prototype.jobStatus = function (nowTime, obj) {
 
 /* Convert profile's duration fields into seconds */
 JobProcessor.prototype.convertProfileTimes = function (profile) {
+  //console.log("convertProfileTimes()  in: " + JSON.stringify(profile));
   var hrs, mins, secs = '0';
-  var durMins = 0;
   profile.forEach( function (item, index) {
+  var durMins = 0;
     console.log("duration = " + item.duration + ", target = " + item.target);
     var hrsmins = item.duration.split('.');
     if (parseInt(hrsmins[0]) > 0 ) { durMins = 60 * parseInt(hrsmins[0]); }
@@ -155,6 +156,7 @@ JobProcessor.prototype.convertProfileTimes = function (profile) {
   });
   //console.log("new profile: " + JSON.stringify(profile));
 
+  //console.log("convertProfileTimes() out: " + JSON.stringify(profile));
   return profile;
 }
 
@@ -245,7 +247,7 @@ JobProcessor.prototype.process = function () {
   var now = new Date().getTime();
 
   var target_temp = this.target_temperature(now);
-  //console.log("target_temp = " + JSON.stringify(target_temp));
+  console.log("target_temp = " + JSON.stringify(target_temp));
   this.temperatureAdjust(target_temp.target);
 
   /*
@@ -269,6 +271,16 @@ JobProcessor.prototype.process = function () {
   fs.appendFileSync(this.historyFilePath, JSON.stringify(status) + os.EOL);
 
   this.processing = false;
+
+  if (target_temp.job_done) {
+    // What to do if we're finished?
+    // Maintain last target?
+    // Do nothing (return)?
+    // Send some sort of alert?
+    // Turn everything off?
+
+    console.log("Job " + this.jobName + " DONE!");
+  }
 }
 
 /* Switch relays on/off based on current and target temperature.
@@ -309,7 +321,76 @@ JobProcessor.prototype.temperatureAdjust = function (target) {
       we use the first two and ignore the rest.
     */
   }
-  //console.log("temperatureAdjust() calculated temp = " + temp);
+  console.log("temperatureAdjust() calculated temp = " + temp);
+
+  /* Now (de)activate relays */
+  if (this.jobRelays.length == 1) {
+    // Single relay for COOL method
+    var coolerRelay = relayIds[0];
+
+    if (parseFloat(temp) > parseFloat(target) ) {
+      // Turn on the cooler relay
+      if ( (! this.relay.isOn(coolerRelay)) ) {
+        this.relay.ON(coolerRelay);
+        this.parent.liveUpdate();
+        console.log("START COOLING");
+      }
+    } else if (parseFloat(temp) < parseFloat(target) ) {
+      // Turn off the cooler relay
+      if ( this.relay.isOn(coolerRelay) ) {
+        this.relay.OFF(coolerRelay);
+        this.parent.liveUpdate();
+        console.log("STOP COOLING");
+      }
+    } else {
+      if ( this.relay.isOn(coolerRelay) ) {
+        this.relay.OFF(coolerRelay);
+        this.parent.liveUpdate();
+      }
+    }
+  } else if (this.jobRelays.length == 2) {
+    //Assume 1st is the cooler relay, 2nd is the heater
+    var coolerRelay = relayIds[0];
+    var heaterRelay = relayIds[1];
+
+    if (parseFloat(temp) > parseFloat(target) ) {
+      // Turn on the cooler relay
+      if ( (! this.relay.isOn(coolerRelay)) ) {
+        this.relay.ON(coolerRelay);
+        this.parent.liveUpdate();
+      }
+      // Turn off the heater relay
+      if ( this.relay.isOn(heaterRelay) ) {
+        this.relay.OFF(heaterRelay);
+        this.parent.liveUpdate();
+      }
+      console.log("START COOLING");
+    } else if (parseFloat(temp) < parseFloat(target) ) {
+      // Turn off the cooler relay
+      if ( this.relay.isOn(coolerRelay) ) {
+        this.relay.OFF(coolerRelay);
+        this.parent.liveUpdate();
+      }
+      // Turn on the heater relay
+      if ( (! this.relay.isOn(heaterRelay)) ) {
+        this.relay.ON(heaterRelay);
+        this.parent.liveUpdate();
+      }
+      console.log("START HEATING");
+    } else {
+      if ( this.relay.isOn(coolerRelay) ) {
+        this.relay.OFF(coolerRelay);
+        this.parent.liveUpdate();
+      }
+      if ( this.relay.isOn(heaterRelay) ) {
+        this.relay.OFF(heaterRelay);
+        this.parent.liveUpdate();
+      }
+    }
+  } else {
+    console.log("No recipe for " + this.jobRelays.length + " relays");
+  }
+
 }
 
 
