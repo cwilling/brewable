@@ -215,11 +215,11 @@ window.onload = function () {
         console.log("Edit the profile");
         location.href = '#content_3';
 
-        /* updateProfile() wants data to be an object */
-        //updateProfileGraph({data:defaultJobProfileData()});
-        updateProfileGraph(
-          {data:JSON.parse(document.getElementById("jobProfileHolder").getAttribute('pdata')),
-          owner:'jobProfileHolder'});
+        /* updateProfileGraph() wants data to be an object */
+        updateProfileGraph({
+            data:JSON.parse(document.getElementById("jobProfileHolder").getAttribute('pdata')),
+            owner:'jobProfileHolder'
+        });
       }
 
       jobProfileHolder.appendChild(jobProfileHolderLabel);
@@ -798,6 +798,8 @@ window.onload = function () {
     }
   }
 
+/* START RUNNING/HISTORY */
+
   /* This is where a graph is (re)drawn.
     We can arrive here for a number of reasons:
       - a graph needs to ber drawn for the first time
@@ -863,9 +865,22 @@ window.onload = function () {
       graphWidthScale = 1;
       document.getElementById('jobItemHZBInput_' + holderName + '_' + longName).value = 1;
     }
+
+    if ( smallDevice() ) {
+      console.log("smallDevice is TRUE");
+      var historyJobsGraphMargin = {top: 50, right: 40, bottom: 60, left: 40};
+      var historyJobsGraphHeight = 300 - (historyJobsGraphMargin.top + historyJobsGraphMargin.bottom);
+    } else {
+      console.log("smallDevice is FALSE");
+      var historyJobsGraphMargin = {top: 50, right: 40, bottom: 60, left: 80};
+      var historyJobsGraphHeight = 400 - (historyJobsGraphMargin.top + historyJobsGraphMargin.bottom);
+    }
+    var historyJobsGraphWidth = graphWidthScale*window.innerWidth - (historyJobsGraphMargin.left + historyJobsGraphMargin.right) - 20;
+/* (original)
     var historyJobsGraphMargin = {top: 20, right: 40, bottom: 50, left: 60},
         historyJobsGraphWidth = graphWidthScale*1800 - historyJobsGraphMargin.left - historyJobsGraphMargin.right,
         historyJobsGraphHeight = 256 - historyJobsGraphMargin.top - historyJobsGraphMargin.bottom;
+*/
 
     // Draw the graph of job history
     d3.select("#history_" + longName.replace('%', '\\%')).remove();
@@ -908,43 +923,35 @@ window.onload = function () {
 
     // Find extent of values in both profileLineData & all the temperatureLineData arrays (1 for each sensor)
     // N.B. could maybe do this while populating the *LineData arrays
-    var maxTime = 0.0;
-    var maxDataPoint = 0.0;
-    var minDataPoint = 1000.0;
-    var minProfile = d3.min(profileLineData, function(d) {return parseFloat(d.y);});
-    var maxProfile = d3.max(profileLineData, function(d) {return parseFloat(d.y);}) + 1.0;
-    var maxProfileTime = d3.max(profileLineData, function(d) {return parseFloat(d.x);}) + 60;
-
-    if ( minProfile < minDataPoint ) minDataPoint = minProfile;
-    if ( maxProfile > maxDataPoint ) maxDataPoint = maxProfile;
-    if ( maxProfileTime > maxTime ) maxTime = maxProfileTime;
+    var minDataPoint = d3.min(profileLineData, function(d) {return parseFloat(d.y);});
+    var maxDataPoint = d3.max(profileLineData, function(d) {return parseFloat(d.y);});
+    var maxTime = d3.max(profileLineData, function(d) {return parseFloat(d.x);});
 
     for (var sensor_instance=0;sensor_instance<header[0]['jobSensorIds'].length;sensor_instance++) {
       var temperature = d3.min(temperatureLineDataHolder[sensor_instance], function(d) {return parseFloat(d.y);});
       if (temperature < minDataPoint ) minDataPoint = temperature;
-      temperature = d3.max(temperatureLineDataHolder[sensor_instance], function(d) {return parseFloat(d.y);}) + 1.0;
+      temperature = d3.max(temperatureLineDataHolder[sensor_instance], function(d) {return parseFloat(d.y);});
       if (temperature > maxDataPoint ) maxDataPoint = temperature;
-      temperature = d3.max(temperatureLineDataHolder[sensor_instance], function(d) {return parseFloat(d.x);}) + 60;
+      temperature = d3.max(temperatureLineDataHolder[sensor_instance], function(d) {return parseFloat(d.x);});
       if ( temperature > maxTime ) maxTime = temperature;
     }
+    // Add some clearance
+    minDataPoint -= 5;
+    maxDataPoint += 5;
+    maxTime += 60;
 
 
-    // Sanity check
-    //minDataPoint = (minDataPoint<0)?0:minDataPoint;
-    //maxDataPoint = (maxDataPoint>60)?60:maxDataPoint;
-    //console.log("**** minDataPoint = " + minDataPoint + ", maxDataPoint = " + maxDataPoint + ", maxTime = " + maxTime);
-
-
-    // Scale & axes
+//                      .domain([minDataPoint,maxDataPoint])
+    console.log("Min = " + minDataPoint + " Max = " + maxDataPoint);
     var historyLinearScaleY = d3.scale.linear()
-                      .domain([minDataPoint,maxDataPoint])
+                      .domain([minDataPoint, maxDataPoint])
                       .range([historyJobsGraphHeight,0]);
     var historyYAxis = d3.svg.axis()
                       .scale(historyLinearScaleY)
                       .orient("left")
-                      .tickValues(makeTickValues(maxDataPoint,4));
-                      //.ticks(4);
+                      .ticks(5);
     var historyYAxisGroup = historyJobsGraphHolder.append("g")
+                      .attr('class', 'y historyAxis unselectable')
                       .attr("transform",
                             "translate(" + historyJobsGraphMargin.left + "," + historyJobsGraphMargin.top + ")")
                       .call(historyYAxis);
@@ -957,7 +964,7 @@ window.onload = function () {
                       .tickValues(makeTickValues(maxTime,18*graphWidthScale));
                       //.ticks(20);
     var xAxisGroup = historyJobsGraphHolder.append("g")
-                      .attr('class', 'x historyAxis')
+                      .attr('class', 'x historyAxis unselectable')
                       .attr("transform",
                             "translate(" + historyJobsGraphMargin.left + "," + (historyJobsGraphHeight + historyJobsGraphMargin.top) + ")")
                       .call(xAxis);
@@ -1850,13 +1857,18 @@ window.onload = function () {
       profileGraphHeight = 400 - (profileGraphMargin.top + profileGraphMargin.bottom);
     }
     profileGraphWidth = window.innerWidth - (profileGraphMargin.left + profileGraphMargin.right) -20;
-      //profileGraphHeight = window.innerHeight - (profileGraphMargin.top - profileGraphMargin.bottom);
+
+    // Redraw profile editor
     updateProfileGraph({data:profileData, owner:profileOwner})
 
-  /*
-    profileGraphWidth = window.innerWidth - 20 - profileGraphMargin.left - profileGraphMargin.right,
-    profileGraphHeight = 400 - profileGraphMargin.top - profileGraphMargin.bottom;
-  */
+    //Redraw running jobs
+    var runningJobs = document.getElementsByClassName("jobElementGraph");
+    for (var i=0;i<runningJobs.length;i++) {
+      var jobLongName = runningJobs[i].id.replace("jobElementGraph_", "");
+      //console.log("Redraw " + jobLongName);
+      updateJobHistoryData(0, jobLongName);
+    };
+
   };
 
 d3.select("body").on("keydown", function () {
