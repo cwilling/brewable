@@ -111,6 +111,10 @@ JobProcessor.prototype.jobInfo = function () {
   return info;
 }
 
+JobProcessor.prototype.name = function () {
+  return this.jobName;
+}
+
 JobProcessor.prototype.jobStatus = function (nowTime, obj) {
   console.log("At jobStatus(): name = " + obj.jobName);
   var job_status = {'jobName'    :obj.jobName,
@@ -237,6 +241,11 @@ JobProcessor.prototype.target_temperature = function (current_time) {
     }
     previous_setpoint = step;
   }
+}
+
+JobProcessor.prototype.stop = function (options) {
+  var stopStatus = (typeof options.stopStatus !== 'undefined') ? options.stopStatus : 'stop';
+  console.log("Stoppng job: " + this.jobName + " with stopStatus = " + stopStatus);
 }
 
 JobProcessor.prototype.process = function () {

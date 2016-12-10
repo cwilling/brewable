@@ -868,12 +868,12 @@ window.onload = function () {
 
     if ( smallDevice() ) {
       console.log("smallDevice is TRUE");
-      var historyJobsGraphMargin = {top: 50, right: 40, bottom: 60, left: 40};
-      var historyJobsGraphHeight = 300 - (historyJobsGraphMargin.top + historyJobsGraphMargin.bottom);
+      var historyJobsGraphMargin = {top: 24, right: 40, bottom: 60, left: 40};
+      var historyJobsGraphHeight = 192 - (historyJobsGraphMargin.top + historyJobsGraphMargin.bottom);
     } else {
       console.log("smallDevice is FALSE");
-      var historyJobsGraphMargin = {top: 50, right: 40, bottom: 60, left: 80};
-      var historyJobsGraphHeight = 400 - (historyJobsGraphMargin.top + historyJobsGraphMargin.bottom);
+      var historyJobsGraphMargin = {top: 32, right: 40, bottom: 60, left: 80};
+      var historyJobsGraphHeight = 256 - (historyJobsGraphMargin.top + historyJobsGraphMargin.bottom);
     }
     var historyJobsGraphWidth = graphWidthScale*window.innerWidth - (historyJobsGraphMargin.left + historyJobsGraphMargin.right) - 20;
 /* (original)
@@ -1226,8 +1226,11 @@ window.onload = function () {
           var longJobName = elm.id.replace('jobItemInstance_', '');
           var jobInstance = instancePattern.exec(longJobName);
           var nodeName = longJobName.slice(0,(longJobName.indexOf(jobInstance)-1));
-          var msgobj = {type:'stop_running_job', data:{'jobName':nodeName}};
-          sendMessage({data:JSON.stringify(msgobj)});
+          var confirmStop = confirm("Stop job " + nodeName + "?");
+          if ( confirmStop == true ) {
+            var msgobj = {type:'stop_running_job', data:{'jobName':nodeName}};
+            sendMessage({data:JSON.stringify(msgobj)});
+          }
         }
       }, {
         title: 'Remove',

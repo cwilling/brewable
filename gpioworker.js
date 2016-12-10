@@ -191,6 +191,8 @@ gpioWorker.prototype.processMessage = function () {
     this.delete_job(msg);
   } else if (msg.type == 'run_job') {
     this.run_job(msg);
+  } else if (msg.type == 'stop_running_job') {
+    this.stop_running_job({'msg':msg, 'stopStatus':'stop'});
   } else if (msg.type == 'load_jobs') {
     this.load_jobs(msg);
   } else {
@@ -494,6 +496,37 @@ gpioWorker.prototype.load_running_jobs = function (jmsg) {
   var jdata = JSON.stringify({'type':'running_jobs','data':running_jobs});
   console.log("load_running_jobs() returning: " + jdata);
   this.output_queue.enqueue(jdata);
+}
+
+gpioWorker.prototype.stop_running_job = function (options) {
+  var jmsg = options.msg;
+  var stopStatus = options.stopStatus
+  var job_found = false;
+  console.log("Rcvd STOP_RUNNING_JOB, stopStatus = " + stopStatus);
+
+  for (var i=0;i<this.runningJobs.length;i++) {
+    var job = this.runningJobs[i];
+    console.log("stop_running_job() Trying: " + job.name());
+    if (job.name() == jmsg['data']['jobName']) {
+      job_found = true;
+      console.log("Job " + job.name() + " running - ready to stop");
+      job.stop(stopStatus);
+      break
+    }
+  }
+  if ( (!job_found) ) {
+    // Perhaps the job was already stopped?
+    for (var i=0;i<this.stoppedJobs.length;i++) {
+      var job = this.stoppedJobs[i];
+      if (job.name() == jmsg['data']['jobName']) {
+        console.log("Job " + job.name() + " already stopped");
+        var jdata = JSON.stringify({'type':'stopped_job',
+                                 'jobName':job.name()});
+        this.output_queue.enqueue(jdata);
+      }
+    }
+  }
+
 }
 
 /* ex:set ai shiftwidth=2 inputtab=spaces smarttab noautotab: */
