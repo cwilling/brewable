@@ -420,6 +420,9 @@ window.onload = function () {
       } else if (jmsg.type === 'running_job_status') {
         console.log("RCVD running_job_status " + message.data);
         updateRunningJob(jmsg.data);
+      } else if (jmsg.type === 'stopped_job') {
+        console.log("RCVD stopped_job " + message.data);
+        jobStopped(jmsg.data);
       } else if (jmsg.type === 'relay_update') {
         //console.log("RCVD relay_update " + message.data);
         relay_update(jmsg);
@@ -441,7 +444,7 @@ window.onload = function () {
         }
         createRelaySelector(availableRelays);
       } else if (jmsg.type === 'loaded_jobs' ) {
-        console.log("RCVD loaded_jobs " + message.data);
+        //console.log("RCVD loaded_jobs " + message.data);
         createJobTemplatesList(jmsg.data);
       }
       else
@@ -710,12 +713,15 @@ window.onload = function () {
 
   function updateRunningJob(data) {
     console.log("updateRunningJob() " + JSON.stringify(data));
-    if ( 'sensors' in data ) {
+    /*if ( 'sensors' in data ) {*/
+    if ( data.type = 'status') {
       var longJobName = data['jobName'] + '-' + data['jobInstance'];
       console.log("updateRunningJob() longJobName " + longJobName);
       runningData[longJobName]['updates'].push(data);
       console.log("updateRunningJob() longJobName 2 " + longJobName);
       updateJobHistoryData(0, longJobName)
+    } else if ( data.type = 'header') {
+      console.log("Received header update for " + data.jobName + "-" + data.jobInstance);
     } else {
       console.log("Received dummy update for " + data.jobName);
     }
@@ -940,9 +946,7 @@ window.onload = function () {
     maxDataPoint += 5;
     maxTime += 60;
 
-
-//                      .domain([minDataPoint,maxDataPoint])
-    console.log("Min = " + minDataPoint + " Max = " + maxDataPoint);
+    //console.log("Min = " + minDataPoint + " Max = " + maxDataPoint);
     var historyLinearScaleY = d3.scale.linear()
                       .domain([minDataPoint, maxDataPoint])
                       .range([historyJobsGraphHeight,0]);
@@ -992,7 +996,6 @@ window.onload = function () {
                               .attr("stroke-width", 2)
                               .attr("fill", "none");
 
-      console.log("pre sensor data: ");
       for (var sensor_instance=0;sensor_instance<header[0]['jobSensorIds'].length;sensor_instance++) {
         console.log("sensor data: " + sensor_instance);
         // Scale temperature data
@@ -1016,7 +1019,131 @@ window.onload = function () {
                                   .attr("stroke-width", 2)
                                   .attr("fill", "none");
     }
+
+    // Only show this button if this job is stopped (the last update will have 'running' == 'stopped')
+    var lastUpdate = updates[updates.length - 1];
+    console.log("QQQQQQQQQQQ " + lastUpdate.running);
+    runningButtonGroup = historyJobsGraphHolder.append("g")
+                              .attr("id", "runningButtonGroup_" + longName.replace('%', '\%'))
+                              .attr("class", "runningButtonGroup")
+                              .attr("transform",
+                                "translate(" +
+                                (smallDevice()?historyJobsGraphWidth-20:historyJobsGraphWidth-40) + "," + 40 + ")")
+                              .style('display', (lastUpdate.running=='stopped'?'block':'none'))
+
+    // Resume button
+    runningResumeButton = d3.select("#runningButtonGroup_" + longName.replace('%', '\%'))
+                        .append("rect")
+                          .attr('id', 'runningResumeButton_' + longName.replace('%', '\%'))
+                          .attr('class', 'runningResumeButton')
+                          .attr('x', 0) .attr('y', 0)
+                          .attr('width', 96).attr('height', 40)
+                          .attr('rx', 6).attr('ry', 6)
+                          .on("click", function() {
+                                console.log("RESUME running " + longName.replace('%', '\%'));
+                                // Request job resume
+                                var msgobj = {'type':'resume_job',
+                                        data:{'jobName': longName.replace('%', '\%') }};
+                                sendMessage({data:JSON.stringify(msgobj)});
+                              })
+
+    runningResumeButtonText = d3.select("#runningButtonGroup_" + longName.replace('%', '\%'))
+                                .append("text")
+                                .attr('class', 'runningResumeButtonText')
+                                .attr('dx', '1.5em')
+                                .attr('dy', '1.7em')
+                                .text("Resume")
   }
+
+  function jobStopped(data) {
+/*
+    var jobName = data['jobName']
+    //console.log("Received stopped_job message " + jobName);
+    d3.select('#title_text_' + jobName).text("Job: " + jobName + " (stopped)");
+*/
+    jobFinishedWith(data, 'stopped');
+  }
+
+  function jobRemoved(data) {
+    jobFinishedWith(data, 'removed');
+  }
+
+  function jobSaved(data) {
+    jobFinishedWith(data, 'saved');
+  }
+
+  /*
+    Remove jobElement_<jobName> & jobElementGraph_<jobName> from running_jobsHolder.
+    Show the No Jobs running notice, if that is the case.
+    Move data associated with jobName from runningData to historyData
+  */
+  function jobFinishedWith(data, endStatus) {
+    if (endStatus === undefined) endStatus='removed';
+
+    var jobName = data['jobName']
+    console.log("Received " + endStatus + "_job message " + jobName);
+    var instancePattern = /-[0-9]{8}_[0-9]{6}/;
+
+    // Remove graph from status (running jobs) page
+    var running_jobsHolder = document.getElementById('running_jobsHolder');
+    var children = document.getElementById("running_jobsHolder").children
+    for (var i=0;i<children.length;i++) {
+      //console.log("Child: " + children[i].id);
+      var thisJobInstance = instancePattern.exec(children[i].id);
+      var thisJobName = children[i].id.slice(0,(children[i].id.indexOf(thisJobInstance)));
+      //console.log("jobName: " + thisJobName);
+      //console.log("Instance: " + thisJobInstance);
+      if (thisJobName === 'jobElement_' + jobName ) {
+        //console.log("Ready to remove " + thisJobName);
+        if ( endStatus !== 'stopped' ) {
+          var rem = document.getElementById('jobElement_' + jobName + thisJobInstance);
+          rem.parentNode.removeChild(rem);
+
+          rem = document.getElementById('jobElementGraph_' + jobName + thisJobInstance);
+          rem.parentNode.removeChild(rem);
+        }
+
+        if ( endStatus === 'saved' ) {
+          // Move associated data
+          historyData[jobName + thisJobInstance] = runningData[jobName + thisJobInstance];
+          //Not sure how to effectively remove old version - maybe just leave it?
+          //del(historyData[jobName + thisJobInstance]);
+
+          // If necessary, show "no jobs running" notice
+          if ( running_jobsHolder.children.length == 0 ) {
+            var no_running_jobs = document.getElementById("no_running_jobs");
+            //no_running_jobs.innerHTML = "No jobs are currently running";
+            no_running_jobs.innerHTML = "<center>" + jobName + " was saved to <a href=#content_2 >Job History</a> <br>No other jobs are currently running</center>";
+            no_running_jobs.style.display = 'flex';
+            no_running_jobs.style.display = '-webkit-flex';
+          }
+
+        } else if ( endStatus === 'stopped' ) {
+          console.log('job stopped');
+          console.log('job stopped ' + jobName + thisJobInstance);
+          // Find the stopped job's graph and add a "Resume" button to it
+          //.attr("id", "runningButtonGroup_" + longName.replace('%', '\%'))
+          var resumeButton = document.getElementById('runningButtonGroup_' + jobName + thisJobInstance);
+          resumeButton.style.display = 'block';
+
+        } else if ( endStatus === 'removed' ) {
+          //Not sure how to effectively remove old version - maybe just leave it?
+          //del(historyData[jobName + thisJobInstance]);
+
+          // If no more running jobs, reinstate "No running jobs" status
+          if ( running_jobsHolder.children.length == 0 ) {
+            var no_running_jobs = document.getElementById("no_running_jobs");
+            no_running_jobs.innerHTML = "<p>No <a href=#content_2>jobs</a> are currently running</p>";
+            no_running_jobs.style.display = 'flex';
+            no_running_jobs.style.display = '-webkit-flex';
+          }
+        }
+      }
+    }
+  }
+
+
+/* START JOBS (page 2) */
 
   function updateJobsList(jobfiles, holder) {
     console.log("Reached updateJobsList()");
@@ -1345,18 +1472,15 @@ window.onload = function () {
 /* START PROFILES */
 
   if ( smallDevice() ) {
-    console.log("smallDevice is TRUE");
+    //console.log("smallDevice is TRUE");
     var profileGraphMargin = {top: 50, right: 40, bottom: 60, left: 40};
     var profileGraphHeight = 300 - (profileGraphMargin.top + profileGraphMargin.bottom);
   } else {
-    console.log("smallDevice is FALSE");
+    //console.log("smallDevice is FALSE");
     var profileGraphMargin = {top: 50, right: 40, bottom: 60, left: 80};
     var profileGraphHeight = 400 - (profileGraphMargin.top + profileGraphMargin.bottom);
   }
   var profileGraphWidth = window.innerWidth - (profileGraphMargin.left + profileGraphMargin.right) - 20;
-    //profileGraphHeight = 400 - profileGraphMargin.top - profileGraphMargin.bottom;
-  //profileGraphWidth = 1800 - profileGraphMargin.left - profileGraphMargin.right,
-  //profileGraphWidth = window.innerWidth - 20 - profileGraphMargin.left - profileGraphMargin.right,
 
   var pfZoom = d3.behavior.zoom()
     .scaleExtent([1,10])
@@ -1687,7 +1811,6 @@ window.onload = function () {
                                   updateTemplateProfile({owner:profileOwner});
                                   replace_job(profileOwner);
                                 }
-
                               })
 
     profileSaveButtonText = d3.select("#profileButtonGroup")

@@ -132,6 +132,21 @@ td {
     fill:       white;
     pointer-events: none;
 }
+.runningResumeButton {
+    stroke:	black;
+    stroke-width: 1px;
+    fill:       #036;
+}
+.runningResumeButton:hover {
+    fill:       #69c;
+    cursor:     pointer;
+}
+.runningResumeButtonText {
+    font-size:  90%;
+    stroke:	none;
+    fill:       white;
+    pointer-events: none;
+}
 
 /*.title_text text {*/
 .title_Text {

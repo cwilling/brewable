@@ -116,7 +116,7 @@ JobProcessor.prototype.name = function () {
 }
 
 JobProcessor.prototype.jobStatus = function (nowTime, obj) {
-  console.log("At jobStatus(): name = " + obj.jobName);
+  //console.log("At jobStatus(): name = " + obj.jobName);
   var job_status = {'jobName'    :obj.jobName,
                     'jobInstance':obj.instanceId,
                     'type'       :'status',
@@ -148,7 +148,7 @@ JobProcessor.prototype.convertProfileTimes = function (profile) {
   var hrs, mins, secs = '0';
   profile.forEach( function (item, index) {
   var durMins = 0;
-    console.log("duration = " + item.duration + ", target = " + item.target);
+    //console.log("duration = " + item.duration + ", target = " + item.target);
     var hrsmins = item.duration.split('.');
     if (parseInt(hrsmins[0]) > 0 ) { durMins = 60 * parseInt(hrsmins[0]); }
     if (parseInt(hrsmins[1]) > 0 ) { durMins += parseInt(hrsmins[1]); }
@@ -245,18 +245,98 @@ JobProcessor.prototype.target_temperature = function (current_time) {
 
 JobProcessor.prototype.stop = function (options) {
   var stopStatus = (typeof options.stopStatus !== 'undefined') ? options.stopStatus : 'stop';
-  console.log("Stoppng job: " + this.jobName + " with stopStatus = " + stopStatus);
+  console.log("Stopping job: " + this.jobName + " with stopStatus = " + stopStatus);
+  try {
+    // Check whether previously stopped
+    for (var i=0;i<this.stoppedJobs.length;i++) {
+      var job = this.stoppedJobs[i];
+      if (job.jobName == this.jobName) {
+        // Finalise the run file
+        var status = this.jobStatus(new Date().getTime(), this);
+        if (stopStatus == 'save') {
+          status['running'] = 'saved';
+        } else {
+          status['running'] = 'stopped';
+        }
+        var jdata = JSON.stringify({'type':'running_job_status', 'data':status});
+        this.output_queue.enqueue(jdata);
+
+        this.history.push(status);
+        fs.appendFileSync(this.historyFilePath, JSON.stringify(status) + os.EOL);
+      }
+    }
+    var job_index = -1;
+    for (var i=0;i<this.runningJobs.length;i++) {
+      var job = this.runningJobs[i];
+      if (job.jobName == this.jobName) {
+        job_index = i;
+        break;
+      }
+    }
+    if (job_index > -1) {
+      console.log("FOUND job " + this.jobName + " to stop running");
+      this.stoppedJobs.push((this.runningJobs.splice(i,1)[0]));
+
+      var jdata = JSON.stringify({'type':'stopped_job', 'data':{'jobName':this.jobName}});
+      this.output_queue.enqueue(jdata);
+
+      // Finalise the run file
+      var status = this.jobStatus(new Date().getTime(), this);
+      if (stopStatus == 'save') {
+        status['running'] = 'saved';
+      } else {
+        status['running'] = 'stopped';
+      }
+      var jdata = JSON.stringify({'type':'running_job_status', 'data':status});
+      this.output_queue.enqueue(jdata);
+
+      this.history.push(status);
+      fs.appendFileSync(this.historyFilePath, JSON.stringify(status) + os.EOL);
+    }
+  }
+  catch (err) {
+    console.log("Trouble stopping job " + this.jobName + ": " + err);
+  }
+}
+
+JobProcessor.prototype.resume = function () {
+  console.log("resume(): resuming job: " + this.name() + "-" + this.instanceId);
+  var job_index = -1;
+  for (var i=0;i<this.stoppedJobs.length;i++) {
+    var job = this.stoppedJobs[i];
+    if (job.jobName == this.jobName) {
+      job_index = i;
+      break;
+    }
+  }
+  if (job_index > -1) {
+    console.log("FOUND job " + this.jobName + " to resume running");
+    this.runningJobs.push((this.stoppedJobs.splice(i,1)[0]));
+
+    var jdata = JSON.stringify({'type':'resumed_job', 'data':{'jobName':this.jobName}});
+    this.output_queue.enqueue(jdata);
+
+    // Resume the run file
+    var status = this.jobStatus(new Date().getTime(), this);
+    status['running'] = 'resumed';
+
+    var jdata = JSON.stringify({'type':'running_job_status', 'data':status});
+    this.output_queue.enqueue(jdata);
+
+    this.history.push(status);
+    fs.appendFileSync(this.historyFilePath, JSON.stringify(status) + os.EOL);
+  }
 }
 
 JobProcessor.prototype.process = function () {
-  console.log("Processing job: " + this.jobName);
+  //console.log("Processing job: " + this.jobName);
   this.report();
   this.processing = true;
   var accumulatedTime = 0.0;
   var now = new Date().getTime();
 
   var target_temp = this.target_temperature(now);
-  console.log("target_temp = " + JSON.stringify(target_temp));
+  //console.log("target_temp = " + JSON.stringify(target_temp));
   this.temperatureAdjust(target_temp.target);
 
   /*
@@ -322,7 +402,7 @@ JobProcessor.prototype.temperatureAdjust = function (target) {
     var temp0 = parseFloat(this.jobSensors[this.jobSensorIds[0]].getTemp());
     var temp1 = parseFloat(this.jobSensors[this.jobSensorIds[1]].getTemp());
     var mswm = parseFloat(this.parent.configuration['multiSensorMeanWeight']);
-    console.log("temperatureAdjust() mswm = " + mswm);
+    //console.log("temperatureAdjust() mswm = " + mswm);
     temp = (temp1 * mswm + temp0 * (100-mswm))/100.0;
   } else {
     console.log("No recipe for " + this.jobSensors.length + " sensors");
@@ -330,7 +410,7 @@ JobProcessor.prototype.temperatureAdjust = function (target) {
       we use the first two and ignore the rest.
     */
   }
-  console.log("temperatureAdjust() calculated temp = " + temp);
+  //console.log("temperatureAdjust() calculated temp = " + temp);
 
   /* Now (de)activate relays */
   if (this.jobRelays.length == 1) {

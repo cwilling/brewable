@@ -193,6 +193,8 @@ gpioWorker.prototype.processMessage = function () {
     this.run_job(msg);
   } else if (msg.type == 'stop_running_job') {
     this.stop_running_job({'msg':msg, 'stopStatus':'stop'});
+  } else if (msg.type == 'resume_job') {
+    this.resume_job(msg);
   } else if (msg.type == 'load_jobs') {
     this.load_jobs(msg);
   } else {
@@ -379,7 +381,7 @@ gpioWorker.prototype.load_jobs = function (msg) {
     'data':this.jobs
   });
   this.output_queue.enqueue(jdata);
-  console.log("this.jobs: " + JSON.stringify(this.jobs));
+  //console.log("this.jobs: " + JSON.stringify(this.jobs));
 }
 
 gpioWorker.prototype.run_job = function (msg) {
@@ -448,7 +450,7 @@ gpioWorker.prototype.setupJobRun = function (jobIndex) {
 gpioWorker.prototype.processRunningJobs = function () {
   console.log("processRunningJobs()");
   this.runningJobs.forEach( function (job, index) {
-    console.log("Process job: " + index + " (" + job.jobName + ")");
+    //console.log("Process job: " + index + " (" + job.jobName + ")");
     //console.log("Process job: " + index + " " + JSON.stringify(job.jobProfile));
     job.process();
   });
@@ -479,17 +481,17 @@ gpioWorker.prototype.load_running_jobs = function (jmsg) {
     console.log("Send list of running jobs here");
     running_jobs = [];
     this.runningJobs.forEach( function (job, index) {
-      console.log("runningJobs history 1: " + JSON.stringify(job.history));
+      //console.log("runningJobs history 1: " + JSON.stringify(job.history));
       if (jmsg['type'] == 'run_job') {
         job.process();
       }
-      console.log("runningJobs history 2: " + JSON.stringify(job.history));
+      //console.log("runningJobs history 2: " + JSON.stringify(job.history));
       var job_info = {};
       job_info['header'] = job.jobInfo();
       job_info['updates'] = job.history.slice(1);
       running_jobs.push(job_info);
     });
-    console.log("running_jobs list: " + JSON.stringify(running_jobs));
+    //console.log("running_jobs list: " + JSON.stringify(running_jobs));
   } else {
     console.log("No jobs running");
   }
@@ -499,7 +501,7 @@ gpioWorker.prototype.load_running_jobs = function (jmsg) {
 }
 
 gpioWorker.prototype.stop_running_job = function (options) {
-  var jmsg = options.msg;
+  var msg = options.msg;
   var stopStatus = options.stopStatus
   var job_found = false;
   console.log("Rcvd STOP_RUNNING_JOB, stopStatus = " + stopStatus);
@@ -507,7 +509,7 @@ gpioWorker.prototype.stop_running_job = function (options) {
   for (var i=0;i<this.runningJobs.length;i++) {
     var job = this.runningJobs[i];
     console.log("stop_running_job() Trying: " + job.name());
-    if (job.name() == jmsg['data']['jobName']) {
+    if (job.name() == msg['data']['jobName']) {
       job_found = true;
       console.log("Job " + job.name() + " running - ready to stop");
       job.stop(stopStatus);
@@ -518,7 +520,7 @@ gpioWorker.prototype.stop_running_job = function (options) {
     // Perhaps the job was already stopped?
     for (var i=0;i<this.stoppedJobs.length;i++) {
       var job = this.stoppedJobs[i];
-      if (job.name() == jmsg['data']['jobName']) {
+      if (job.name() == msg['data']['jobName']) {
         console.log("Job " + job.name() + " already stopped");
         var jdata = JSON.stringify({'type':'stopped_job',
                                  'jobName':job.name()});
@@ -527,6 +529,27 @@ gpioWorker.prototype.stop_running_job = function (options) {
     }
   }
 
+}
+
+gpioWorker.prototype.resume_job = function (msg) {
+  var job_found = false;
+  console.log("Rcvd resquest to RESUME job " + msg.data["jobName"]);
+
+  for (var i=0;i<this.stoppedJobs.length;i++) {
+    var job = this.stoppedJobs[i];
+    var jobLongName = job.name() + '-' + job.instanceId;
+    console.log("stoppedJobs() Trying: " + jobLongName);
+    if (jobLongName == msg.data['jobName']) {
+      job_found = true;
+      console.log("Found stopped job " + job.name() + " - ready to resume");
+      break
+    }
+  }
+  if ( (!job_found) ) {
+      console.log("Couldn't find job " + msg['data']['jobName'] + " to resume!");
+  } else {
+      job.resume();
+  }
 }
 
 /* ex:set ai shiftwidth=2 inputtab=spaces smarttab noautotab: */
