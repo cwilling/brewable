@@ -423,6 +423,9 @@ window.onload = function () {
       } else if (jmsg.type === 'stopped_job') {
         console.log("RCVD stopped_job " + message.data);
         jobStopped(jmsg.data);
+      } else if (jmsg.type === 'removed_job') {
+        console.log("RCVD removed_job " + message.data);
+        jobRemoved(jmsg.data);
       } else if (jmsg.type === 'relay_update') {
         //console.log("RCVD relay_update " + message.data);
         relay_update(jmsg);
@@ -1081,33 +1084,31 @@ window.onload = function () {
     if (endStatus === undefined) endStatus='removed';
 
     var jobName = data['jobName']
-    console.log("Received " + endStatus + "_job message " + jobName);
+    var longName = data['longName']
+    //var jobInstance = longName.replace(jobName + '-', '');
+    //console.log("Received " + endStatus + "_job message " + jobName + " : " + longName + " : " + jobInstance);
     var instancePattern = /-[0-9]{8}_[0-9]{6}/;
 
     // Remove graph from status (running jobs) page
     var running_jobsHolder = document.getElementById('running_jobsHolder');
     var children = document.getElementById("running_jobsHolder").children
     for (var i=0;i<children.length;i++) {
-      //console.log("Child: " + children[i].id);
-      var thisJobInstance = instancePattern.exec(children[i].id);
-      var thisJobName = children[i].id.slice(0,(children[i].id.indexOf(thisJobInstance)));
-      //console.log("jobName: " + thisJobName);
-      //console.log("Instance: " + thisJobInstance);
-      if (thisJobName === 'jobElement_' + jobName ) {
-        //console.log("Ready to remove " + thisJobName);
+      console.log("Child: " + children[i].id);
+      if (children[i].id.endsWith(longName) ) {
+        console.log("jobFinishedWith() ready to remove " + longName);
         if ( endStatus !== 'stopped' ) {
-          var rem = document.getElementById('jobElement_' + jobName + thisJobInstance);
+          var rem = document.getElementById('jobElement_' + longName);
           rem.parentNode.removeChild(rem);
 
-          rem = document.getElementById('jobElementGraph_' + jobName + thisJobInstance);
+          rem = document.getElementById('jobElementGraph_' + longName);
           rem.parentNode.removeChild(rem);
         }
 
         if ( endStatus === 'saved' ) {
           // Move associated data
-          historyData[jobName + thisJobInstance] = runningData[jobName + thisJobInstance];
+          historyData[longName] = runningData[longName];
           //Not sure how to effectively remove old version - maybe just leave it?
-          //del(historyData[jobName + thisJobInstance]);
+          //del(historyData[longName]);
 
           // If necessary, show "no jobs running" notice
           if ( running_jobsHolder.children.length == 0 ) {
@@ -1119,16 +1120,14 @@ window.onload = function () {
           }
 
         } else if ( endStatus === 'stopped' ) {
-          console.log('job stopped');
-          console.log('job stopped ' + jobName + thisJobInstance);
+          console.log('job stopped ' + longName);
           // Find the stopped job's graph and add a "Resume" button to it
-          //.attr("id", "runningButtonGroup_" + longName.replace('%', '\%'))
-          var resumeButton = document.getElementById('runningButtonGroup_' + jobName + thisJobInstance);
+          var resumeButton = document.getElementById('runningButtonGroup_' + longName);
           resumeButton.style.display = 'block';
 
         } else if ( endStatus === 'removed' ) {
           //Not sure how to effectively remove old version - maybe just leave it?
-          //del(historyData[jobName + thisJobInstance]);
+          //del(historyData[longName]);
 
           // If no more running jobs, reinstate "No running jobs" status
           if ( running_jobsHolder.children.length == 0 ) {
@@ -1355,7 +1354,8 @@ window.onload = function () {
           var nodeName = longJobName.slice(0,(longJobName.indexOf(jobInstance)-1));
           var confirmStop = confirm("Stop job " + nodeName + "?");
           if ( confirmStop == true ) {
-            var msgobj = {type:'stop_running_job', data:{'jobName':nodeName}};
+            var msgobj = {type:'stop_running_job',
+                          data:{'jobName':nodeName, 'longName':longJobName}};
             sendMessage({data:JSON.stringify(msgobj)});
           }
         }
@@ -1369,7 +1369,7 @@ window.onload = function () {
           var confirmRemove = confirm("Remove job " + nodeName + "?");
           if ( confirmRemove == true ) {
             var msgobj = {type:'remove_running_job',
-                          data:{'jobName':nodeName,'longName':longJobName}};
+                          data:{'jobName':nodeName, 'longName':longJobName}};
             sendMessage({data:JSON.stringify(msgobj)});
           }
         }

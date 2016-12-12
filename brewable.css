@@ -132,6 +132,9 @@ td {
     fill:       white;
     pointer-events: none;
 }
+.runningButtonGroup {
+    opacity:    0.8;
+}
 .runningResumeButton {
     stroke:	black;
     stroke-width: 1px;

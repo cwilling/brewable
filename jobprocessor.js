@@ -245,6 +245,7 @@ JobProcessor.prototype.target_temperature = function (current_time) {
 
 JobProcessor.prototype.stop = function (options) {
   var stopStatus = (typeof options.stopStatus !== 'undefined') ? options.stopStatus : 'stop';
+  console.log("stop() options: " + JSON.stringify(options));
   console.log("Stopping job: " + this.jobName + " with stopStatus = " + stopStatus);
   try {
     // Check whether previously stopped
@@ -255,6 +256,8 @@ JobProcessor.prototype.stop = function (options) {
         var status = this.jobStatus(new Date().getTime(), this);
         if (stopStatus == 'save') {
           status['running'] = 'saved';
+        } else if (stopStatus == 'remove') {
+          status['running'] = 'removable';
         } else {
           status['running'] = 'stopped';
         }
@@ -275,15 +278,19 @@ JobProcessor.prototype.stop = function (options) {
     }
     if (job_index > -1) {
       console.log("FOUND job " + this.jobName + " to stop running");
-      this.stoppedJobs.push((this.runningJobs.splice(i,1)[0]));
+      this.stoppedJobs.push((this.runningJobs.splice(job_index, 1)[0]));
 
-      var jdata = JSON.stringify({'type':'stopped_job', 'data':{'jobName':this.jobName}});
+      var jdata = JSON.stringify({'type':'stopped_job',
+                                  'data':{'longName':this.jobName + '-' + this.instanceId, 'jobName':this.jobName}
+                                });
       this.output_queue.enqueue(jdata);
 
       // Finalise the run file
       var status = this.jobStatus(new Date().getTime(), this);
       if (stopStatus == 'save') {
         status['running'] = 'saved';
+      } else if (stopStatus == 'remove') {
+        status['running'] = 'removable';
       } else {
         status['running'] = 'stopped';
       }

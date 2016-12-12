@@ -183,6 +183,8 @@ gpioWorker.prototype.processMessage = function () {
     this.list_sensors(msg);
   } else if (msg.type == 'list_relays') {
     this.list_relays(msg);
+  } else if (msg.type == 'load_jobs') {
+    this.load_jobs(msg);
   } else if (msg.type == 'save_job') {
     this.save_job(msg);
   } else if (msg.type == 'replace_job') {
@@ -195,8 +197,8 @@ gpioWorker.prototype.processMessage = function () {
     this.stop_running_job({'msg':msg, 'stopStatus':'stop'});
   } else if (msg.type == 'resume_job') {
     this.resume_job(msg);
-  } else if (msg.type == 'load_jobs') {
-    this.load_jobs(msg);
+  } else if (msg.type == 'remove_running_job') {
+    this.remove_running_job(msg);
   } else {
     console.log("Unrecognised message:");
     for (var key in msg) {
@@ -503,27 +505,35 @@ gpioWorker.prototype.load_running_jobs = function (jmsg) {
 gpioWorker.prototype.stop_running_job = function (options) {
   var msg = options.msg;
   var stopStatus = options.stopStatus
-  var job_found = false;
-  console.log("Rcvd STOP_RUNNING_JOB, stopStatus = " + stopStatus);
+  //console.log("stop_running_job() options: " + JSON.stringify(options));
+
+  var jobName = msg.data["jobName"];
+  var longName = msg.data["longName"]
+  var job_index = -1;
+  console.log("Rcvd STOP_RUNNING_JOB: " + longName + ", stopStatus = " + stopStatus);
 
   for (var i=0;i<this.runningJobs.length;i++) {
-    var job = this.runningJobs[i];
-    console.log("stop_running_job() Trying: " + job.name());
-    if (job.name() == msg['data']['jobName']) {
-      job_found = true;
-      console.log("Job " + job.name() + " running - ready to stop");
-      job.stop(stopStatus);
-      break
+    console.log("stop_running_job() Trying: " + this.runningJobs[i].name());
+    var jobLongName = this.runningJobs[i].name() + '-' + this.runningJobs[i].instanceId;
+    if (jobLongName == longName) {
+      job_index = i;
+      console.log("Job " + jobLongName + " running - ready to stop");
+      break;
     }
   }
-  if ( (!job_found) ) {
+  if ( job_index > -1 ) {
+    console.log("Job " + longName + " running - ready to stop");
+    this.runningJobs[job_index].stop({'stopStatus':stopStatus});
+  } else {
     // Perhaps the job was already stopped?
     for (var i=0;i<this.stoppedJobs.length;i++) {
+      var jobLongName = this.stoppedJobs[i].name() + '-' + this.stoppedJobs[i].instanceId;
       var job = this.stoppedJobs[i];
-      if (job.name() == msg['data']['jobName']) {
-        console.log("Job " + job.name() + " already stopped");
+      if (jobLongName == longName) {
+        console.log("Job " + jobLongName + " already stopped");
         var jdata = JSON.stringify({'type':'stopped_job',
-                                 'jobName':job.name()});
+                                    'data':{'longName':longName, 'jobName':jobName}
+                                  });
         this.output_queue.enqueue(jdata);
       }
     }
@@ -551,5 +561,46 @@ gpioWorker.prototype.resume_job = function (msg) {
       job.resume();
   }
 }
+
+gpioWorker.prototype.remove_running_job = function (msg) {
+  var jobName = msg.data["jobName"];
+  var longName = msg.data["longName"]
+  console.log("Rcvd resquest to REMOVE running job " + jobName + " (" + longName + ")");
+  this.stop_running_job({'msg':msg, 'stopStatus':'remove'});
+
+  // Whether previously running or already stopped, it should now be in stoppedJobs
+  var job_index = -1;
+  for (var i=0;i<this.stoppedJobs.length;i++) {
+    var jobLongName = this.stoppedJobs[i].name() + '-' + this.stoppedJobs[i].instanceId;
+    if (jobLongName == longName) {
+      job_index = i;
+      break;
+    }
+  }
+  if ( job_index > -1 ) {
+    var job = this.stoppedJobs.splice(job_index, 1)[0];
+    var jobHistoryFilePath = job.historyFilePath;
+    console.log("Job " + longName + " removed from stoppedJobs");
+    var jdata = JSON.stringify({'type':'removed_job',
+                                'data':{'longName':longName, 'jobName':jobName}
+                              });
+    this.output_queue.enqueue(jdata);
+
+    // Remove associated file
+    console.log("Removing history file: " + jobHistoryFilePath);
+    fs.unlink(jobHistoryFilePath, function (err) {
+      if (err)
+        console.log("Failed to delete file " + jobHistoryFilePath + ": ", err);
+      else
+        console.log("File " + jobHistoryFilePath + " removed OK.");
+    });
+  } else {
+    // This shouldn't be possible
+    console.log("Job to remove NOT FOUND! (" + longName + ")");
+  }
+
+
+}
+
 
 /* ex:set ai shiftwidth=2 inputtab=spaces smarttab noautotab: */
