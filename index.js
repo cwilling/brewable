@@ -11,7 +11,7 @@ var clients = [];
 // This function passed to output_queue for periodic processing
 var updateClients = function () {
   //console.log("updateClients() for " + clients.length + " clients");
-  if (output_queue.size() > 0) {
+  while (output_queue.size() > 0) {
     message = output_queue.dequeue();
     clients.forEach( function(client) {
       //console.log("Sending msg: " + message);
