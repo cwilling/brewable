@@ -47,8 +47,7 @@ function JobProcessor(options) {
   */
   this.history = [];
   this.historyFileName = this.jobName + '-' + this.instanceId + '.txt';
-  this.historyFilePath = path.join(options.parent.configObj.dir('history'), this.historyFileName);
-  //console.log("historyFilePath: " + historyFilePath);
+  this.runFilePath = path.join(options.parent.configObj.dir('jobs'), this.historyFileName);
 
   var header = {'type':'header',
               'jobName':this.jobName,
@@ -92,8 +91,8 @@ function JobProcessor(options) {
   this.history.push(job_status);
 
 
-  fs.appendFileSync(this.historyFilePath, JSON.stringify(header) + os.EOL);
-  fs.appendFileSync(this.historyFilePath, JSON.stringify(job_status) + os.EOL);
+  fs.appendFileSync(this.runFilePath, JSON.stringify(header) + os.EOL);
+  fs.appendFileSync(this.runFilePath, JSON.stringify(job_status) + os.EOL);
 
 }
 module.exports = JobProcessor;
@@ -245,6 +244,7 @@ JobProcessor.prototype.target_temperature = function (current_time) {
 
 JobProcessor.prototype.stop = function (options) {
   var stopStatus = (typeof options.stopStatus !== 'undefined') ? options.stopStatus : 'stop';
+  var longName = options.longName;
   console.log("stop() options: " + JSON.stringify(options));
   console.log("Stopping job: " + this.jobName + " with stopStatus = " + stopStatus);
   try {
@@ -265,13 +265,14 @@ JobProcessor.prototype.stop = function (options) {
         this.output_queue.enqueue(jdata);
 
         this.history.push(status);
-        fs.appendFileSync(this.historyFilePath, JSON.stringify(status) + os.EOL);
+        fs.appendFileSync(this.runFilePath, JSON.stringify(status) + os.EOL);
       }
     }
     var job_index = -1;
     for (var i=0;i<this.runningJobs.length;i++) {
       var job = this.runningJobs[i];
-      if (job.jobName == this.jobName) {
+      if (longName == job.jobName + '-' + job.instanceId) {
+        console.log("stop() found job " + longName + " to stop: ");
         job_index = i;
         break;
       }
@@ -281,8 +282,9 @@ JobProcessor.prototype.stop = function (options) {
       this.stoppedJobs.push((this.runningJobs.splice(job_index, 1)[0]));
 
       var jdata = JSON.stringify({'type':'stopped_job',
-                                  'data':{'longName':this.jobName + '-' + this.instanceId, 'jobName':this.jobName}
+                                  'data':{'longName':longName, 'jobName':job.jobName}
                                 });
+      console.log("stop() sending: " + jdata);
       this.output_queue.enqueue(jdata);
 
       // Finalise the run file
@@ -298,7 +300,7 @@ JobProcessor.prototype.stop = function (options) {
       this.output_queue.enqueue(jdata);
 
       this.history.push(status);
-      fs.appendFileSync(this.historyFilePath, JSON.stringify(status) + os.EOL);
+      fs.appendFileSync(this.runFilePath, JSON.stringify(status) + os.EOL);
     }
   }
   catch (err) {
@@ -331,7 +333,7 @@ JobProcessor.prototype.resume = function () {
     this.output_queue.enqueue(jdata);
 
     this.history.push(status);
-    fs.appendFileSync(this.historyFilePath, JSON.stringify(status) + os.EOL);
+    fs.appendFileSync(this.runFilePath, JSON.stringify(status) + os.EOL);
   }
 }
 
@@ -364,7 +366,7 @@ JobProcessor.prototype.process = function () {
   });
   this.output_queue.enqueue(jdata);
   this.history.push(status);
-  fs.appendFileSync(this.historyFilePath, JSON.stringify(status) + os.EOL);
+  fs.appendFileSync(this.runFilePath, JSON.stringify(status) + os.EOL);
 
   this.processing = false;
 

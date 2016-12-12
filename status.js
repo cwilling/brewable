@@ -423,6 +423,8 @@ window.onload = function () {
       } else if (jmsg.type === 'stopped_job') {
         console.log("RCVD stopped_job " + message.data);
         jobStopped(jmsg.data);
+      } else if (jmsg.type === 'resumed_job') {
+        console.log("RCVD resumed_job " + message.data);
       } else if (jmsg.type === 'removed_job') {
         console.log("RCVD removed_job " + message.data);
         jobRemoved(jmsg.data);
@@ -708,20 +710,23 @@ window.onload = function () {
       saveData['header'] = [header];
       saveData['updates'] = updates;
       runningData[longName] = saveData;
-      console.log("XXX " + JSON.stringify(runningData[longName]));
+      //console.log("XXX " + JSON.stringify(runningData[longName]));
     });
-    console.log("ZZZ");
+    //console.log("ZZZ");
     updateJobsList(longJobNames, 'running_jobsHolder');
   }
 
   function updateRunningJob(data) {
-    console.log("updateRunningJob() " + JSON.stringify(data));
-    /*if ( 'sensors' in data ) {*/
+    //console.log("updateRunningJob() " + JSON.stringify(data));
     if ( data.type = 'status') {
       var longJobName = data['jobName'] + '-' + data['jobInstance'];
-      console.log("updateRunningJob() longJobName " + longJobName);
+      //console.log("updateRunningJob() longJobName " + longJobName);
+      if (!runningData.hasOwnProperty(longJobName)) {
+        console.log("No job " + longJobName + " yet");
+        return;
+      }
       runningData[longJobName]['updates'].push(data);
-      console.log("updateRunningJob() longJobName 2 " + longJobName);
+      //console.log("updateRunningJob() longJobName 2 " + longJobName);
       updateJobHistoryData(0, longJobName)
     } else if ( data.type = 'header') {
       console.log("Received header update for " + data.jobName + "-" + data.jobInstance);
@@ -823,11 +828,12 @@ window.onload = function () {
     // data should consist of  two arrays,
     // 1st with just the job header and 2nd with an array of status updates
     //console.log("Received msg: saved_job_data " + data);
-    console.log("updateJobHistoryData(): jobLongName " + jobLongName);
+    //console.log("updateJobHistoryData(): jobLongName " + jobLongName);
 
     // Is it new (via data parameter) or are we redrawing stored data?
     if ( jobLongName === undefined ) {
       // We must have data supplied by parameter
+      console.log("updateJobHistoryData() New job");
       var header = data['header'];
       var updates = data['updates'];
       var longName = header[0]['jobName'] + '-' + header[0]['jobInstance'];
@@ -847,7 +853,7 @@ window.onload = function () {
         var longName = header[0]['jobName'] + '-' + header[0]['jobInstance'];
         //console.log("updateJobHistoryData() 1 longName: " + longName);
         //console.log("updateJobHistoryData() 2 updates =  " + updates.length);
-        console.log("updateJobHistoryData() 3 updates =  " + JSON.stringify(updates));
+        //console.log("updateJobHistoryData() 3 updates =  " + JSON.stringify(updates));
       }
       //var longName = header[0]['jobName'] + '-' + header[0]['jobInstance'];
     }
@@ -1000,7 +1006,7 @@ window.onload = function () {
                               .attr("fill", "none");
 
       for (var sensor_instance=0;sensor_instance<header[0]['jobSensorIds'].length;sensor_instance++) {
-        console.log("sensor data: " + sensor_instance);
+        //console.log("sensor data: " + sensor_instance);
         // Scale temperature data
         var scaledTemperatureLineData = [];
         var temperatureLineData = temperatureLineDataHolder[sensor_instance];
@@ -1380,7 +1386,8 @@ window.onload = function () {
           var longJobName = elm.id.replace('jobItemInstance_', '');
           var jobInstance = instancePattern.exec(longJobName);
           var nodeName = longJobName.slice(0,(longJobName.indexOf(jobInstance)-1));
-          var msgobj = {type:'save_running_job', data:{'jobName':nodeName}};
+          var msgobj = {type:'save_running_job',
+                        data:{'jobName':nodeName, 'longName':longJobName}};
           sendMessage({data:JSON.stringify(msgobj)});
         }
       }];
