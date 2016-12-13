@@ -66,7 +66,9 @@ function gpioWorker (input_queue, output_queue) {
   this.runningJobs = []
   this.stoppedJobs = []
 
+  this.runDir = this.configObj.dir('jobs');
   this.historyDir = this.configObj.dir('history');
+  this.archiveDir = this.configObj.dir('archive');
   console.log("HISTORY dir = " + this.historyDir);
 
   // eventEmitter is global (from index.js)
@@ -203,6 +205,12 @@ gpioWorker.prototype.processMessage = function () {
     this.remove_running_job(msg);
   } else if (msg.type == 'save_running_job') {
     this.save_running_job(msg);
+  } else if (msg.type == 'load_saved_jobs') {
+    this.load_saved_jobs(msg);
+  } else if (msg.type == 'load_saved_job_data') {
+    this.load_saved_job_data(msg);
+  } else if (msg.type == 'archive_saved_job') {
+    this.archive_saved_job(msg);
   } else if (msg.type == 'delete_saved_job') {
     this.delete_saved_job(msg);
   } else {
@@ -465,15 +473,15 @@ gpioWorker.prototype.processRunningJobs = function () {
 }
 
 /* Send a list of running jobs back to the client */
-gpioWorker.prototype.load_running_jobs = function (jmsg) {
+gpioWorker.prototype.load_running_jobs = function (msg) {
   /* We reach here for a variety of reasons,
-    depending on the type of jmsg
+    depending on the type of msg
   */
-  if (jmsg['type'] == 'load_running_jobs') {
+  if (msg['type'] == 'load_running_jobs') {
     console.log("Send running_jobs list after LOAD_RUNNING_JOBS request");
-  } else if (jmsg['type'] == 'run_job') {
+  } else if (msg['type'] == 'run_job') {
     console.log("Send running_jobs list after RUN_JOBS request");
-  } else if (jmsg['type'] == 'load_startup_data') {
+  } else if (msg['type'] == 'load_startup_data') {
     console.log("Send running_jobs list after LOAD_STARTUP_DATA request");
   } else {
     console.log("Send running_jobs list after UNKNOWN request");
@@ -490,7 +498,7 @@ gpioWorker.prototype.load_running_jobs = function (jmsg) {
     running_jobs = [];
     this.runningJobs.forEach( function (job, index) {
       //console.log("runningJobs history 1: " + JSON.stringify(job.history));
-      if (jmsg['type'] == 'run_job') {
+      if (msg['type'] == 'run_job') {
         job.process();
       }
       //console.log("runningJobs history 2: " + JSON.stringify(job.history));
@@ -700,8 +708,57 @@ gpioWorker.prototype.delete_saved_job = function (msg) {
       this.output_queue.enqueue(jdata);
     }
   }.bind(this));
-
 }
+
+gpioWorker.prototype.archive_saved_job = function (msg) {
+  var jobName = msg.data["jobName"];
+  var historyFileName = msg.data["jobName"] + '-' + msg.data["instance"] + '.txt';
+  var historyFilePath = path.join(this.historyDir, historyFileName);
+  var archiveFilePath = path.join(this.archiveDir, historyFileName);
+  console.log("Rcvd request to ARCHIVE saved job " + jobName + " (" + historyFilePath + ")");
+
+  console.log("Renaming " + historyFilePath + " to " + archiveFilePath);
+  fs.rename(historyFilePath, archiveFilePath, function (err) {
+    if (err) {
+      console.log("Failed to rename " + historyFilePath + " to " + archiveFilePath + ": " + err);
+    } else {
+      console.log(historyFilePath + " renamed to " + archiveFilePath + " OK.");
+      var jdata = JSON.stringify({'type':'archived_job',
+                                  'data':{'jobName':jobName, 'instance':msg.data['instance']}
+                                });
+      this.output_queue.enqueue(jdata);
+    }
+  }.bind(this));
+}
+
+gpioWorker.prototype.load_saved_job_data = function (msg) {
+  console.log("Rcvd request to LOAD SAVED JOB DATA " + msg.data["fileName"] + ".txt");
+
+  var fileName = msg.data['fileName'] + '.txt';
+  var filepath = path.join(this.historyDir, fileName);
+  fs.readFile(filepath, 'utf8', function (err, data) {
+    if (err) {
+      console.log("Failed to load_saved_job_data from" + filepath + ": " + err);
+    } else {
+      //console.log("Read data from " + filePath + " OK.");
+      lines = data.split(os.EOL);
+      var header = JSON.parse(lines[0]);
+      //console.log("header: " + JSON.stringify(header));
+
+      var updates = [];
+      for (var i=1;i<lines.length-1;i++) {
+        //console.log("-> " + lines[i]);
+        updates.push(JSON.parse(lines[i]));
+        //console.log("-> " + JSON.stringify(updates[updates.length-1]));
+      }
+      var jdata = JSON.stringify({'type':'saved_job_data',
+                                  'data':{'header':[header], 'updates':updates}
+                                });
+      this.output_queue.enqueue(jdata);
+    }
+  }.bind(this) );
+}
+
 
 
 /* ex:set ai shiftwidth=2 inputtab=spaces smarttab noautotab: */

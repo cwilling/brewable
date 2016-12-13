@@ -440,6 +440,13 @@ window.onload = function () {
         // This is a listing, not the data
         console.log("RCVD saved_jobs_list " + message.data);
         updateJobsList(jmsg.data['historyfiles'], 'historyListJobsHolder');
+      } else if (jmsg.type === 'saved_job_data') {
+        // Data for a particular saved job
+        console.log("RCVD saved_job_data ");
+        updateJobHistoryData(jmsg.data);
+      } else if (jmsg.type === 'archived_job') {
+        console.log("RCVD archived_job " + message.data);
+        jobHistoryItemRemoved(jmsg);
       } else if (jmsg.type === 'removed_saved_job') {
         console.log("RCVD removed_saved_job " + message.data);
         jobHistoryItemRemoved(jmsg);
