@@ -1,3 +1,4 @@
+var os = require('os');
 var osenv = require('osenv');
 var path = require('path');
 var fs = require('fs');
@@ -65,7 +66,8 @@ function gpioWorker (input_queue, output_queue) {
   this.runningJobs = []
   this.stoppedJobs = []
 
-console.log("WORK DIR = " + this.configObj.dir('history'));
+  this.historyDir = this.configObj.dir('history');
+  console.log("HISTORY dir = " + this.historyDir);
 
   // eventEmitter is global (from index.js)
   eventEmitter.on('sensor_read', allSensorsRead);
@@ -201,6 +203,8 @@ gpioWorker.prototype.processMessage = function () {
     this.remove_running_job(msg);
   } else if (msg.type == 'save_running_job') {
     this.save_running_job(msg);
+  } else if (msg.type == 'delete_saved_job') {
+    this.delete_saved_job(msg);
   } else {
     console.log("Unrecognised message:");
     for (var key in msg) {
@@ -225,7 +229,7 @@ gpioWorker.prototype.load_startup_data = function (msg) {
 
   // Also send these data (each sends own data to output queue)
   this.load_running_jobs(msg);
-  //this.load_saved_jobs();
+  this.load_saved_jobs(msg);
   //this.load_profiles();
 }
 
@@ -545,7 +549,7 @@ gpioWorker.prototype.stop_running_job = function (options) {
 
 gpioWorker.prototype.resume_job = function (msg) {
   var job_found = false;
-  console.log("Rcvd resquest to RESUME job " + msg.data["jobName"]);
+  console.log("Rcvd request to RESUME job " + msg.data["jobName"]);
 
   for (var i=0;i<this.stoppedJobs.length;i++) {
     var job = this.stoppedJobs[i];
@@ -562,6 +566,41 @@ gpioWorker.prototype.resume_job = function (msg) {
   } else {
       job.resume();
   }
+}
+
+gpioWorker.prototype.load_saved_jobs = function (msg) {
+  console.log("Rcvd request to LOAD SAVED JOBS");
+
+  fs.readdir(this.historyDir, function (err, files) {
+    if (err) {
+      console.log("Failed to read history directory " + this.historyDir);
+    } else {
+      console.log("history files: " + files);
+      var goodhistoryfiles = [];
+
+      files.forEach( function (file, index) {
+        console.log("Reading file " + file);
+        console.log("full path: " + this.historyDir);
+        console.log("full path: " + file);
+
+        fs.readFile(path.join(this.historyDir, file), 'utf8', function (err, data) {
+          lines = data.split(os.EOL);
+          var last_line = JSON.parse(lines[lines.length-2]);
+          console.log("last line: " + JSON.stringify(last_line));
+          if (last_line['running'] == 'saved') {
+            goodhistoryfiles.push(file);
+          }
+          console.log("good history files: " + goodhistoryfiles);
+          jdata = JSON.stringify({'type':'saved_jobs_list',
+                                  'data':{'historyfiles':goodhistoryfiles}
+                                });
+          this.output_queue.enqueue(jdata);
+        }.bind(this));
+    
+      }.bind(this));
+    }
+  }.bind(this));
+
 }
 
 gpioWorker.prototype.remove_running_job = function (msg) {
@@ -592,7 +631,7 @@ gpioWorker.prototype.remove_running_job = function (msg) {
     console.log("Removing run file: " + jobRunFilePath);
     fs.unlink(jobRunFilePath, function (err) {
       if (err)
-        console.log("Failed to delete file " + jobRunFilePath + ": ", err);
+        console.log("Failed to delete file " + jobRunFilePath + ": " + err);
       else
         console.log("File " + jobRunFilePath + " removed OK.");
     });
@@ -606,6 +645,62 @@ gpioWorker.prototype.save_running_job = function (msg) {
   var jobName = msg.data["jobName"];
   var longName = msg.data["longName"]
   console.log("Rcvd request to SAVE running job " + jobName + " (" + longName + ")");
+  this.stop_running_job({'msg':msg, 'stopStatus':'save'});
+
+  // Whether previously running or already stopped, it should now be in stoppedJobs
+  var job_index = -1;
+  for (var i=0;i<this.stoppedJobs.length;i++) {
+    var jobLongName = this.stoppedJobs[i].name() + '-' + this.stoppedJobs[i].instanceId;
+    if (jobLongName == longName) {
+      job_index = i;
+      break;
+    }
+  }
+  if ( job_index > -1 ) {
+    var job = this.stoppedJobs.splice(job_index, 1)[0];
+    var jobRunFilePath = job.runFilePath;
+    var jobHistoryFilePath = job.historyFilePath;
+    console.log("Renaming " + jobRunFilePath + " to " + jobHistoryFilePath);
+    fs.rename(jobRunFilePath, jobHistoryFilePath, function (err) {
+      if (err) {
+        console.log("Failed to rename " + jobRunFilePath + " to " + jobHistoryFilePath + ": " + err);
+      } else {
+        console.log(jobRunFilePath + " renamed to " + jobHistoryFilePath + " OK.");
+        var jdata = JSON.stringify({'type':'saved_job',
+                                    'data':{'longName':longName, 'jobName':jobName}
+                                  });
+        this.output_queue.enqueue(jdata);
+      }
+    }.bind(this));
+  } else {
+    var jdata = JSON.stringify({'type':'error_saved_job',
+                                'data':{'longName':longName, 'jobName':jobName}
+                              });
+    this.output_queue.enqueue(jdata);
+  }
+  this.load_saved_jobs({'type':'load_saved_jobs','data':[]});
+}
+
+gpioWorker.prototype.delete_saved_job = function (msg) {
+  var jobName = msg.data["jobName"];
+  var historyFileName = msg.data["jobName"] + '-' + msg.data["instance"] + '.txt';
+  var historyFilePath = path.join(this.historyDir, historyFileName);
+  console.log("Rcvd request to DELETE saved job " + jobName + " (" + historyFilePath + ")");
+
+  console.log("Removing run file: " + historyFilePath);
+  fs.unlink(historyFilePath, function (err) {
+    if (err) {
+      console.log("Failed to delete file " + historyFilePath + ": " + err);
+    } else {
+      console.log("File " + historyFilePath + " removed OK.");
+      console.log("jobName = " + jobName + " instance = " + msg.data["instance"]);
+      var jdata = JSON.stringify({'type':'removed_saved_job',
+                                  'data':{'jobName':jobName, 'instance':msg.data["instance"]}
+                                });
+      this.output_queue.enqueue(jdata);
+    }
+  }.bind(this));
+
 }
 
 

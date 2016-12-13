@@ -48,6 +48,7 @@ function JobProcessor(options) {
   this.history = [];
   this.historyFileName = this.jobName + '-' + this.instanceId + '.txt';
   this.runFilePath = path.join(options.parent.configObj.dir('jobs'), this.historyFileName);
+  this.historyFilePath = path.join(options.parent.configObj.dir('history'), this.historyFileName);
 
   var header = {'type':'header',
               'jobName':this.jobName,

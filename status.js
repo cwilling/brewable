@@ -247,9 +247,26 @@ window.onload = function () {
     jobItemsHolderContainer.appendChild(jobItemsHolder);
     jobComposer.appendChild(jobItemsHolderContainer);
 
+  var jobsHistory = document.createElement('DIV');
+  jobsHistory.id = 'jobsHistory';
+    var jobsHistoryTitle = document.createElement('DIV');
+    jobsHistoryTitle.id = 'jobsHistoryTitle';
+    jobsHistoryTitle.className = 'section_title unselectable';
+    jobsHistoryTitle.textContent = 'Job History';
+    var historyList = document.createElement('DIV');
+    historyList.id = 'historyList';
+    historyList.className = 'historyList';
+      var historyListJobsHolder = document.createElement('DIV');
+      historyListJobsHolder.id = 'historyListJobsHolder';
+      historyListJobsHolder.className = 'historyListJobsHolder';
+    historyList.appendChild(historyListJobsHolder);
+    jobsHistory.appendChild(jobsHistoryTitle);
+    jobsHistory.appendChild(historyList);
+
   content_2.appendChild(jobTemplatesTitle);
   content_2.appendChild(jobTemplatesHolder);
   content_2.appendChild(jobComposer);
+  content_2.appendChild(jobsHistory);
 
   var content_3 = document.createElement('DIV');
   content_3.id = 'content_3';
@@ -417,6 +434,15 @@ window.onload = function () {
       } else if (jmsg.type === 'running_jobs') {
         console.log("RCVD running_jobs " + message.data);
         createRunningJobsList(jmsg.data);
+      } else if (jmsg.type === 'saved_job') {
+        jobSaved(jmsg.data);
+      } else if (jmsg.type === 'saved_jobs_list') {
+        // This is a listing, not the data
+        console.log("RCVD saved_jobs_list " + message.data);
+        updateJobsList(jmsg.data['historyfiles'], 'historyListJobsHolder');
+      } else if (jmsg.type === 'removed_saved_job') {
+        console.log("RCVD removed_saved_job " + message.data);
+        jobHistoryItemRemoved(jmsg);
       } else if (jmsg.type === 'running_job_status') {
         console.log("RCVD running_job_status " + message.data);
         updateRunningJob(jmsg.data);
@@ -1147,6 +1173,28 @@ window.onload = function () {
     }
   }
 
+  function jobHistoryItemRemoved (jmsg) {
+    var jobName = jmsg.data['jobName']
+    var jobInstance = jmsg.data['instance'];
+    console.log("Received " + jmsg.type + " message for: " + jobName + '-' + jobInstance);
+
+    // Remove the jobElement_<jobName>-<jobInstance> element
+    // Also (if it has been displayed) jobElementGraph_<jobName>-<jobInstance>
+    jobElement = document.getElementById('jobElement_' + jobName + '-' + jobInstance);
+    while ( jobElement.hasChildNodes() ) {
+      jobElement.removeChild(jobElement.firstChild);
+    }
+    jobElement.parentNode.removeChild(jobElement);
+
+    jobElementGraph = document.getElementById('jobElementGraph_' + jobName + '-' + jobInstance);
+    if (typeof(jobElementGraph) != 'undefined' && jobElementGraph != null) {
+      while (jobElementGraph.hasChildNodes() ) {
+        jobElementGraph.removeChild(jobElementGraph.firstChild);
+      }
+      jobElementGraph.parentNode.removeChild(jobElementGraph);
+    }
+  }
+
 
 /* START JOBS (page 2) */
 
@@ -1160,6 +1208,7 @@ window.onload = function () {
     while ( jobsListHolder.hasChildNodes() ) {
       jobsListHolder.removeChild(jobsListHolder.firstChild);
     }
+    console.log("XXX " + holder);
 
     // Reverse sort the received list (by instancePattern)
     sortedJobFiles = jobFiles.sort(function(a,b) {
@@ -2461,7 +2510,7 @@ d3.select("body").on("keyup", function () {
         document.getElementById("tiProfile_" + i).onclick = function() {
           location.href = '#content_3';
           var templateItemProfile = document.getElementById("tiProfile_" + i);
-          console.log("XXXX: " + templateItemProfile.getAttribute('pdata'));
+          //console.log("XXXX: " + templateItemProfile.getAttribute('pdata'));
           updateProfileGraph(
               {data:JSON.parse(templateItemProfile.getAttribute('pdata')),
               owner:templateItemProfile.id});
