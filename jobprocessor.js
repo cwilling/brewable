@@ -4,6 +4,12 @@ var os = require('os');
 
 
 function JobProcessor(options) {
+  if (options.job.hasOwnProperty('type')) {
+    // This is not a new job rather a recovered job,
+    // comprising a header with an additional array  of 'updates'
+    console.log("JobProcessor(): RECOVERING job " + options.job.jobName + '-' + options.job.jobInstance);
+    return;
+  }
   this.rawJobInfo = options.job;
   this.parent = options.parent;
 
@@ -345,9 +351,15 @@ JobProcessor.prototype.process = function () {
   var accumulatedTime = 0.0;
   var now = new Date().getTime();
 
-  var target_temp = this.target_temperature(now);
-  //console.log("target_temp = " + JSON.stringify(target_temp));
-  this.temperatureAdjust(target_temp.target);
+  try {
+    var target_temp = this.target_temperature(now);
+    //console.log("target_temp = " + JSON.stringify(target_temp));
+    this.temperatureAdjust(target_temp.target);
+  }
+  catch (err) {
+    console.log("Couldn't find target_temp! " + err);
+    return;
+  }
 
   /*
     jobStatus() doesn't seem to know what 'this' is

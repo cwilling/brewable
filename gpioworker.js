@@ -65,11 +65,48 @@ function gpioWorker (input_queue, output_queue) {
   // Running & stopped JobProcessor instances
   this.runningJobs = []
   this.stoppedJobs = []
+  this.recoveredJobs = []
 
   this.runDir = this.configObj.dir('jobs');
   this.historyDir = this.configObj.dir('history');
   this.archiveDir = this.configObj.dir('archive');
   console.log("HISTORY dir = " + this.historyDir);
+
+  // Look for jobs still running when server last shut down
+  fs.readdir(this.runDir, function (err, files) {
+    if (err) {
+      console.log("Failed to read running jobs directory " + this.runDir);
+    } else {
+      console.log("job files: " + files);
+      files.forEach( function (file, index) {
+        var filePath = path.join(this.runDir, file);
+        fs.readFile(filePath, 'utf8', function (err, data) {
+          if (err) {
+            console.log("Failed to load_saved_job_data from" + filePath + ": " + err);
+          } else {
+            console.log("Read data from " + filePath + " OK.");
+            lines = data.split(os.EOL);
+            var header = JSON.parse(lines[0]);
+            console.log("header: " + JSON.stringify(header));
+
+            header['updates'] = [];
+            for (var i=0;i<lines.length-1;i++) {
+              header['updates'].push(JSON.parse(lines[i]));
+            }
+            var jobName = header.jobName;
+            console.log("job jobName: " + jobName + " has " + header.updates.length + " updates");
+
+            if ( (! this.setupJobRun({'jobData': header})) ) {
+              console.log("Couldn't start job " + jobName);
+            } else {
+              console.log("Started job " + jobName);
+            }
+            console.log(this.recoveredJobs.length + " jobs recovered");
+          }
+        }.bind(this));
+      }.bind(this));
+    }
+  }.bind(this));
 
   // eventEmitter is global (from index.js)
   eventEmitter.on('sensor_read', allSensorsRead);
@@ -430,7 +467,7 @@ gpioWorker.prototype.run_job = function (msg) {
     }
     console.log("Ready to run " + jobName);
 
-    if ( (! this.setupJobRun(targetIndex)) ) {
+    if ( (! this.setupJobRun({'jobIndex':targetIndex})) ) {
       console.log("Couldn't start job " + jobName);
     } else {
       console.log("Started job " + jobName);
@@ -449,15 +486,30 @@ gpioWorker.prototype.run_job = function (msg) {
 
 }
 
-gpioWorker.prototype.setupJobRun = function (jobIndex) {
-//  var jobInstance = new JobProcessor({job:JSON.parse(JSON.stringify(this.jobs[jobIndex])),parent:this});
+/*
+  Normally, a job instance is created based on the relevant job template,
+  using a jobIndex into this.jobs. If jobIndex < 0, it means that instead
+  of using basic info from his.jobs to create the instance, we will instead
+  supply a suitable object with the required information.
+
+  The first use of this facility is to continue running jobs after a server
+  crash/shutdown; in this case we'll supply header information reclaimed
+  from the job's history file.
+*/
+
+gpioWorker.prototype.setupJobRun = function (options) {
+  var jobIndex = (typeof options.jobIndex !== 'undefined') ? options.jobIndex : -1;
+  var jobData = (typeof options.jobData !== 'undefined') ? options.jobData : {};
 
   try {
-    this.runningJobs.push(new JobProcessor({job:JSON.parse(JSON.stringify(this.jobs[jobIndex])),parent:this}));
-    //return true;
+    if (jobIndex < 0) {
+      this.recoveredJobs.push(new JobProcessor({job:JSON.parse(JSON.stringify(jobData)),parent:this}));
+    } else {
+      this.runningJobs.push(new JobProcessor({job:JSON.parse(JSON.stringify(this.jobs[jobIndex])),parent:this}));
+    }
   }
   catch (err) {
-    console.log("Couldn't create JobPocessor for job " + this.jobs[jobIndex].name + " ERR: " + err);
+    console.log("Couldn't create JobPocessor for job: " + " ERR: " + err);
     return false;
   }
   return true;
