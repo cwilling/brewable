@@ -915,11 +915,11 @@ window.onload = function () {
     }
 
     if ( smallDevice() ) {
-      console.log("smallDevice is TRUE");
+      //console.log("smallDevice is TRUE");
       var historyJobsGraphMargin = {top: 24, right: 40, bottom: 60, left: 40};
       var historyJobsGraphHeight = 192 - (historyJobsGraphMargin.top + historyJobsGraphMargin.bottom);
     } else {
-      console.log("smallDevice is FALSE");
+      //console.log("smallDevice is FALSE");
       var historyJobsGraphMargin = {top: 32, right: 40, bottom: 60, left: 80};
       var historyJobsGraphHeight = 256 - (historyJobsGraphMargin.top + historyJobsGraphMargin.bottom);
     }
@@ -1064,7 +1064,6 @@ window.onload = function () {
 
     // Only show this button if this job is stopped (the last update will have 'running' == 'stopped')
     var lastUpdate = updates[updates.length - 1];
-    console.log("QQQQQQQQQQQ " + lastUpdate.running);
     runningButtonGroup = historyJobsGraphHolder.append("g")
                               .attr("id", "runningButtonGroup_" + longName.replace('%', '\%'))
                               .attr("class", "runningButtonGroup")
@@ -2041,7 +2040,7 @@ window.onload = function () {
       profileGraphMargin = {top: 30, right: 40, bottom: 60, left: 40};
       profileGraphHeight = 300 - (profileGraphMargin.top + profileGraphMargin.bottom);
     } else {
-      console.log("smallDevice is FALSE");
+      //console.log("smallDevice is FALSE");
       profileGraphMargin = {top: 50, right: 40, bottom: 60, left: 80};
       profileGraphHeight = 400 - (profileGraphMargin.top + profileGraphMargin.bottom);
     }

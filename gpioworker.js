@@ -101,7 +101,7 @@ function gpioWorker (input_queue, output_queue) {
             } else {
               console.log("Started job " + jobName);
             }
-            console.log(this.recoveredJobs.length + " jobs recovered");
+            //console.log(this.recoveredJobs.length + " jobs recovered");
           }
         }.bind(this));
       }.bind(this));
@@ -503,7 +503,7 @@ gpioWorker.prototype.setupJobRun = function (options) {
 
   try {
     if (jobIndex < 0) {
-      this.recoveredJobs.push(new JobProcessor({job:JSON.parse(JSON.stringify(jobData)),parent:this}));
+      this.runningJobs.push(new JobProcessor({job:JSON.parse(JSON.stringify(jobData)),parent:this}));
     } else {
       this.runningJobs.push(new JobProcessor({job:JSON.parse(JSON.stringify(this.jobs[jobIndex])),parent:this}));
     }

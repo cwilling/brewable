@@ -4,26 +4,64 @@ var os = require('os');
 
 
 function JobProcessor(options) {
+  var isNewJob = true;
   if (options.job.hasOwnProperty('type')) {
     // This is not a new job rather a recovered job,
     // comprising a header with an additional array  of 'updates'
+    isNewJob = false;
     console.log("JobProcessor(): RECOVERING job " + options.job.jobName + '-' + options.job.jobInstance);
-    return;
   }
-  this.rawJobInfo = options.job;
   this.parent = options.parent;
+  if (isNewJob) {
+    this.rawJobInfo = options.job;
+    console.log("rawJobInfo (new): preheat type = " + typeof(this.rawJobInfo['preheat']));
+    if (typeof(this.rawJobInfo['preheat']) === 'boolean') {
+      console.log("Changing preheat!");
+      var newPreheat = {};
+      newPreheat['on'] = this.rawJobInfo['preheat'];
+      this.rawJobInfo['preheat'] = newPreheat;
+    }
+    console.log("rawJobInfo (new): " + JSON.stringify(this.rawJobInfo));
+  } else {
+    this.rawJobInfo = {};
+    this.rawJobInfo['name'] = options.job['jobName'];
+    // Preheat not implemented yet.
+    // Expect it to be an object with at least an 'on' field which is either true or false;
+    if ( (!options.job.hasOwnProperty('preheat')) ) {
+      this.rawJobInfo['preheat'] = {};
+      this.rawJobInfo['preheat']['on'] = false;
+    } else {
+      this.rawJobInfo['preheat'] = options.job['preheat'];
+    }
+    this.rawJobInfo['profile'] = options.job['jobProfile'];
+    this.rawJobInfo['sensors'] = options.job['jobSensorIds'];
+    this.rawJobInfo['relays'] = options.job['jobRelays'];
+    console.log("rawJobInfo (rec): " + JSON.stringify(this.rawJobInfo));
+  }
+
 
   this.configObj = options.parent.configObj;
   this.sensorDevices = options.parent.sensorDevices;
   this.runningJobs = options.parent.runningJobs;
   this.stoppedJobs = options.parent.stoppedJobs;
   this.output_queue = options.parent.output_queue;
-  this.jobName = options.job['name'];
-  this.jobPreHeat = options.job['preheat'];
-  this.jobProfile = this.convertProfileTimes(this.rawJobInfo['profile']);
 
-  var jsIds = this.validateSensors(options.job['sensors']);
+  if (isNewJob) {
+    this.jobName = options.job['name'];
+    this.jobPreHeat = options.job['preheat'];
+    this.jobProfile = this.convertProfileTimes(this.rawJobInfo['profile']);
+  } else {
+    this.jobName = options.job['jobName'];
+    this.jobPreHeat = this.rawJobInfo['preheat'];
+    this.jobProfile = this.rawJobInfo['profile'];
+  }
+
+  if ( (isNewJob) )
+    var jsIds = this.validateSensors(options.job['sensors']);
+  else
+    var jsIds = this.validateSensors(options.job['jobSensorIds']);
   this.jobSensorIds = jsIds;
+
   var jSensors = {};
   options.parent.sensorDevices().forEach( function (sensor, index) {
     //console.log("ID = " + sensor.getId());
@@ -33,17 +71,31 @@ function JobProcessor(options) {
     }
   });
   this.jobSensors = jSensors;
-
   //console.log("jobSensors: " + JSON.stringify(this.jobSensors));
-  var jRelays = options.job['relays'];
+
+  if ( (isNewJob) )
+    var jRelays = options.job['relays'];
+  else
+    var jRelays = options.job['jobRelays'];
   this.jobRelays = jRelays;
 
-  this.jsDate = new Date();
-  this.startTime = this.jsDate.getTime();
+  if ( (isNewJob) ) {
+    this.jsDate = new Date();
+    this.startTime = this.jsDate.getTime();
+  } else {
+    this.startTime = options.job['startTime'];
+  }
 
-  this.instanceId = this.makeStamp(this.jsDate);
-  this.processing = false;
+  if ( (isNewJob) ) {
+    this.instanceId = this.makeStamp(this.jsDate);
+  } else {
+    this.instanceId = options.job['jobInstance'];
+  }
+
   this.relay = options.parent.relay;
+
+
+  this.processing = false;
 
 ////  console.log("Processing " + JSON.stringify(options.parent));
 
@@ -51,11 +103,17 @@ function JobProcessor(options) {
     Start a history file for this job.
     The history file consists of a 'header' and periodic 'status' updates.
   */
-  this.history = [];
+  if ( (isNewJob) )
+    this.history = [];
+  else
+    this.history = options.job['updates'];
+  //console.log("New history: " + JSON.stringify(this.history));
+
   this.historyFileName = this.jobName + '-' + this.instanceId + '.txt';
   this.runFilePath = path.join(options.parent.configObj.dir('jobs'), this.historyFileName);
   this.historyFilePath = path.join(options.parent.configObj.dir('history'), this.historyFileName);
 
+  // Only for new jobs (not recovered jobs)
   var header = {'type':'header',
               'jobName':this.jobName,
               'jobInstance':this.instanceId,
@@ -74,8 +132,14 @@ function JobProcessor(options) {
                     'jobInstance':this.instanceId,
                     'type'       :'status',
                     'elapsed'    : Math.floor((this.startTime - this.startTime)/1000),
-                    'sensors'    : []
+                    'sensors'    : [],
+                    'running'    :'startup'
                    }
+  if ( (!isNewJob) ) {
+    job_status['elapsed'] = Math.floor((new Date().getTime() - this.startTime)/1000),
+    job_status['running'] = 'recovered';
+  }
+
   this.jobSensorIds.forEach( function (sensor, index) {
     job_status['sensors'].push(sensor);
     //console.log("jobStatus(): " + JSON.stringify(jSensors));
@@ -93,14 +157,15 @@ function JobProcessor(options) {
   if (this.jobSensorIds.length > 1) {
     job_status['msmw'] = options.parent.configObj.getConfiguration()['multiSensorMeanWeight']
   }
-  job_status['running'] = 'startup';
   console.log("job_status: " + JSON.stringify(job_status));
   this.history.push(job_status);
 
 
-  fs.appendFileSync(this.runFilePath, JSON.stringify(header) + os.EOL);
+  if ( (isNewJob) )
+    fs.appendFileSync(this.runFilePath, JSON.stringify(header) + os.EOL);
   fs.appendFileSync(this.runFilePath, JSON.stringify(job_status) + os.EOL);
 
+//  if ( (!isNewJob) ) return;
 }
 module.exports = JobProcessor;
 
@@ -186,7 +251,7 @@ JobProcessor.prototype.validateSensors = function (sensorIds) {
     }
   });
   //console.log("VALIDATE: " + valid_sensorIds);
-  //console.log("VALIDATE: " + JSON.stringify(valid_sensorIds));
+  console.log("VALIDATE: " + JSON.stringify(valid_sensorIds));
 
   return valid_sensorIds;
 }
