@@ -55,12 +55,17 @@ function gpioWorker (input_queue, output_queue) {
   // Populate this.jobs from saved data
   // "Raw" jobs i.e. templates, not instances
   this.jobs = [];
-  var data = fs.readFileSync(this.jobTemplateDataFile);
-  var job_data = JSON.parse(data).job_data;
-  for (var d=0;d<job_data.length;d++) {
-    this.jobs.push(job_data[d]);
+  try {
+    var data = fs.readFileSync(this.jobTemplateDataFile);
+    var job_data = JSON.parse(data).job_data;
+    for (var d=0;d<job_data.length;d++) {
+      this.jobs.push(job_data[d]);
+    }
+    //console.log("this.jobs (from file): " + JSON.stringify(this.jobs));
   }
-  //console.log("this.jobs (from file): " + JSON.stringify(this.jobs));
+  catch (err) {
+    console.log("No job templates available: " + err);
+  }
 
   // Running & stopped JobProcessor instances
   this.runningJobs = []
