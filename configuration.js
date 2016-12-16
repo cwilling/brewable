@@ -23,6 +23,13 @@ function Configuration (options) {
     this._configuration = {};
 
     //console.log("this._projectConfigDir: " + this._projectConfigDir);
+    mkdirp(this._projectConfigDir, function (err) {
+      if (err) {
+        console.log("Problem making directory:" + this._projectConfigDir);
+      }
+      //console.log("Make " + target + " OK");
+      return;
+    });
 
     this.topicDirs.forEach(function (dir) {
       var target = path.join(this._projectConfigDir, dir);
