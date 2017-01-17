@@ -14,13 +14,17 @@
   "scripts": {
     "start": "node server.js"
   },
-  "name": "newbrew",
-  "version": "1.0.0",
+  "name": "brewable",
+  "version": "0.3.0",
   "description": "Nodejs version of brewable",
   "main": "index.js",
   "devDependencies": {},
   "author": "Christoph Willing",
   "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cwilling/brewable.git"
+  },
   "//": [
 "ex:set ai shiftwidth=2 inputtab=spaces smarttab noautotab:"
   ]
