@@ -59,9 +59,13 @@ setInterval( function() {
   worker.updateDevices();
 }, 2000);
 
+/* millseconds i.e.
+  10000 = 10s
+  30000 = 30s
+*/
 setInterval( function() {
   worker.processRunningJobs();
-}, (10000 + Math.floor((Math.random() * 1000) + 1)));
+}, (30000 + Math.floor((Math.random() * 1000) + 1)));
 
 
 /* ex:set ai shiftwidth=2 inputtab=spaces smarttab noautotab: */

@@ -165,6 +165,9 @@ function JobProcessor(options) {
     fs.appendFileSync(this.runFilePath, JSON.stringify(header) + os.EOL);
   fs.appendFileSync(this.runFilePath, JSON.stringify(job_status) + os.EOL);
 
+  // Interpolation choices are "linear" or "step-after"
+  this.target_interpolation = 'linear';
+
 //  if ( (!isNewJob) ) return;
 }
 module.exports = JobProcessor;
@@ -300,17 +303,41 @@ JobProcessor.prototype.target_temperature = function (current_time) {
     return {job_done:true, target:control_steps[control_steps.length - 1][1]};
   }
 
-  /* In simplest case (no easing into next change point)
-    just choose temperature from previous set point.
-  */
-  var previous_setpoint = control_steps[0];
-  for (var i=0;i<control_steps.length;i++) {
-    var step = control_steps[i];
-    if (step[2] > elapsed_time) {
-      //console.log("Returning " + JSON.stringify({job_done:false, target:previous_setpoint[1]}));
-      return {job_done:false, target:previous_setpoint[1]};
+  if (this.target_interpolation == 'step-after') {
+    //console.log("target_interpolation = STEP-AFTER");
+    /* In simplest case (no easing into next change point)
+      just choose temperature from previous set point.
+    */
+    var previous_setpoint = control_steps[0];
+    for (var i=0;i<control_steps.length;i++) {
+      var step = control_steps[i];
+      if (step[2] > elapsed_time) {
+        //console.log("Returning " + JSON.stringify({job_done:false, target:previous_setpoint[1]}));
+        return {job_done:false, target:previous_setpoint[1]};
+      }
+      previous_setpoint = step;
     }
-    previous_setpoint = step;
+  } if (this.target_interpolation == 'linear') {
+    //console.log("target_interpolation = LINEAR");
+    /* Follow linear path between set points
+      i.e. find slope between previous & next set points,
+      then extract temperature at current_time
+    */
+    var previous_setpoint = control_steps[0];
+    for (var i=0;i<control_steps.length;i++) {
+      var step = control_steps[i];
+      if (step[2] > elapsed_time) {
+        var slope = (step[1] - previous_setpoint[1])/(step[2] - previous_setpoint[2]);
+        var intercept = step[1] - slope*step[2];
+        var target = slope*elapsed_time + intercept;
+        console.log("returning target = " + target);
+        return {job_done:false, target:target};
+      }
+      previous_setpoint = step;
+    }
+  } else {
+    console.log("UNKNOWN target_interpolation = " + this.target_interpolation);
+        return {job_done:false, target:'18.0'};
   }
 }
 

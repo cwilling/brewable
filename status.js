@@ -6,9 +6,10 @@ var _TESTING_ = false;
 var navigationMap = {};
 var global_x = 0;
 
-var INTERPOLATE_profile_template = "step-after";
-var INTERPOLATE_profile_editor = "step-after";
-var INTERPOLATE_profile_history = "step-after";
+//var INTERPOLATE_profile_template = "step-after";
+var INTERPOLATE_profile_template = "linear";
+var INTERPOLATE_profile_editor = "linear";
+var INTERPOLATE_profile_history = "linear";
 
 var availableSensors = [];
 var availableRelays  = [];
