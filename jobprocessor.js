@@ -330,7 +330,7 @@ JobProcessor.prototype.target_temperature = function (current_time) {
         var slope = (step[1] - previous_setpoint[1])/(step[2] - previous_setpoint[2]);
         var intercept = step[1] - slope*step[2];
         var target = slope*elapsed_time + intercept;
-        console.log("returning target = " + target);
+        //console.log("returning target = " + target);
         return {job_done:false, target:target};
       }
       previous_setpoint = step;
