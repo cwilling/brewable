@@ -11,3 +11,4 @@ Basic feature list:
 
 See https://cwilling.github.io/brewable for installation and usage information.
 
+Note that the develop branch is a rewrite of the server code using nodejs, replacing the python version in master branch.
