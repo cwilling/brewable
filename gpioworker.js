@@ -597,11 +597,13 @@ gpioWorker.prototype.stop_running_job = function (options) {
     this.runningJobs[job_index].stop({'longName':longName, 'stopStatus':stopStatus});
   } else {
     // Perhaps the job was already stopped?
+    // In which case, ensure it has correct stopStatus
     for (var i=0;i<this.stoppedJobs.length;i++) {
       var jobLongName = this.stoppedJobs[i].name() + '-' + this.stoppedJobs[i].instanceId;
       var job = this.stoppedJobs[i];
       if (jobLongName == longName) {
         console.log("Job " + jobLongName + " already stopped");
+        this.stoppedJobs[i].stop({'longName':longName, 'stopStatus':stopStatus});
         var jdata = JSON.stringify({'type':'stopped_job',
                                     'data':{'longName':longName, 'jobName':jobName}
                                   });
