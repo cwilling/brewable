@@ -2,11 +2,12 @@
 
 
 var events = require('events');
-var server = require("./server");
-var router = require("./router");
-var requestHandlers = require("./requestHandlers");
-var Queue = require("./queue.js");
-var gpioworker = require("./gpioworker");
+
+var server = require("./modules/server");
+var router = require("./modules/router");
+var requestHandlers = require("./modules/requestHandlers");
+var Queue = require("./modules/queue.js");
+var gpioworker = require("./modules/gpioworker");
 
 global.eventEmitter = new events.EventEmitter();
 var clients = [];
@@ -47,8 +48,7 @@ handle["/index.htm"] = requestHandlers.index;
 handle["/index.html"] = requestHandlers.index;
 handle["/favicon.ico"] = requestHandlers.favicon;
 handle["/status.js"] = requestHandlers.status;
-handle["/sprintf.js"] = requestHandlers.sprintf;
-handle["/d3.v3.min.js"] = requestHandlers.d3;
+//handle["/d3.v3.min.js"] = requestHandlers.d3;
 handle["/brewable.css"] = requestHandlers.css;
 handle["/ws"] = requestHandlers.ws;
 

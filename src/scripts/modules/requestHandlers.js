@@ -15,7 +15,7 @@ function start(response) {
 
 function index(response) {
   console.log("Request handler 'index' was called.");
-  fs.readFile(path.join(__dirname, "/index.html"), function (err, data) {
+  fs.readFile(path.join(__dirname, "../../../build/index.html"), function (err, data) {
     if(err){
       response.writeHead(404);
       response.write("Not Found!");
@@ -29,7 +29,7 @@ function index(response) {
 
 function favicon(response) {
   console.log("Request handler 'favicon' was called.");
-  fs.readFile(path.join(__dirname, "/favicon.ico"), function (err, data) {
+  fs.readFile(path.join(__dirname, "../../../favicon.ico"), function (err, data) {
     if(err){
       response.writeHead(404);
       response.write("Not Found!");
@@ -43,7 +43,8 @@ function favicon(response) {
 
 function status(response) {
   console.log("Request handler 'status' was called.");
-  fs.readFile(path.join(__dirname, "/status.js"), function (err, data) {
+  //fs.readFile(path.join(__dirname, "../../../status.js"), function (err, data) {
+  fs.readFile(path.join(__dirname, "../../../build/js/brewablebundle.js"), function (err, data) {
     if(err){
       response.writeHead(404);
       response.write("Not Found!");
@@ -56,24 +57,10 @@ function status(response) {
   });
 }
 
-function sprintf(response) {
-  console.log("Request handler 'sprintf' was called.");
-  fs.readFile(path.join(__dirname, "/sprintf.js"), function (err, data) {
-    if(err){
-      response.writeHead(404);
-      response.write("Not Found!");
-      console.log("sprintf.js not found");
-    } else {
-      response.writeHead(200, {"Content-Type": "text/plain"});
-      response.write(data);
-    }
-    response.end();
-  });
-}
-
+/*
 function d3(response) {
   console.log("Request handler 'd3' was called.");
-  fs.readFile(path.join(__dirname, "/d3.v3.min.js"), function (err, data) {
+  fs.readFile(path.join(__dirname, "../../../d3.v3.min.js"), function (err, data) {
     if(err){
       response.writeHead(404);
       response.write("Not Found!");
@@ -85,10 +72,11 @@ function d3(response) {
     response.end();
   });
 }
+*/
 
 function css(response) {
   console.log("Request handler 'css' was called.");
-  fs.readFile(path.join(__dirname, "/brewable.css"), function (err, data) {
+  fs.readFile(path.join(__dirname, "../../../styles/brewable.css"), function (err, data) {
     if(err){
       response.writeHead(404);
       response.write("Not Found!");
@@ -109,8 +97,7 @@ function ws(response) {
 }
 
 exports.status = status;
-exports.sprintf = sprintf;
-exports.d3 = d3;
+//exports.d3 = d3;
 exports.css = css;
 exports.index = index;
 exports.favicon = favicon;

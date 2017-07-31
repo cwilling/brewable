@@ -10,7 +10,6 @@ INSTALL_FILES = brewable.css \
 		seeedrelay.py \
 		server.py \
 		sprintf.js \
-		status.html \
 		status.js
 
 DESTDIR = /

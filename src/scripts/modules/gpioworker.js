@@ -3,6 +3,7 @@ var osenv = require('osenv');
 var path = require('path');
 var fs = require('fs');
 var events = require('events');
+
 var sensordevice = require("./sensor");
 var sensorLister = require("./sensorLister");
 var Relay = require("./sainsmartrelay");
@@ -658,12 +659,12 @@ gpioWorker.prototype.load_saved_jobs = function (msg) {
             goodhistoryfiles.push(file);
           }
           console.log("good history files: " + goodhistoryfiles);
-          jdata = JSON.stringify({'type':'saved_jobs_list',
-                                  'data':{'historyfiles':goodhistoryfiles}
-                                });
+          jdata = JSON.stringify({
+            'type':'saved_jobs_list',
+            'data':{'historyfiles':goodhistoryfiles}
+          });
           this.output_queue.enqueue(jdata);
         }.bind(this));
-    
       }.bind(this));
     }
   }.bind(this));

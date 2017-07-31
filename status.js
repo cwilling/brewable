@@ -1,3 +1,15 @@
+// Import styles (automatically injected into <head>).
+import "./styles/brewable.css";
+
+import { select, selectAll, event, mouse } from "d3-selection";
+import { max, min } from "d3-array";
+import { scaleLinear, scaleTime } from "d3-scale";
+import { drag } from "d3-drag";
+import { zoom } from "d3-zoom";
+import { axisBottom, axisLeft } from "d3-axis";
+import { line } from "d3-shape";
+//import { timeFormat } from "d3-time-format";
+
 //window.onload = function () {
 //  console.log("Window.onload()");
 //};
@@ -5,11 +17,6 @@
 var _TESTING_ = false;
 var navigationMap = {};
 var global_x = 0;
-
-//var INTERPOLATE_profile_template = "step-after";
-var INTERPOLATE_profile_template = "linear";
-var INTERPOLATE_profile_editor = "linear";
-var INTERPOLATE_profile_history = "linear";
 
 var availableSensors = [];
 var availableRelays  = [];
@@ -22,10 +29,13 @@ var temperatureColours = ["blue", "green", "red", "orange"];
 var profileLineColours = ["green", "red", "orange", "blue"];
 var pfCtrlKey = false;
 var pfCurrentDot = {"id":"none"};
+var profileOwner;
 
 /* Save JobHistory data here */
 var historyData = {};
 var runningData = {};
+
+var msgobj = {};
 
 function smallDevice () {
   return window.innerWidth<1000?true:false;
@@ -35,6 +45,7 @@ function smallDevice () {
 */
 function resolveGraphTimeValue(rawval) {
   var pieces = rawval.split(".");
+  var result;
   if (pieces.length > 1 ) {
     //console.log("resolve: " + pieces[0] + " and " + pieces[1]);
     result = 60 * parseInt(pieces[0])
@@ -59,34 +70,56 @@ function invertGraphTimeValue(val) {
   return hours + "." + minutes;
 }
 
+/*
 var domReady = function(callback) {
   document.readyState === "interactive" ||
   document.readyState === "complete" ? callback() : document.addEventListener("DOMContentLoaded", callback);
 };
+*/
+
 
 /* Return top left corner of enclosing element
    From: http://javascript.info/tutorial/coordinates
 */
 function getOffsetRect(elem) {
   // (1)
-  var box = elem.getBoundingClientRect()
+  var box = elem.getBoundingClientRect();
 
-  var body = document.body
-  var docElem = document.documentElement
+  var body = document.body;
+  var docElem = document.documentElement;
 
   // (2)
-  var scrollTop = window.pageYOffset || docElem.scrollTop || body.scrollTop
-  var scrollLeft = window.pageXOffset || docElem.scrollLeft || body.scrollLeft
+  var scrollTop = window.pageYOffset || docElem.scrollTop || body.scrollTop;
+  var scrollLeft = window.pageXOffset || docElem.scrollLeft || body.scrollLeft;
 
   // (3)
-  var clientTop = docElem.clientTop || body.clientTop || 0
-  var clientLeft = docElem.clientLeft || body.clientLeft || 0
+  var clientTop = docElem.clientTop || body.clientTop || 0;
+  var clientLeft = docElem.clientLeft || body.clientLeft || 0;
 
   // (4)
-  var top  = box.top +  scrollTop - clientTop
-  var left = box.left + scrollLeft - clientLeft
+  var top  = box.top +  scrollTop - clientTop;
+  var left = box.left + scrollLeft - clientLeft;
 
-  return { top: Math.round(top), left: Math.round(left) }
+  return { top: Math.round(top), left: Math.round(left) };
+}
+
+// https://github.com/uxitten/polyfill/blob/master/string.polyfill.js
+// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/padStart
+if (!String.prototype.padStart) {
+  String.prototype.padStart = function padStart(targetLength,padString) {
+    targetLength = targetLength>>0; //floor if number or convert non-number to 0;
+    padString = String(padString || ' ');
+    if (this.length > targetLength) {
+      return String(this);
+    }
+    else {
+      targetLength = targetLength-this.length;
+      if (targetLength > padString.length) {
+        padString += padString.repeat(targetLength/padString.length); //append to original to ensure we are longer than needed
+      }
+      return padString.slice(0,targetLength) + String(this);
+    }
+  };
 }
 
 
@@ -105,33 +138,33 @@ window.onload = function () {
   content_1.id = 'content_1';
   content_1.className = 'content';
   main_content.appendChild(content_1);
-    var statusTitle = document.createElement('DIV');
-    statusTitle.id = 'statusTitle';
-    statusTitle.className = 'page_title unselectable';
-    statusTitle.textContent = 'Current Status';
+  var statusTitle = document.createElement('DIV');
+  statusTitle.id = 'statusTitle';
+  statusTitle.className = 'page_title unselectable';
+  statusTitle.textContent = 'Current Status';
   content_1.appendChild(statusTitle);
 
-    var live_updateHolderContainer = document.createElement('DIV');
-    live_updateHolderContainer.id = 'live_updateHolderContainer';
+  var live_updateHolderContainer = document.createElement('DIV');
+  live_updateHolderContainer.id = 'live_updateHolderContainer';
   content_1.appendChild(live_updateHolderContainer);
-      var live_updateHolder = document.createElement('DIV');
-      live_updateHolder.id = 'live_updateHolder';
-    live_updateHolderContainer.appendChild(live_updateHolder);
+  var live_updateHolder = document.createElement('DIV');
+  live_updateHolder.id = 'live_updateHolder';
+  live_updateHolderContainer.appendChild(live_updateHolder);
 
-        var sensor_updateHolder = document.createElement('DIV');
-        sensor_updateHolder.id = 'sensor_updateHolder';
-        var relay_updateHolder = document.createElement('DIV');
-        relay_updateHolder.id = 'relay_updateHolder';
-      live_updateHolder.appendChild(sensor_updateHolder);
-      live_updateHolder.appendChild(relay_updateHolder);
+  var sensor_updateHolder = document.createElement('DIV');
+  sensor_updateHolder.id = 'sensor_updateHolder';
+  var relay_updateHolder = document.createElement('DIV');
+  relay_updateHolder.id = 'relay_updateHolder';
+  live_updateHolder.appendChild(sensor_updateHolder);
+  live_updateHolder.appendChild(relay_updateHolder);
 
-    var no_running_jobs = document.createElement('DIV');
-    no_running_jobs.id = 'no_running_jobs';
-    no_running_jobs.innerHTML = "No &nbsp<a href=#content_2>jobs</a>&nbsp are currently running"
+  var no_running_jobs = document.createElement('DIV');
+  no_running_jobs.id = 'no_running_jobs';
+  no_running_jobs.innerHTML = "No &nbsp<a href=#content_2>jobs</a>&nbsp are currently running";
   content_1.appendChild(no_running_jobs);
 
-    var running_jobsHolder = document.createElement('DIV');
-    running_jobsHolder.id = 'running_jobsHolder';
+  var running_jobsHolder = document.createElement('DIV');
+  running_jobsHolder.id = 'running_jobsHolder';
   content_1.appendChild(running_jobsHolder);
 
 
@@ -147,122 +180,123 @@ window.onload = function () {
 
   var jobTemplatesHolder = document.createElement('DIV');
   jobTemplatesHolder.id = 'jobTemplatesHolder'; var jobTemplatesListHolder = document.createElement('DIV');
-    jobTemplatesListHolder.id = 'jobTemplatesListHolder';
-    jobTemplatesHolder.appendChild(jobTemplatesListHolder);
+  jobTemplatesListHolder.id = 'jobTemplatesListHolder';
+  jobTemplatesHolder.appendChild(jobTemplatesListHolder);
 
   var jobComposer = document.createElement('DIV');
   jobComposer.id = 'jobComposer';
-    var jobComposerTitle = document.createElement('DIV');
-    jobComposerTitle.id = 'jobComposerTitle';
-    jobComposerTitle.className = 'section_title unselectable';
-    jobComposerTitle.textContent = 'Job Composer';
-    jobComposer.appendChild(jobComposerTitle);
+  var jobComposerTitle = document.createElement('DIV');
+  jobComposerTitle.id = 'jobComposerTitle';
+  jobComposerTitle.className = 'section_title unselectable';
+  jobComposerTitle.textContent = 'Job Composer';
+  jobComposer.appendChild(jobComposerTitle);
 
-    var jobItemsHolderContainer = document.createElement('DIV');
-    jobItemsHolderContainer.id = 'jobItemsHolderContainer';
+  var jobItemsHolderContainer = document.createElement('DIV');
+  jobItemsHolderContainer.id = 'jobItemsHolderContainer';
 
-    var jobItemsHolder = document.createElement('DIV');
-    jobItemsHolder.id = 'jobItemsHolder';
-      // Item 1: Save button
-      var jobSaveButton = document.createElement('DIV');
-      jobSaveButton.id = 'jobSaveButton';
-      jobSaveButton.className = 'unselectable';
-      jobSaveButton.textContent = 'Save';
-      jobItemsHolder.appendChild(jobSaveButton);
+  var jobItemsHolder = document.createElement('DIV');
+  jobItemsHolder.id = 'jobItemsHolder';
+  // Item 1: Save button
+  var jobSaveButton = document.createElement('DIV');
+  jobSaveButton.id = 'jobSaveButton';
+  jobSaveButton.className = 'unselectable';
+  jobSaveButton.textContent = 'Save';
+  jobItemsHolder.appendChild(jobSaveButton);
 
-      // Item 2: Job name
-      var jobNameHolder = document.createElement('DIV');
-      jobNameHolder.id = 'jobNameHolder';
-      jobNameHolder.className = 'unselectable';
-      jobNameHolder.text = 'jobNameHolder';
-        var jobNameLabel = document.createElement('LABEL');
-        jobNameLabel.for = 'jobName';
-        jobNameLabel.textContent = 'Job Name';
-        var jobName = document.createElement('INPUT');
-        jobName.id = 'jobName';
-        jobName.type = 'text';
-        jobNameHolder.appendChild(jobNameLabel);
-        jobNameHolder.appendChild(jobName);
-      jobItemsHolder.appendChild(jobNameHolder);
+  // Item 2: Job name
+  var jobNameHolder = document.createElement('DIV');
+  jobNameHolder.id = 'jobNameHolder';
+  jobNameHolder.className = 'unselectable';
+  jobNameHolder.text = 'jobNameHolder';
+  var jobNameLabel = document.createElement('LABEL');
+  jobNameLabel.for = 'jobName';
+  jobNameLabel.textContent = 'Job Name';
+  var jobName = document.createElement('INPUT');
+  jobName.id = 'jobName';
+  jobName.type = 'text';
+  jobNameHolder.appendChild(jobNameLabel);
+  jobNameHolder.appendChild(jobName);
+  jobItemsHolder.appendChild(jobNameHolder);
 
-      // Item 3: Preheat
-      var jobPreHeat = document.createElement('DIV');
-      jobPreHeat.id = 'jobPreHeat';
+  // Item 3: Preheat
+  var jobPreHeat = document.createElement('DIV');
+  jobPreHeat.id = 'jobPreHeat';
 
-      var selectPreHeat = document.createElement("INPUT");
-      selectPreHeat.type = "checkbox";
-      selectPreHeat.id = 'selectPreHeat';
-      selectPreHeat.name = 'selectPreHeat';
+  var selectPreHeat = document.createElement("INPUT");
+  selectPreHeat.type = "checkbox";
+  selectPreHeat.id = 'selectPreHeat';
+  selectPreHeat.name = 'selectPreHeat';
 
-      var selectPreHeatLabel = document.createElement("LABEL");
-      selectPreHeatLabel.className = 'unselectable';
-      selectPreHeatLabel.setAttribute("for", "selectPreHeat");
-      selectPreHeatLabel.textContent = 'Pre Heat/Cool';
+  var selectPreHeatLabel = document.createElement("LABEL");
+  selectPreHeatLabel.className = 'unselectable';
+  selectPreHeatLabel.setAttribute("for", "selectPreHeat");
+  selectPreHeatLabel.textContent = 'Pre Heat/Cool';
 
-      jobPreHeat.appendChild(selectPreHeat);
-      jobPreHeat.appendChild(selectPreHeatLabel);
-      jobItemsHolder.appendChild(jobPreHeat);
+  jobPreHeat.appendChild(selectPreHeat);
+  jobPreHeat.appendChild(selectPreHeatLabel);
+  jobItemsHolder.appendChild(jobPreHeat);
 
-      // Item 4: Profile?
-      var jobProfileHolder = document.createElement('DIV');
-      jobProfileHolder.id = 'jobProfileHolder';
-      jobProfileHolder.className = 'unselectable';
-      var jobProfileHolderLabel = document.createElement("LABEL");
-      jobProfileHolderLabel.id = 'jobProfileHolderLabel';
-      jobProfileHolderLabel.innerHTML = '<center>Profile</center>';
-      /* setAttribute wants value to be a string */
-      jobProfileHolder.setAttribute('pdata', JSON.stringify(defaultJobProfileData()));
-      jobProfileHolder.onclick = function (e) {
-        console.log("Edit the profile");
-        location.href = '#content_3';
+  // Item 4: Profile?
+  var jobProfileHolder = document.createElement('DIV');
+  jobProfileHolder.id = 'jobProfileHolder';
+  jobProfileHolder.className = 'unselectable';
+  var jobProfileHolderLabel = document.createElement("LABEL");
+  jobProfileHolderLabel.id = 'jobProfileHolderLabel';
+  jobProfileHolderLabel.innerHTML = '<center>Profile</center>';
+  /* setAttribute wants value to be a string */
+  jobProfileHolder.setAttribute('pdata', JSON.stringify(defaultJobProfileData()));
+  //jobProfileHolder.onclick = function (e) {
+  jobProfileHolder.onclick = function () {
+    console.log("Edit the profile");
+    location.href = '#content_3';
 
-        /* updateProfileGraph() wants data to be an object */
-        updateProfileGraph({
-            data:JSON.parse(document.getElementById("jobProfileHolder").getAttribute('pdata')),
-            owner:'jobProfileHolder'
-        });
-      }
+    /* updateProfileGraph() wants data to be an object */
+    updateProfileGraph({
+      data:JSON.parse(document.getElementById("jobProfileHolder").getAttribute('pdata')),
+      owner:'jobProfileHolder'
+    });
+  };
 
-      jobProfileHolder.appendChild(jobProfileHolderLabel);
-      jobItemsHolder.appendChild(jobProfileHolder);
+  jobProfileHolder.appendChild(jobProfileHolderLabel);
+  jobItemsHolder.appendChild(jobProfileHolder);
 
-      // Item 5: Sensors
-      var jobSensorsHolder = document.createElement('DIV');
-      jobSensorsHolder.id = 'jobSensorsHolder';
-      jobSensorsHolder.className = 'jobDevicesHolder';
-      jobItemsHolder.appendChild(jobSensorsHolder);
+  // Item 5: Sensors
+  var jobSensorsHolder = document.createElement('DIV');
+  jobSensorsHolder.id = 'jobSensorsHolder';
+  jobSensorsHolder.className = 'jobDevicesHolder';
+  jobItemsHolder.appendChild(jobSensorsHolder);
 
-      // Item 6: Relays
-      var jobRelaysHolder = document.createElement('DIV');
-      jobRelaysHolder.id = 'jobRelaysHolder';
-      jobRelaysHolder.className = 'jobDevicesHolder';
-      jobItemsHolder.appendChild(jobRelaysHolder);
+  // Item 6: Relays
+  var jobRelaysHolder = document.createElement('DIV');
+  jobRelaysHolder.id = 'jobRelaysHolder';
+  jobRelaysHolder.className = 'jobDevicesHolder';
+  jobItemsHolder.appendChild(jobRelaysHolder);
 
-      // Item 7: Dismiss
-      var dismissJobComposerButton = document.createElement('DIV');
-      dismissJobComposerButton.id = 'dismissJobComposerButton';
-      dismissJobComposerButton.className = 'unselectable';
-      dismissJobComposerButton.textContent = 'Dismiss';
-      jobItemsHolder.appendChild(dismissJobComposerButton);
+  // Item 7: Dismiss
+  var dismissJobComposerButton = document.createElement('DIV');
+  dismissJobComposerButton.id = 'dismissJobComposerButton';
+  dismissJobComposerButton.className = 'unselectable';
+  dismissJobComposerButton.textContent = 'Dismiss';
+  jobItemsHolder.appendChild(dismissJobComposerButton);
 
-    jobItemsHolderContainer.appendChild(jobItemsHolder);
-    jobComposer.appendChild(jobItemsHolderContainer);
+  jobItemsHolderContainer.appendChild(jobItemsHolder);
+  jobComposer.appendChild(jobItemsHolderContainer);
 
   var jobsHistory = document.createElement('DIV');
   jobsHistory.id = 'jobsHistory';
-    var jobsHistoryTitle = document.createElement('DIV');
-    jobsHistoryTitle.id = 'jobsHistoryTitle';
-    jobsHistoryTitle.className = 'section_title unselectable';
-    jobsHistoryTitle.textContent = 'Job History';
-    var historyList = document.createElement('DIV');
-    historyList.id = 'historyList';
-    historyList.className = 'historyList';
-      var historyListJobsHolder = document.createElement('DIV');
-      historyListJobsHolder.id = 'historyListJobsHolder';
-      historyListJobsHolder.className = 'historyListJobsHolder';
-    historyList.appendChild(historyListJobsHolder);
-    jobsHistory.appendChild(jobsHistoryTitle);
-    jobsHistory.appendChild(historyList);
+  var jobsHistoryTitle = document.createElement('DIV');
+  jobsHistoryTitle.id = 'jobsHistoryTitle';
+  jobsHistoryTitle.className = 'section_title unselectable';
+  jobsHistoryTitle.textContent = 'Job History';
+  var historyList = document.createElement('DIV');
+  historyList.id = 'historyList';
+  historyList.className = 'historyList';
+  var historyListJobsHolder = document.createElement('DIV');
+  historyListJobsHolder.id = 'historyListJobsHolder';
+  historyListJobsHolder.className = 'historyListJobsHolder';
+  historyList.appendChild(historyListJobsHolder);
+  jobsHistory.appendChild(jobsHistoryTitle);
+  jobsHistory.appendChild(historyList);
 
   content_2.appendChild(jobTemplatesTitle);
   content_2.appendChild(jobTemplatesHolder);
@@ -273,13 +307,13 @@ window.onload = function () {
   content_3.id = 'content_3';
   content_3.className = 'content';
   main_content.appendChild(content_3);
-    var profilesTitle = document.createElement('DIV');
-    profilesTitle.id = 'profilesTitle';
-    profilesTitle.className = 'page_title unselectable';
-    profilesTitle.textContent = 'Profile Editor';
+  var profilesTitle = document.createElement('DIV');
+  profilesTitle.id = 'profilesTitle';
+  profilesTitle.className = 'page_title unselectable';
+  profilesTitle.textContent = 'Profile Editor';
 
-    var profilesGraphHolder = document.createElement('DIV');
-    profilesGraphHolder.id = 'profilesGraphHolder';
+  var profilesGraphHolder = document.createElement('DIV');
+  profilesGraphHolder.id = 'profilesGraphHolder';
 
   content_3.appendChild(profilesTitle);
   content_3.appendChild(profilesGraphHolder);
@@ -288,16 +322,16 @@ window.onload = function () {
   content_4.id = 'content_4';
   content_4.className = 'content';
   main_content.appendChild(content_4);
-    var configTitle = document.createElement('DIV');
-    configTitle.id = 'configTitle';
-    configTitle.className = 'page_title unselectable';
-    configTitle.textContent = 'Configuration';
+  var configTitle = document.createElement('DIV');
+  configTitle.id = 'configTitle';
+  configTitle.className = 'page_title unselectable';
+  configTitle.textContent = 'Configuration';
 
-    var configHolder = document.createElement('DIV');
-    configHolder.id = 'configHolder';
+  var configHolder = document.createElement('DIV');
+  configHolder.id = 'configHolder';
 
-    var testHolder = document.createElement('DIV');
-    testHolder.id = 'testHolder';
+  var testHolder = document.createElement('DIV');
+  testHolder.id = 'testHolder';
   content_4.appendChild(configTitle);
   content_4.appendChild(configHolder);
   content_4.appendChild(testHolder);
@@ -305,15 +339,16 @@ window.onload = function () {
 
   document.body.appendChild(main_content);
 
-/* popups */
-  var profileTooltip = d3.select("body").append("div")
-                        .attr("id", "dotTooltip")
-                        .attr("class", "tooltip")
-                        .style("opacity", 0)
-                        .style("left",  "0px")
-                        .style("top", "0px");
+  /* popups */
+  var profileTooltip = select("body")
+    .append("div")
+    .attr("id", "dotTooltip")
+    .attr("class", "tooltip")
+    .style("opacity", 0)
+    .style("left",  "0px")
+    .style("top", "0px");
 
-/*******************  Swipe between pages  ***************************/
+  /*******************  Swipe between pages  ***************************/
 
   // Navigate by swipe
   var swipeDeltaMin = 50;
@@ -400,10 +435,10 @@ window.onload = function () {
     };
   }
 
-/*******************  Do some configuration ***************************/
+  /*******************  Do some configuration ***************************/
 
-// END of Configuration Page
-/**********************************************************************/
+  // END of Configuration Page
+  /**********************************************************************/
 
   //var socket = new WebSocket("ws://localhost:8080/ws");
   //var socket = new WebSocket("ws://" + location.host + "/ws");
@@ -412,7 +447,7 @@ window.onload = function () {
 
   socket.onerror = function(){  
     console.log('Connection Error');
-  }
+  };
   socket.onopen = function(){  
     console.log("websocket connected"); 
 
@@ -423,7 +458,7 @@ window.onload = function () {
 
   // Handle received messages
   socket.onmessage = function (message) {
-    var jmsg;
+    var i, jmsg;
     try {
       jmsg = JSON.parse(message.data);
       if (jmsg.type === 'live_update') {
@@ -470,7 +505,7 @@ window.onload = function () {
         // Keep a copy for later
         availableSensors = [];
         while (availableSensors.length > 0) {availableSensors.pop();}
-        for (var i=0;i<jmsg.data.length;i++) {
+        for (i=0;i<jmsg.data.length;i++) {
           availableSensors.push(jmsg.data[i]);
         }
         createSensorSelector(availableSensors);
@@ -478,7 +513,7 @@ window.onload = function () {
         console.log("RCVD relay_list " + message.data);
         availableRelays = [];
         while (availableRelays.length > 0) {availableRelays.pop();}
-        for (var i=0;i<jmsg.data.length;i++) {
+        for (i=0;i<jmsg.data.length;i++) {
           availableRelays.push(jmsg.data[i]);
         }
         createRelaySelector(availableRelays);
@@ -494,7 +529,7 @@ window.onload = function () {
     catch (err) {
       console.log("Unrecognised message: " + message.data);
     }
-  }
+  };
 
   socket.onclose = function () {
     // Display disconnected status
@@ -514,6 +549,7 @@ window.onload = function () {
   function live_update(data) {
     var sensor_state = data.sensor_state;
     var relay_state = data.relay_state;
+    var i;
     //console.log("Rcvd live_update");
 
     // Label for Sensors
@@ -525,19 +561,20 @@ window.onload = function () {
       asensor.className = 'sensor_update';
       asensor.style.width = '128px';
       asensor.setAttribute('tempScale', 'C');
-      asensor.oncontextmenu = function(e) { return false; };
+      //asensor.oncontextmenu = function(e) { return false; };
+      asensor.oncontextmenu = function() { return false; };
       asensor.onmousedown = function(e) {
         switch (e.button) {
-          case 0:
-            if (this.getAttribute('tempScale') == 'C') {
-              this.setAttribute('tempScale', 'F');
-            } else {
-              this.setAttribute('tempScale', 'C');
-            }
-            break;
-          default:
-            console.log("Pressed button " + e.button + " at " + this.id);
-            break;
+        case 0:
+          if (this.getAttribute('tempScale') == 'C') {
+            this.setAttribute('tempScale', 'F');
+          } else {
+            this.setAttribute('tempScale', 'C');
+          }
+          break;
+        default:
+          console.log("Pressed button " + e.button + " at " + this.id);
+          break;
         }
       };
       sensor_updateHolder.appendChild(asensor);
@@ -546,17 +583,18 @@ window.onload = function () {
     var tempScale = el.getAttribute('tempScale');
     el.textContent = 'Temp. (' + tempScale + '):';
 
-    for (var i=0;i<sensor_state.length;i++) {
+    for (i=0;i<sensor_state.length;i++) {
       //console.log("sensor_state: " + sensor_state[i].sensorId + " = " + sensor_state[i].temperature);
-      var elementName = 'sensor_update_' + sensor_state[i].sensorId;
+      elementName = 'sensor_update_' + sensor_state[i].sensorId;
       if ( ! document.body.contains(document.getElementById(elementName)) ) {
         sensor_updateHolder = document.getElementById('sensor_updateHolder');
-        var asensor = document.createElement("DIV");
+        asensor = document.createElement("DIV");
         asensor.id = elementName;
         asensor.title = sensor_state[i].sensorId;
         asensor.className = 'sensor_update';
         asensor.style.width = '128px';
-        asensor.oncontextmenu = function(e) { return false; };
+        //asensor.oncontextmenu = function(e) { return false; };
+        asensor.oncontextmenu = function() { return false; };
         asensor.onmousedown = function(e) {
           console.log("Pressed button " + e.button + " at " + this.id);
         };
@@ -579,12 +617,13 @@ window.onload = function () {
       arelay.id = elementName;
       arelay.className = 'relay_update';
       arelay.style.width = '128px';
-      arelay.oncontextmenu = function(e) { return false; };
+      //arelay.oncontextmenu = function(e) { return false; };
+      arelay.oncontextmenu = function() { return false; };
       arelay.onmousedown = function(e) {
         switch (e.button) {
-          default:
-            console.log("Pressed button " + e.button + " at " + this.id);
-            break;
+        default:
+          console.log("Pressed button " + e.button + " at " + this.id);
+          break;
         }
       };
       relay_updateHolder.appendChild(arelay);
@@ -592,25 +631,29 @@ window.onload = function () {
     document.getElementById(elementName).textContent = 'Relays:';
 
     // Status of Relays
-    for (var i=0;i<relay_state.length;i++) {
-      var elementName = 'relay_update_' + i;
+    for (i=0;i<relay_state.length;i++) {
+      elementName = 'relay_update_' + i;
       if ( ! document.body.contains(document.getElementById(elementName)) ) {
         relay_updateHolder = document.getElementById('relay_updateHolder');
-        var arelay = document.createElement("DIV");
+        arelay = document.createElement("DIV");
         arelay.id = elementName;
         arelay.className = 'relay_update';
         arelay.style.width = '128px';
-        arelay.oncontextmenu = function(e) { return false; };
+        //arelay.oncontextmenu = function(e) { return false; };
+        arelay.oncontextmenu = function() { return false; };
         arelay.onmousedown = function(e) {
           switch (e.button) {
-            case 0:
-              //send_relay_cmd(parseInt(this.id.charAt(this.id.length-1)) + 1);
-    msgobj = {type:'toggle_relay', data:[parseInt(this.id.charAt(this.id.length-1)) + 1]};
-    sendMessage({data:JSON.stringify(msgobj)});
-              break;
-            default:
-              console.log("Pressed button " + e.button + " at " + this.id);
-              break;
+          case 0:
+            //send_relay_cmd(parseInt(this.id.charAt(this.id.length-1)) + 1);
+            msgobj = {
+              type:'toggle_relay',
+              data:[parseInt(this.id.charAt(this.id.length-1)) + 1]
+            };
+            sendMessage({data:JSON.stringify(msgobj)});
+            break;
+          default:
+            console.log("Pressed button " + e.button + " at " + this.id);
+            break;
           }
         };
         relay_updateHolder.appendChild(arelay);
@@ -619,7 +662,7 @@ window.onload = function () {
       // 1st True/False indicates whether relay is On/Off
       if ( relay_state[i][0] ) {
         //if (document.getElementById(elementName).textContent == 'OFF') {
-          // Must be changing off->on
+        // Must be changing off->on
         //  beep();
         //}
         document.getElementById(elementName).textContent = 'ON';
@@ -658,7 +701,7 @@ window.onload = function () {
       // 1st True/False indicates whether relay is On/Off
       if ( relay_state[i][0] ) {
         //if (document.getElementById(elementName).textContent == 'OFF') {
-          // Must be changing off->on
+        // Must be changing off->on
         //  beep();
         //}
         document.getElementById(elementName).textContent = 'ON';
@@ -682,6 +725,7 @@ window.onload = function () {
     var data_keys = Object.keys(data);
     console.log("Rcvd startup data with keys: " + data_keys);
 
+    var configEntryHolder;
     for (var k in data_keys ) {
       if (data_keys[k] == 'testing') {
         _TESTING_ = data[data_keys[k]];
@@ -689,11 +733,11 @@ window.onload = function () {
       } else if (data_keys[k] == 'config') {
         // If configEntryHolder exists, remove all child nodes; otherwise create configEntryHolder
         if ( document.body.contains(document.getElementById('configEntryHolder')) ) {
-          var configEntryHolder = document.getElementById('configEntryHolder');
+          configEntryHolder = document.getElementById('configEntryHolder');
           var last;
-          while (last = configEntryHolder.lastChild) configEntryHolder.removeChild(last);
+          while ((last = configEntryHolder.lastChild)) configEntryHolder.removeChild(last);
         } else {
-          var configEntryHolder = document.createElement('DIV');
+          configEntryHolder = document.createElement('DIV');
           configEntryHolder.id = 'configEntryHolder';
           document.getElementById('configHolder').appendChild(configEntryHolder);
         }
@@ -703,8 +747,7 @@ window.onload = function () {
         //  console.log("configKey: " + key);
         //}
       } else if (data_keys[k] == 'the_end') {
-        var the_end_unused = data[data_keys[k]];
-        //console.log("the_end: " + the_end_unused);
+        console.log("the_end of startup_data");
       } else {
         console.log("Unknown startup_data key: " + data_keys[k] + " = " + data[data_keys[k]]);
       }
@@ -725,11 +768,10 @@ window.onload = function () {
     /* Clean out any existing stuff in the running_jobsHolder div. */
     var runningJobsHolder = document.getElementById("running_jobsHolder");
     var last;
-    while (last = runningJobsHolder.lastChild) runningJobsHolder.removeChild(last);
+    while ((last = runningJobsHolder.lastChild)) runningJobsHolder.removeChild(last);
 
     var longJobNames = [];
     data.forEach( function (job, index) {
-      console.log("WWW");
       var header = job['header'];
       var updates = job['updates'];
       var longName = header['jobName'] + '-' + header['jobInstance'];
@@ -752,7 +794,7 @@ window.onload = function () {
 
   function updateRunningJob(data) {
     //console.log("updateRunningJob() " + JSON.stringify(data));
-    if ( data.type = 'status') {
+    if ( data.type == 'status' ) {
       var longJobName = data['jobName'] + '-' + data['jobInstance'];
       //console.log("updateRunningJob() longJobName " + longJobName);
       if (!runningData.hasOwnProperty(longJobName)) {
@@ -761,8 +803,8 @@ window.onload = function () {
       }
       runningData[longJobName]['updates'].push(data);
       //console.log("updateRunningJob() longJobName 2 " + longJobName);
-      updateJobHistoryData(0, longJobName)
-    } else if ( data.type = 'header') {
+      updateJobHistoryData(0, longJobName);
+    } else if ( data.type == 'header' ) {
       console.log("Received header update for " + data.jobName + "-" + data.jobInstance);
     } else {
       console.log("Received dummy update for " + data.jobName);
@@ -787,9 +829,10 @@ window.onload = function () {
 
       if (key == 'sensorFudgeFactors') {
         console.log("Do sensorFudgeFactors here");
+        var configItemDataValue;
         for (var sensor in configItems[key]) {
           //console.log("Sensor: " + sensor + " = " + configItems[key][sensor]);
-          var configItemDataValue = document.createElement('DIV');
+          configItemDataValue = document.createElement('DIV');
           configItemDataValue.id = 'configItemDataValue_' + sensor;
           configItemDataValue.className = 'configItemDataValue';
 
@@ -809,14 +852,14 @@ window.onload = function () {
             idata['fudge'] = this.value;
             msgobj = {type:'config_change', data:idata};
             sendMessage({data:JSON.stringify(msgobj)});
-          }
+          };
 
           configItemDataValue.appendChild(configItemSensorName);
           configItemDataValue.appendChild(configItemSensorFudge);
           configItemData.appendChild(configItemDataValue);
         }
       } else {
-        var configItemDataValue = document.createElement('DIV');
+        configItemDataValue = document.createElement('DIV');
         configItemDataValue.id = 'configItemDataValue_' + key;
         configItemDataValue.className = 'configItemDataValue';
 
@@ -832,7 +875,7 @@ window.onload = function () {
           idata[this.id.replace(/.+_/,'')] = this.value;
           msgobj = {type:'config_change', data:idata};
           sendMessage({data:JSON.stringify(msgobj)});
-        }
+        };
 
         configItemDataValue.appendChild(configItemDataValueInput);
         configItemData.appendChild(configItemDataValue);
@@ -846,7 +889,7 @@ window.onload = function () {
     }
   }
 
-/* START RUNNING/HISTORY */
+  /* START RUNNING/HISTORY */
 
   /* This is where a graph is (re)drawn.
     We can arrive here for a number of reasons:
@@ -865,44 +908,48 @@ window.onload = function () {
     //console.log("updateJobHistoryData(): jobLongName " + jobLongName);
 
     // Is it new (via data parameter) or are we redrawing stored data?
+    var header, updates, longName;
     if ( jobLongName === undefined ) {
       // We must have data supplied by parameter
       console.log("updateJobHistoryData() New job");
-      var header = data['header'];
-      var updates = data['updates'];
-      var longName = header[0]['jobName'] + '-' + header[0]['jobInstance'];
+      header = data['header'];
+      updates = data['updates'];
+      longName = header[0]['jobName'] + '-' + header[0]['jobInstance'];
       historyData[longName] = data;
     } else {
       // Must have previously saved data
 
       if ( historyData.hasOwnProperty(jobLongName) ) {
         // It's a saved job
-        var header = historyData[jobLongName]['header'];
-        var updates = historyData[jobLongName]['updates'];
-        var longName = header[0]['jobName'] + '-' + header[0]['jobInstance'];
-      } else {
+        header = historyData[jobLongName]['header'];
+        updates = historyData[jobLongName]['updates'];
+        longName = header[0]['jobName'] + '-' + header[0]['jobInstance'];
+      } else if (runningData.hasOwnProperty(jobLongName)) {
         // Must be a running job
-        var header = runningData[jobLongName]['header'];
-        var updates = runningData[jobLongName]['updates'];
-        var longName = header[0]['jobName'] + '-' + header[0]['jobInstance'];
+        header = runningData[jobLongName]['header'] || [];
+        updates = runningData[jobLongName]['updates'];
+        longName = header[0]['jobName'] + '-' + header[0]['jobInstance'];
         //console.log("updateJobHistoryData() 1 longName: " + longName);
         //console.log("updateJobHistoryData() 2 updates =  " + updates.length);
         //console.log("updateJobHistoryData() 3 updates =  " + JSON.stringify(updates));
+      } else {
+        // Nothing to do here
+        return;
       }
       //var longName = header[0]['jobName'] + '-' + header[0]['jobInstance'];
     }
     //console.log("updateJobHistoryData() longName: " + longName);
 
-/* Examples of extracting various fields
+    /* Examples of extracting various fields
     console.log("updateJobHistoryData() jobProfile: " + header[0]['jobProfile'] + " " + header[0]['jobProfile'].length);
     console.log("updateJobHistoryData() jobName: " + header[0]['jobName'] + " " + header.length);
     console.log("updateJobHistoryData() updates: " + updates + " " + updates.length);
     for (var i=0;i<updates.length;i++) {
       console.log("updateJobHistoryData() temp at " + parseFloat(updates[i]['elapsed']).toFixed(2) + " = " + updates[i][updates[i]['sensors'][0]]);
     }
-*/
+    */
 
-    var holderNode = document.getElementById('jobElementGraph_' + longName)
+    var holderNode = document.getElementById('jobElementGraph_' + longName);
     if (holderNode == null) {
       console.log('updateJobHistoryData(): jobElementGraph_' + longName + ' does not exist');
       return;
@@ -915,54 +962,52 @@ window.onload = function () {
       document.getElementById('jobItemHZBInput_' + holderName + '_' + longName).value = 1;
     }
 
+    var historyJobsGraphMargin;
+    var historyJobsGraphHeight;
     if ( smallDevice() ) {
       //console.log("smallDevice is TRUE");
-      var historyJobsGraphMargin = {top: 24, right: 40, bottom: 60, left: 40};
-      var historyJobsGraphHeight = 192 - (historyJobsGraphMargin.top + historyJobsGraphMargin.bottom);
+      historyJobsGraphMargin = {top: 24, right: 40, bottom: 60, left: 40};
+      historyJobsGraphHeight = 192 - (historyJobsGraphMargin.top + historyJobsGraphMargin.bottom);
     } else {
       //console.log("smallDevice is FALSE");
-      var historyJobsGraphMargin = {top: 32, right: 40, bottom: 60, left: 80};
-      var historyJobsGraphHeight = 256 - (historyJobsGraphMargin.top + historyJobsGraphMargin.bottom);
+      historyJobsGraphMargin = {top: 32, right: 40, bottom: 60, left: 80};
+      historyJobsGraphHeight = 256 - (historyJobsGraphMargin.top + historyJobsGraphMargin.bottom);
     }
     var historyJobsGraphWidth = graphWidthScale*window.innerWidth - (historyJobsGraphMargin.left + historyJobsGraphMargin.right) - 20;
-/* (original)
-    var historyJobsGraphMargin = {top: 20, right: 40, bottom: 50, left: 60},
-        historyJobsGraphWidth = graphWidthScale*1800 - historyJobsGraphMargin.left - historyJobsGraphMargin.right,
-        historyJobsGraphHeight = 256 - historyJobsGraphMargin.top - historyJobsGraphMargin.bottom;
-*/
 
     // Draw the graph of job history
-    d3.select("#history_" + longName.replace('%', '\\%')).remove();
-    var historyJobsGraphHolder = d3.select("#jobElementGraph_" + longName.replace('%', '\\%')).append("svg")
-                      .attr("id", "history_" + longName.replace('%', '\%'))
-                      .attr("class", "history_job")
-                      .attr("width", historyJobsGraphWidth + historyJobsGraphMargin.right + historyJobsGraphMargin.left)
-                      .attr("height", historyJobsGraphHeight + historyJobsGraphMargin.top + historyJobsGraphMargin.bottom)
-                      .style("border", "1px solid black")
+    select("#history_" + longName.replace('%', '\\%')).remove();
+    var historyJobsGraphHolder = select("#jobElementGraph_" + longName.replace('%', '\\%'))
+      .append("svg")
+      //.attr("id", "history_" + longName.replace('%', '\%'))
+      .attr("id", "history_" + longName.replace('%', '\\%'))
+      .attr("class", "history_job")
+      .attr("width", historyJobsGraphWidth + historyJobsGraphMargin.right + historyJobsGraphMargin.left)
+      .attr("height", historyJobsGraphHeight + historyJobsGraphMargin.top + historyJobsGraphMargin.bottom)
+      .style("border", "1px solid black");
 
     // Extract profile & temperature data into local arrays
     var profileData = header[0]['jobProfile'];
     var profileLineData = [];
-    var temperatureLineDataHolder = []
-    var temperatureLineData = []
+    var temperatureLineDataHolder = [];
+    var temperatureLineData = [];
     var setpoint = {};
     var nextStep = 0.0;
     for (var sp=0;sp<profileData.length;sp++) {
-      setpoint = {"x":nextStep,
-                  "y":profileData[sp]["target"]};
+      setpoint = {"x":nextStep, "y":profileData[sp]["target"]};
       profileLineData.push(setpoint);
       nextStep += parseFloat(profileData[sp]["duration"]);
       //console.log("**** updateJobHistoryData() profile: " + setpoint["x"] + " : " + setpoint["y"]);
     }
     // Extract temperature data for all sensors
-    for (var sensor_instance=0;sensor_instance<header[0]['jobSensorIds'].length;sensor_instance++) {
+    var sensor_instance;
+    for (sensor_instance=0;sensor_instance<header[0]['jobSensorIds'].length;sensor_instance++) {
       //console.log("updateJobHistoryData() sensor name: " + header[0]['jobSensorIds'][sensor_instance]);
-      var sensorName = header[0]['jobSensorIds'][sensor_instance];
+      //var sensorName = header[0]['jobSensorIds'][sensor_instance];
 
       temperatureLineData = [];
       for (var i=0;i<updates.length;i++) {
-        setpoint = {"x":parseFloat(updates[i]['elapsed']).toFixed(2),
-                    "y":updates[i][updates[i]['sensors'][sensor_instance]]};
+        setpoint = {"x":parseFloat(updates[i]['elapsed']).toFixed(2), "y":updates[i][updates[i]['sensors'][sensor_instance]]};
         // Now build a path for this sensor by going through all the history entries
         temperatureLineData.push(setpoint);
         //console.log("**** updateJobHistoryData() temperature: " + setpoint["x"] + " : " + setpoint["y"]);
@@ -972,16 +1017,16 @@ window.onload = function () {
 
     // Find extent of values in both profileLineData & all the temperatureLineData arrays (1 for each sensor)
     // N.B. could maybe do this while populating the *LineData arrays
-    var minDataPoint = d3.min(profileLineData, function(d) {return parseFloat(d.y);});
-    var maxDataPoint = d3.max(profileLineData, function(d) {return parseFloat(d.y);});
-    var maxTime = d3.max(profileLineData, function(d) {return parseFloat(d.x);});
+    var minDataPoint = min(profileLineData, function(d) {return parseFloat(d.y);});
+    var maxDataPoint = max(profileLineData, function(d) {return parseFloat(d.y);});
+    var maxTime = max(profileLineData, function(d) {return parseFloat(d.x);});
 
-    for (var sensor_instance=0;sensor_instance<header[0]['jobSensorIds'].length;sensor_instance++) {
-      var temperature = d3.min(temperatureLineDataHolder[sensor_instance], function(d) {return parseFloat(d.y);});
+    for (sensor_instance=0;sensor_instance<header[0]['jobSensorIds'].length;sensor_instance++) {
+      var temperature = min(temperatureLineDataHolder[sensor_instance], function(d) {return parseFloat(d.y);});
       if (temperature < minDataPoint ) minDataPoint = temperature;
-      temperature = d3.max(temperatureLineDataHolder[sensor_instance], function(d) {return parseFloat(d.y);});
+      temperature = max(temperatureLineDataHolder[sensor_instance], function(d) {return parseFloat(d.y);});
       if (temperature > maxDataPoint ) maxDataPoint = temperature;
-      temperature = d3.max(temperatureLineDataHolder[sensor_instance], function(d) {return parseFloat(d.x);});
+      temperature = max(temperatureLineDataHolder[sensor_instance], function(d) {return parseFloat(d.x);});
       if ( temperature > maxTime ) maxTime = temperature;
     }
     // Add some clearance
@@ -990,119 +1035,125 @@ window.onload = function () {
     maxTime += 60;
 
     //console.log("Min = " + minDataPoint + " Max = " + maxDataPoint);
-    var historyLinearScaleY = d3.scale.linear()
-                      .domain([minDataPoint, maxDataPoint])
-                      .range([historyJobsGraphHeight,0]);
-    var historyYAxis = d3.svg.axis()
-                      .scale(historyLinearScaleY)
-                      .orient("left")
-                      .ticks(5);
-    var historyYAxisGroup = historyJobsGraphHolder.append("g")
-                      .attr('class', 'y historyAxis unselectable')
-                      .attr("transform",
-                            "translate(" + historyJobsGraphMargin.left + "," + historyJobsGraphMargin.top + ")")
-                      .call(historyYAxis);
-    var historyLinearScaleX = d3.scale.linear()
-                      .domain([0,maxTime])
-                      .range([0,historyJobsGraphWidth]);
-    var xAxis = d3.svg.axis()
-                      .scale(historyLinearScaleX)
-                      .orient("bottom")
-                      .tickValues(makeTickValues(maxTime,18*graphWidthScale));
-                      //.ticks(20);
-    var xAxisGroup = historyJobsGraphHolder.append("g")
-                      .attr('class', 'x historyAxis unselectable')
-                      .attr("transform",
-                            "translate(" + historyJobsGraphMargin.left + "," + (historyJobsGraphHeight + historyJobsGraphMargin.top) + ")")
-                      .call(xAxis);
+    var historyLinearScaleY = scaleLinear()
+      .domain([minDataPoint, maxDataPoint])
+      .range([historyJobsGraphHeight,0]);
+    var historyYAxis = axisLeft(historyLinearScaleY).ticks(5);
+    //var historyYAxisGroup = historyJobsGraphHolder.append("g")
+    historyJobsGraphHolder.append("g")
+      .attr('class', 'y historyAxis unselectable')
+      .attr("transform", "translate(" + historyJobsGraphMargin.left + "," + historyJobsGraphMargin.top + ")")
+      .call(historyYAxis);
+    var historyLinearScaleX = scaleTime()
+      .domain([0,maxTime])
+      .range([0,historyJobsGraphWidth]);
+    var xAxis = axisBottom(historyLinearScaleX).tickValues(makeTickValues(maxTime,18*graphWidthScale));
+    //.ticks(20);
+    //var xAxisGroup = historyJobsGraphHolder.append("g")
+    historyJobsGraphHolder.append("g")
+      .attr('class', 'x historyAxis unselectable')
+      .attr("transform", "translate(" + historyJobsGraphMargin.left + "," + (historyJobsGraphHeight + historyJobsGraphMargin.top) + ")")
+      .call(xAxis);
 
     // Custom tick format
-    historyJobsGraphHolder.selectAll('.x.historyAxis text').text(function(d) { return tickText(d) });
+    historyJobsGraphHolder.selectAll('.x.historyAxis text')
+      .text(function(d) { return tickText(d); });
 
     // Scale profile data
     var scaledProfileLineData = [];
-    for ( var sp=0;sp<profileLineData.length;sp++) {
+    for ( sp=0;sp<profileLineData.length;sp++) {
       //console.log("scaled sp = " + profileLineData[sp].x + " : " + profileLineData[sp].y);
-      scaledProfileLineData.push({"x":historyLinearScaleX(profileLineData[sp].x),
-                           "y":historyLinearScaleY(profileLineData[sp].y)});
+      scaledProfileLineData.push({
+        "x":historyLinearScaleX(profileLineData[sp].x),
+        "y":historyLinearScaleY(profileLineData[sp].y)
+      });
     }
     // Draw profile graph
-    var historyProfileLineFunction = d3.svg.line()
-                              .x(function(d) { return d.x; })
-                              .y(function(d) { return d.y; })
-                              .interpolate(INTERPOLATE_profile_history);
-    var lineGraph = historyJobsGraphHolder.append("path")
-                              .attr("transform",
-                                    "translate(" + historyJobsGraphMargin.left + "," + historyJobsGraphMargin.top + ")")
-                              .attr("d", historyProfileLineFunction(scaledProfileLineData))
-                              .attr("stroke", "gray")
-                              .attr("stroke-width", 2)
-                              .attr("fill", "none");
+    var historyProfileLineFunction = line()
+      .x(function(d) { return d.x; })
+      .y(function(d) { return d.y; });
+    //var lineGraph = historyJobsGraphHolder.append("path")
+    historyJobsGraphHolder.append("path")
+      .attr("transform", "translate(" + historyJobsGraphMargin.left + "," + historyJobsGraphMargin.top + ")")
+      .attr("d", historyProfileLineFunction(scaledProfileLineData))
+      .attr("stroke", "gray")
+      .attr("stroke-width", 2)
+      .attr("fill", "none");
 
-      for (var sensor_instance=0;sensor_instance<header[0]['jobSensorIds'].length;sensor_instance++) {
-        //console.log("sensor data: " + sensor_instance);
-        // Scale temperature data
-        var scaledTemperatureLineData = [];
-        var temperatureLineData = temperatureLineDataHolder[sensor_instance];
-        for ( var sp=0;sp<temperatureLineData.length;sp++) {
-          //console.log("scaled sp = " + temperatureLineData[sp].x + " : " + temperatureLineData[sp].y);
-          scaledTemperatureLineData.push({"x":historyLinearScaleX(temperatureLineData[sp].x),
-                                          "y":historyLinearScaleY(temperatureLineData[sp].y)});
-        }
-        // Draw temperature graph
-        var historyTemperatureLineFunction = d3.svg.line()
-                                  .x(function(d) { return d.x; })
-                                  .y(function(d) { return d.y; })
-                                  .interpolate("linear");
-        var lineGraph = historyJobsGraphHolder.append("path")
-                                  .attr("transform",
-                                        "translate(" + historyJobsGraphMargin.left + "," + historyJobsGraphMargin.top + ")")
-                                  .attr("d", historyTemperatureLineFunction(scaledTemperatureLineData))
-                                  .attr("stroke", temperatureColours[sensor_instance])
-                                  .attr("stroke-width", 2)
-                                  .attr("fill", "none");
+    for (sensor_instance=0;sensor_instance<header[0]['jobSensorIds'].length;sensor_instance++) {
+      //console.log("updateJobHistoryData() sensor data: " + sensor_instance);
+      // Scale temperature data
+      var scaledTemperatureLineData = [];
+      temperatureLineData = temperatureLineDataHolder[sensor_instance];
+      for ( sp=0;sp<temperatureLineData.length;sp++) {
+        //console.log("scaled sp = " + temperatureLineData[sp].x + " : " + temperatureLineData[sp].y);
+        scaledTemperatureLineData.push({
+          "x":historyLinearScaleX(temperatureLineData[sp].x),
+          "y":historyLinearScaleY(temperatureLineData[sp].y)
+        });
+      }
+      // Draw temperature graph
+      var historyTemperatureLineFunction = line()
+        .x(function(d) { return d.x; })
+        .y(function(d) { return d.y; });
+      //var lineGraph = historyJobsGraphHolder.append("path")
+      historyJobsGraphHolder.append("path")
+        .attr("transform",
+          "translate(" + historyJobsGraphMargin.left + "," + historyJobsGraphMargin.top + ")")
+        .attr("d", historyTemperatureLineFunction(scaledTemperatureLineData))
+        .attr("stroke", temperatureColours[sensor_instance])
+        .attr("stroke-width", 2)
+        .attr("fill", "none");
     }
 
     // Only show this button if this job is stopped (the last update will have 'running' == 'stopped')
     var lastUpdate = updates[updates.length - 1];
-    runningButtonGroup = historyJobsGraphHolder.append("g")
-                              .attr("id", "runningButtonGroup_" + longName.replace('%', '\%'))
-                              .attr("class", "runningButtonGroup")
-                              .attr("transform",
-                                "translate(" +
-                                (smallDevice()?historyJobsGraphWidth-20:historyJobsGraphWidth-40) + "," + 40 + ")")
-                              .style('display', (lastUpdate.running=='stopped'?'block':'none'))
+    historyJobsGraphHolder.append("g")
+      //.attr("id", "runningButtonGroup_" + longName.replace('%', '\%'))
+      .attr("id", "runningButtonGroup_" + longName.replace('%', '\\%'))
+      .attr("class", "runningButtonGroup")
+      .attr("transform",
+        "translate(" +
+        (smallDevice()?historyJobsGraphWidth-20:historyJobsGraphWidth-40) + "," + 40 + ")")
+      .style('display', (lastUpdate.running=='stopped'?'block':'none'));
 
     // Resume button
-    runningResumeButton = d3.select("#runningButtonGroup_" + longName.replace('%', '\%'))
-                        .append("rect")
-                          .attr('id', 'runningResumeButton_' + longName.replace('%', '\%'))
-                          .attr('class', 'runningResumeButton')
-                          .attr('x', 0) .attr('y', 0)
-                          .attr('width', 96).attr('height', 40)
-                          .attr('rx', 6).attr('ry', 6)
-                          .on("click", function() {
-                                console.log("RESUME running " + longName.replace('%', '\%'));
-                                // Request job resume
-                                var msgobj = {'type':'resume_job',
-                                        data:{'jobName': longName.replace('%', '\%') }};
-                                sendMessage({data:JSON.stringify(msgobj)});
-                              })
+    //select("#runningButtonGroup_" + longName.replace('%', '\%'))
+    select("#runningButtonGroup_" + longName.replace('%', '\\%'))
+      .append("rect")
+      //.attr('id', 'runningResumeButton_' + longName.replace('%', '\%'))
+      .attr('id', 'runningResumeButton_' + longName.replace('%', '\\%'))
+      .attr('class', 'runningResumeButton')
+      .attr('x', 0) .attr('y', 0)
+      .attr('width', 96).attr('height', 40)
+      .attr('rx', 6).attr('ry', 6)
+      .on("click", function() {
+        //console.log("RESUME running " + longName.replace('%', '\%'));
+        console.log("RESUME running " + longName.replace('%', '\\%'));
+        // Request job resume
+        var msgobj = {
+          'type':'resume_job',
+          //'data':{'jobName': longName.replace('%', '\%') }
+          'data':{'jobName': longName.replace('%', '\\%') }
+        };
+        sendMessage({data:JSON.stringify(msgobj)});
+      });
 
-    runningResumeButtonText = d3.select("#runningButtonGroup_" + longName.replace('%', '\%'))
-                                .append("text")
-                                .attr('class', 'runningResumeButtonText')
-                                .attr('dx', '1.5em')
-                                .attr('dy', '1.7em')
-                                .text("Resume")
+    //select("#runningButtonGroup_" + longName.replace('%', '\%'))
+    select("#runningButtonGroup_" + longName.replace('%', '\\%'))
+      .append("text")
+      .attr('class', 'runningResumeButtonText')
+      .attr('dx', '1.5em')
+      .attr('dy', '1.7em')
+      .text("Resume");
   }
 
   function jobStopped(data) {
-/*
+    /*
     var jobName = data['jobName']
     //console.log("Received stopped_job message " + jobName);
-    d3.select('#title_text_' + jobName).text("Job: " + jobName + " (stopped)");
-*/
+    select('#title_text_' + jobName).text("Job: " + jobName + " (stopped)");
+    */
     jobFinishedWith(data, 'stopped');
   }
 
@@ -1122,15 +1173,15 @@ window.onload = function () {
   function jobFinishedWith(data, endStatus) {
     if (endStatus === undefined) endStatus='removed';
 
-    var jobName = data['jobName']
-    var longName = data['longName']
+    var jobName = data['jobName'];
+    var longName = data['longName'];
     //var jobInstance = longName.replace(jobName + '-', '');
     //console.log("Received " + endStatus + "_job message " + jobName + " : " + longName + " : " + jobInstance);
-    var instancePattern = /-[0-9]{8}_[0-9]{6}/;
+    //var instancePattern = /-[0-9]{8}_[0-9]{6}/;
 
     // Remove graph from status (running jobs) page
     var running_jobsHolder = document.getElementById('running_jobsHolder');
-    var children = document.getElementById("running_jobsHolder").children
+    var children = document.getElementById("running_jobsHolder").children;
     for (var i=0;i<children.length;i++) {
       console.log("Child: " + children[i].id);
       if (children[i].id.endsWith(longName) ) {
@@ -1150,8 +1201,9 @@ window.onload = function () {
           //del(historyData[longName]);
 
           // If necessary, show "no jobs running" notice
+          var no_running_jobs;
           if ( running_jobsHolder.children.length == 0 ) {
-            var no_running_jobs = document.getElementById("no_running_jobs");
+            no_running_jobs = document.getElementById("no_running_jobs");
             //no_running_jobs.innerHTML = "No jobs are currently running";
             no_running_jobs.innerHTML = "<center>" + jobName + " was saved to <a href=#content_2 >Job History</a> <br>No other jobs are currently running</center>";
             no_running_jobs.style.display = 'flex';
@@ -1170,7 +1222,7 @@ window.onload = function () {
 
           // If no more running jobs, reinstate "No running jobs" status
           if ( running_jobsHolder.children.length == 0 ) {
-            var no_running_jobs = document.getElementById("no_running_jobs");
+            no_running_jobs = document.getElementById("no_running_jobs");
             no_running_jobs.innerHTML = "<p>No <a href=#content_2>jobs</a> are currently running</p>";
             no_running_jobs.style.display = 'flex';
             no_running_jobs.style.display = '-webkit-flex';
@@ -1181,19 +1233,19 @@ window.onload = function () {
   }
 
   function jobHistoryItemRemoved (jmsg) {
-    var jobName = jmsg.data['jobName']
+    var jobName = jmsg.data['jobName'];
     var jobInstance = jmsg.data['instance'];
     console.log("Received " + jmsg.type + " message for: " + jobName + '-' + jobInstance);
 
     // Remove the jobElement_<jobName>-<jobInstance> element
     // Also (if it has been displayed) jobElementGraph_<jobName>-<jobInstance>
-    jobElement = document.getElementById('jobElement_' + jobName + '-' + jobInstance);
+    var jobElement = document.getElementById('jobElement_' + jobName + '-' + jobInstance);
     while ( jobElement.hasChildNodes() ) {
       jobElement.removeChild(jobElement.firstChild);
     }
     jobElement.parentNode.removeChild(jobElement);
 
-    jobElementGraph = document.getElementById('jobElementGraph_' + jobName + '-' + jobInstance);
+    var jobElementGraph = document.getElementById('jobElementGraph_' + jobName + '-' + jobInstance);
     if (typeof(jobElementGraph) != 'undefined' && jobElementGraph != null) {
       while (jobElementGraph.hasChildNodes() ) {
         jobElementGraph.removeChild(jobElementGraph.firstChild);
@@ -1203,10 +1255,10 @@ window.onload = function () {
   }
 
 
-/* START JOBS (page 2) */
+  /* START JOBS (page 2) */
 
   function updateJobsList(jobfiles, holder) {
-    console.log("Reached updateJobsList()");
+    //console.log("Reached updateJobsList()");
     var jobFiles = jobfiles;
     var jobsListHolder = document.getElementById(holder);
     var instancePattern = /[0-9]{8}_[0-9]{6}/;
@@ -1215,29 +1267,29 @@ window.onload = function () {
     while ( jobsListHolder.hasChildNodes() ) {
       jobsListHolder.removeChild(jobsListHolder.firstChild);
     }
-    console.log("XXX " + holder);
+    //console.log("XXX " + holder);
 
     // Reverse sort the received list (by instancePattern)
-    sortedJobFiles = jobFiles.sort(function(a,b) {
-                    var to_sort = [instancePattern.exec(a),instancePattern.exec(b)];
-                    var to_sort_orig = to_sort.slice();
-                    to_sort.sort();
-                    if (to_sort_orig[0] == to_sort[0]) {
-                      return 1;
-                    } else {
-                      return -1;
-                    }
-                  });
+    jobFiles.sort(function(a,b) {
+      var to_sort = [instancePattern.exec(a),instancePattern.exec(b)];
+      var to_sort_orig = to_sort.slice();
+      to_sort.sort();
+      if (to_sort_orig[0] == to_sort[0]) {
+        return 1;
+      } else {
+        return -1;
+      }
+    });
 
     for (var i=0;i<jobFiles.length;i++) {
       //console.log("              " + jobFiles[i]);
       // Extract some identifiers from the filename
       var jobInstance = instancePattern.exec(jobFiles[i]);
-      console.log("updateJobsList() jobInstance = " + jobInstance);
+      //console.log("updateJobsList() jobInstance = " + jobInstance);
       var jobName = jobfiles[i].slice(0,(jobFiles[i].indexOf(jobInstance)-1));
-      console.log("updateJobsList() jobName = " + jobName);
+      //console.log("updateJobsList() jobName = " + jobName);
       var jobNameFull = jobName + '-' + jobInstance;
-      console.log(jobFiles[i] + ': ' + jobName + ' ' + jobInstance);
+      //console.log(jobFiles[i] + ': ' + jobName + ' ' + jobInstance);
 
       var jobElement = document.createElement('DIV');
       jobElement.id = 'jobElement_' + jobNameFull;
@@ -1251,67 +1303,67 @@ window.onload = function () {
       var jobItemName = document.createElement('DIV');
       jobItemName.id = 'jobItemName_' + i;
       jobItemName.className = 'jobItemName';
-      jobItemName.innerHTML = "<html>" + jobName + "</html>"
+      jobItemName.innerHTML = "<html>" + jobName + "</html>";
 
       var jobItemInstance = document.createElement('DIV');
       jobItemInstance.id = 'jobItemInstance_' + jobNameFull;
       jobItemInstance.className = 'jobItemInstance jobItemInstance_' + holder;
-      jobItemInstance.innerHTML = "<html>" + jobInstance + "</html>"
+      jobItemInstance.innerHTML = "<html>" + jobInstance + "</html>";
 
       // Horizontal Zoom box
       var jobItemHZoomBox = document.createElement('DIV');
-        jobItemHZoomBox.id = 'jobItemHZoomBox_' + jobNameFull;
-        jobItemHZoomBox.className = 'zoomBox'
-        jobItemHZoomBox.title = 'Horizontal Zoom Factor'
+      jobItemHZoomBox.id = 'jobItemHZoomBox_' + jobNameFull;
+      jobItemHZoomBox.className = 'zoomBox';
+      jobItemHZoomBox.title = 'Horizontal Zoom Factor';
       var jobItemHZBLabel = document.createElement('LABEL');
-        jobItemHZBLabel.for = 'jobItemHZBInput_'+ holder + '_' + jobNameFull;
-        jobItemHZBLabel.className = 'zoomBoxLabel';
+      jobItemHZBLabel.for = 'jobItemHZBInput_'+ holder + '_' + jobNameFull;
+      jobItemHZBLabel.className = 'zoomBoxLabel';
       var jobItemHZBInput = document.createElement('INPUT');
-        jobItemHZBInput.id = 'jobItemHZBInput_'+ holder + '_' + jobNameFull;
-        jobItemHZBInput.className = 'zoomBoxInput';
-        jobItemHZBInput.value = 1;
-        jobItemHZBInput.onblur = function() {
-                var jobLongName = this.id.replace("jobItemHZBInput_" + holder + '_', "");
-                //console.log('INPUT ' + this.id + " : " + this.value + " : " + jobLongName);
-                //if ( historyData.hasOwnProperty(jobLongName) ) {
-                //  updateJobHistoryData(0, jobLongName);
-                //}
-                updateJobHistoryData(0, jobLongName);
-              }
-        jobItemHZBInput.addEventListener('keypress', function(event) {
-                if (event.keyCode == 13) {
-                  this.onblur();
-                }
-              });
+      jobItemHZBInput.id = 'jobItemHZBInput_'+ holder + '_' + jobNameFull;
+      jobItemHZBInput.className = 'zoomBoxInput';
+      jobItemHZBInput.value = 1;
+      jobItemHZBInput.onblur = function() {
+        var jobLongName = this.id.replace("jobItemHZBInput_" + holder + '_', "");
+        //console.log('INPUT ' + this.id + " : " + this.value + " : " + jobLongName);
+        //if ( historyData.hasOwnProperty(jobLongName) ) {
+        //  updateJobHistoryData(0, jobLongName);
+        //}
+        updateJobHistoryData(0, jobLongName);
+      };
+      jobItemHZBInput.addEventListener('keypress', function(event) {
+        if (event.keyCode == 13) {
+          this.onblur();
+        }
+      });
 
       var jobItemHZDown = document.createElement('Button');
-        jobItemHZDown.id = 'jobItemHZDown_' + jobNameFull;
-        jobItemHZDown.className = 'zoomBoxButton';
-        jobItemHZDown.textContent = '-';
-        jobItemHZDown.onclick = function() {
-                var hsinput = document.getElementById(this.id.replace("jobItemHZDown", "jobItemHZBInput_" + holder));
-                hsinput.value -=  parseInt(hsinput.value)>1?1:0;
-                var jobLongName = this.id.replace("jobItemHZDown_", "");
-                //console.log('DOWN ' + this.id + " : " + hsinput.value + " : " + jobLongName);
-                //if ( historyData.hasOwnProperty(jobLongName) ) {
-                //  updateJobHistoryData(0, jobLongName);
-                //}
-                updateJobHistoryData(0, jobLongName);
-              }
+      jobItemHZDown.id = 'jobItemHZDown_' + jobNameFull;
+      jobItemHZDown.className = 'zoomBoxButton';
+      jobItemHZDown.textContent = '-';
+      jobItemHZDown.onclick = function() {
+        var hsinput = document.getElementById(this.id.replace("jobItemHZDown", "jobItemHZBInput_" + holder));
+        hsinput.value -=  parseInt(hsinput.value)>1?1:0;
+        var jobLongName = this.id.replace("jobItemHZDown_", "");
+        //console.log('DOWN ' + this.id + " : " + hsinput.value + " : " + jobLongName);
+        //if ( historyData.hasOwnProperty(jobLongName) ) {
+        //  updateJobHistoryData(0, jobLongName);
+        //}
+        updateJobHistoryData(0, jobLongName);
+      };
       var jobItemHZUp = document.createElement('Button');
-        jobItemHZUp.id = 'jobItemHZUp_' + jobNameFull;
-        jobItemHZUp.className = 'zoomBoxButton';
-        jobItemHZUp.textContent = '+';
-        jobItemHZUp.onclick = function() {
-                var hsinput = document.getElementById(this.id.replace("jobItemHZUp", "jobItemHZBInput_" + holder));
-                hsinput.value = parseInt(hsinput.value,10) + 1;
-                var jobLongName = this.id.replace("jobItemHZUp_", "");
-                //console.log('UP ' + this.id + " : " + hsinput.value + " : " + jobLongName);
-                //if ( historyData.hasOwnProperty(jobLongName) ) {
-                //  updateJobHistoryData(0, jobLongName);
-                //}
-                updateJobHistoryData(0, jobLongName);
-              }
+      jobItemHZUp.id = 'jobItemHZUp_' + jobNameFull;
+      jobItemHZUp.className = 'zoomBoxButton';
+      jobItemHZUp.textContent = '+';
+      jobItemHZUp.onclick = function() {
+        var hsinput = document.getElementById(this.id.replace("jobItemHZUp", "jobItemHZBInput_" + holder));
+        hsinput.value = parseInt(hsinput.value,10) + 1;
+        var jobLongName = this.id.replace("jobItemHZUp_", "");
+        //console.log('UP ' + this.id + " : " + hsinput.value + " : " + jobLongName);
+        //if ( historyData.hasOwnProperty(jobLongName) ) {
+        //  updateJobHistoryData(0, jobLongName);
+        //}
+        updateJobHistoryData(0, jobLongName);
+      };
       //jobItemHZoomBox.appendChild(jobItemHZBLabel);
       jobItemHZoomBox.appendChild(jobItemHZDown);
       jobItemHZoomBox.appendChild(jobItemHZBInput);
@@ -1331,14 +1383,14 @@ window.onload = function () {
     }
 
     // Popup menu - content could vary depending on where the jobs list is parented
+    var jobElementMenu = [];
     if (holder === 'historyListJobsHolder' ) {
       // Start of popup menu
-      var jobElementMenu = [{
+      jobElementMenu = [{
         title: 'Display',
         action: function(elm, data, index) {
           console.log('menu item #1 from ' + elm.id + " " + data.title + " " + index);
-          var jobElementGraphName = 'jobElementGraph_' +
-                                  elm.id.slice('jobItemInstance_'.length);
+          var jobElementGraphName = 'jobElementGraph_' + elm.id.slice('jobItemInstance_'.length);
           var jobLongName = elm.id.slice('jobItemInstance_'.length);
           //console.log('jobElementGraphName = ' + jobElementGraphName);
           var jobElementGraph = document.getElementById(jobElementGraphName);
@@ -1349,14 +1401,17 @@ window.onload = function () {
 
             // Only download job data if we don't already have it
             if ( (!historyData.hasOwnProperty(jobLongName)) ) {
-              msgobj = {type:'load_saved_job_data', data:{'fileName':jobElementGraphName.slice('jobElementGraph_'.length)}};
-                sendMessage({data:JSON.stringify(msgobj)});
-              } else {
-                updateJobHistoryData(0, jobLongName);
-              }
+              msgobj = {       
+                type:'load_saved_job_data',
+                data:{'fileName':jobElementGraphName.slice('jobElementGraph_'.length)}
+              };
+              sendMessage({data:JSON.stringify(msgobj)});
+            } else {
+              updateJobHistoryData(0, jobLongName);
             }
           }
-        }, {
+        }
+      }, {
         // At the server, move from history to archive directory
         // In the browser, remove item from list
         title: 'Archive',
@@ -1367,8 +1422,10 @@ window.onload = function () {
           var jobInstance = longName.replace(jobName + '-', '');
           var confirmArchive = confirm("Archive job: " + jobName + "?");
           if ( confirmArchive == true ) {
-            var msgobj = {type:'archive_saved_job',
-                          data:{'jobName':jobName, 'instance':jobInstance}};
+            var msgobj = {
+              type:'archive_saved_job',
+              data:{'jobName':jobName, 'instance':jobInstance}
+            };
             sendMessage({data:JSON.stringify(msgobj)});
           }
         }
@@ -1382,8 +1439,10 @@ window.onload = function () {
           console.log('menu jobName ' + jobName + ' instance: ' + jobInstance);
           var confirmDelete = confirm("Completely DELETE job: " + jobName + " from the system?");
           if ( confirmDelete == true ) {
-            var msgobj = {type:'delete_saved_job',
-                          data:{'jobName':jobName, 'instance':jobInstance}};
+            var msgobj = {
+              type:'delete_saved_job',
+              data:{'jobName':jobName, 'instance':jobInstance}
+            };
             sendMessage({data:JSON.stringify(msgobj)});
           }
         }
@@ -1391,7 +1450,7 @@ window.onload = function () {
       // End of popup menu
     } else if (holder === 'running_jobsHolder') {
       // Start of popup menu
-      var jobElementMenu = [{
+      jobElementMenu = [{
         title: 'Hide/Display',
         action: function(elm, data, index) {
           console.log('menu item #1 from ' + elm.id + " " + data.title + " " + index);
@@ -1416,8 +1475,10 @@ window.onload = function () {
           var nodeName = longJobName.slice(0,(longJobName.indexOf(jobInstance)-1));
           var confirmStop = confirm("Stop job " + nodeName + "?");
           if ( confirmStop == true ) {
-            var msgobj = {type:'stop_running_job',
-                          data:{'jobName':nodeName, 'longName':longJobName}};
+            var msgobj = {
+              type:'stop_running_job',
+              data:{'jobName':nodeName, 'longName':longJobName}
+            };
             sendMessage({data:JSON.stringify(msgobj)});
           }
         }
@@ -1430,8 +1491,10 @@ window.onload = function () {
           var nodeName = longJobName.slice(0,(longJobName.indexOf(jobInstance)-1));
           var confirmRemove = confirm("Remove job " + nodeName + "?");
           if ( confirmRemove == true ) {
-            var msgobj = {type:'remove_running_job',
-                          data:{'jobName':nodeName, 'longName':longJobName}};
+            var msgobj = {
+              type:'remove_running_job',
+              data:{'jobName':nodeName, 'longName':longJobName}
+            };
             sendMessage({data:JSON.stringify(msgobj)});
           }
         }
@@ -1442,15 +1505,17 @@ window.onload = function () {
           var longJobName = elm.id.replace('jobItemInstance_', '');
           var jobInstance = instancePattern.exec(longJobName);
           var nodeName = longJobName.slice(0,(longJobName.indexOf(jobInstance)-1));
-          var msgobj = {type:'save_running_job',
-                        data:{'jobName':nodeName, 'longName':longJobName}};
+          var msgobj = {
+            type:'save_running_job',
+            data:{'jobName':nodeName, 'longName':longJobName}
+          };
           sendMessage({data:JSON.stringify(msgobj)});
         }
       }];
       // End of popup menu
     } else if (holder === 'testHolder') {
       // Start of popup menu
-      var jobElementMenu = [{
+      jobElementMenu = [{
         title: 'Display',
         action: function(elm, data, index) {
           console.log('menu item #1 from ' + elm.id + " " + data.title + " " + index);
@@ -1466,114 +1531,126 @@ window.onload = function () {
 
             // Only download job data if we don't already have it
             if ( (!historyData.hasOwnProperty(jobLongName)) ) {
-              msgobj = {type:'load_saved_job_data', data:{'fileName':jobElementGraphName.slice('jobElementGraph_'.length)}};
-                sendMessage({data:JSON.stringify(msgobj)});
-              } else {
-                updateJobHistoryData(0, jobLongName);
-              }
+              msgobj = {
+                type:'load_saved_job_data',
+                data:{'fileName':jobElementGraphName.slice('jobElementGraph_'.length)}
+              };
+              sendMessage({data:JSON.stringify(msgobj)});
+            } else {
+              updateJobHistoryData(0, jobLongName);
             }
           }
-        }, {
-          title: 'Delete',
-          action: function(elm, data, index) {
-            console.log('menu item #2 from ' + elm.id + " " + data.title + " " + index);
-          }
-        }, {
-          title: 'Is this the Status Page?',
-          action: function(elm, data, index) {
-            console.log('menu item #3 from ' + elm.id + " " + data.title + " " + index);
-          }
+        }
+      }, {
+        title: 'Delete',
+        action: function(elm, data, index) {
+          console.log('menu item #2 from ' + elm.id + " " + data.title + " " + index);
+        }
+      }, {
+        title: 'Is this the Status Page?',
+        action: function(elm, data, index) {
+          console.log('menu item #3 from ' + elm.id + " " + data.title + " " + index);
+        }
       }];
       // End of popup menu
     }
 
-    d3.selectAll('.jobItemInstance_' + holder).on('click', function(data, index) {
-                                        var elm = this;
+    selectAll('.jobItemInstance_' + holder)
+      //.on('click', function(data, index) {
+      .on('click', function() {
+        var elm = this;
 
-                                        // create the div element that will hold the context menu
-                                        d3.selectAll('.context-menu').data([1])
-                                          .enter()
-                                          .append('div')
-                                          .attr('class', 'context-menu');
+        // create the div element that will hold the context menu
+        selectAll('.context-menu').data([1])
+          .enter()
+          .append('div')
+          .attr('class', 'context-menu');
 
-                                          // an ordinary click anywhere closes menu
-                                          d3.select('body').on('click.context-menu', function() {
-                                            d3.select('.context-menu').style('display', 'none');
-                                          });
+        // an ordinary click anywhere closes menu
+        select('body').on('click.context-menu', function() {
+          select('.context-menu').style('display', 'none');
+        });
 
-                                          // this is executed when a contextmenu event occurs
-                                          d3.selectAll('.context-menu')
-                                            .html('<center><p><b>Job Options</b></p></center><hr>')
-                                            .append('ul')
-                                            .selectAll('li')
-                                            .data(jobElementMenu).enter()
-                                            .append('li')
-                                            .on('click',function(d) {
-                                                        console.log('popup selected: ' + d.title);
-                                                        d.action(elm, d, i);
-                                                        d3.select('.context-menu')
-                                                          .style('display', 'none');
-                                                        return d;
-                                                      })
-                                            .text(function(d) {return d.title;});
-                                          d3.select('.context-menu').style('display', 'none');
+        // this is executed when a contextmenu event occurs
+        selectAll('.context-menu')
+          .html('<center><p><b>Job Options</b></p></center><hr>')
+          .append('ul')
+          .selectAll('li')
+          .data(jobElementMenu).enter()
+          .append('li')
+          .on('click',function(d) {
+            console.log('popup selected: ' + d.title);
+            d.action(elm, d, i);
+            select('.context-menu')
+              .style('display', 'none');
+            return d;
+          })
+          .text(function(d) {return d.title;});
+        select('.context-menu').style('display', 'none');
 
-                                          // show the context menu
-                                          d3.select('.context-menu')
-                                            .style('left', (d3.event.pageX - 12) + 'px')
-                                            .style('top', (d3.event.pageY - 72) + 'px')
-                                            .style('display', 'block');
-                                          d3.event.preventDefault();
+        // show the context menu
+        select('.context-menu')
+          .style('left', (event.pageX - 12) + 'px')
+          .style('top', (event.pageY - 72) + 'px')
+          .style('display', 'block');
+        event.preventDefault();
 
-                                          d3.event.stopPropagation();
-                                      });
+        event.stopPropagation();
+      });
 
   }
 
 
 
-/* START PROFILES */
+  /* START PROFILES */
 
+  var profileGraphMargin;
+  var profileGraphHeight;
   if ( smallDevice() ) {
     //console.log("smallDevice is TRUE");
-    var profileGraphMargin = {top: 50, right: 40, bottom: 60, left: 40};
-    var profileGraphHeight = 300 - (profileGraphMargin.top + profileGraphMargin.bottom);
+    profileGraphMargin = {top: 50, right: 40, bottom: 60, left: 40};
+    profileGraphHeight = 300 - (profileGraphMargin.top + profileGraphMargin.bottom);
   } else {
     //console.log("smallDevice is FALSE");
-    var profileGraphMargin = {top: 50, right: 40, bottom: 60, left: 80};
-    var profileGraphHeight = 400 - (profileGraphMargin.top + profileGraphMargin.bottom);
+    profileGraphMargin = {top: 50, right: 40, bottom: 60, left: 80};
+    profileGraphHeight = 400 - (profileGraphMargin.top + profileGraphMargin.bottom);
   }
   var profileGraphWidth = window.innerWidth - (profileGraphMargin.left + profileGraphMargin.right) - 20;
 
-  var pfZoom = d3.behavior.zoom()
+  var pfZoom = zoom()
     .scaleExtent([1,10])
     .on("zoom", zoomed);
 
   function zoomed () {
-    if (d3.event.ctrlKey) {
+    if (event.ctrlKey) {
       console.log("zoomed(): CTRL key pressed");
       //return;
     }
-    profileGraphHolder.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
+    /*
+    select("#profilesGraphHolder")
+     .attr("transform", "translate(" + event.translate + ")scale(" + event.scale + ")");
+    */
   }
 
-  var pfDrag = d3.behavior.drag()
-    .origin(function (d) { return d; })
-    .on("dragstart", dragstarted)
+  /*
+  var pfDrag = drag()
+    .subject(function () { return {x:event.x, y:event.y}; })
+    .on("start", dragstarted)
     .on("drag", dragged)
-    .on("dragend", dragended);
+    .on("end", dragended);
+  */
 
   function dragstarted (d) {
     //console.log("dragstarted() " + JSON.stringify(d));
-    d3.event.sourceEvent.stopPropagation();
-    // d3.event.ctrlKey is masked by something
+    event.sourceEvent.stopPropagation();
+    // event.ctrlKey is masked by something
     // i.e. doesn't work here so use our own pfCtrlKey instead
     if (pfCtrlKey) {
       // if ctrl key is down, we're not dragging (actually deleting)
       //console.log("dragstarted(): CTRL key is down");
       return;
     }
-    if (d3.event.ctrlKey) {
+    if (event.ctrlKey) {
       console.log("dragstarted(): CTRL key is down");
       return;
     }
@@ -1586,34 +1663,36 @@ window.onload = function () {
       .style("left", (d.x + profileGraphMargin.left - 67) + "px")
       .style("top", (d.y + profileGraphMargin.top + 43) + "px");
 
-    d3.select(this).classed("dragging", true);
+    select(this).classed("dragging", true);
   }
   function dragged (d) {
-    d3.select(this).attr("cx", d.x = d3.event.x).attr("cy", d.y = d3.event.y);
+    select(this).attr("cx", d.x = event.x).attr("cy", d.y = event.y);
 
     profileTooltip.html(tickText(profileLinearScaleX.invert(d.x)) + ", " + parseInt(profileLinearScaleY.invert(d.y)))
-    .style("opacity", 0.9)
-    .style("left", (d.x + profileGraphMargin.left - 67) + "px")
-    .style("top", (d.y + profileGraphMargin.top + 43) + "px");
+      .style("opacity", 0.9)
+      .style("left", (d.x + profileGraphMargin.left - 67) + "px")
+      .style("top", (d.y + profileGraphMargin.top + 43) + "px");
 
-    d3.select(this).classed("dragging", true);
+    select(this).classed("dragging", true);
   }
   function dragended (d) {
-    if (d3.event.ctrlKey) {
+    if (event.ctrlKey) {
       console.log("dragended(): CTRL key pressed");
     }
-    if ( !(d3.select(this).classed("dragging")) ) {
+    if ( !(select(this).classed("dragging")) ) {
       console.log("dragended(): should be a click");
       removeSetPoint(this);
       return;
     }
 
-    //var datum = d3.select(this).datum();
+    //var datum = select(this).datum();
     //console.log("dragended() " + JSON.stringify(datum));
 
     var index = this.id.split('_')[1];
+    console.log("this.id = " + this.id);
+    console.log("index = " + index);
 
-    //var pos = d3.mouse(this);
+    //var pos = mouse(this);
     //console.log("dragended() pos: " + (pos[0]-profileGraphMargin.left) + "," + (pos[1]-profileGraphMargin.top));
     var sp = {
       //x:parseInt(profileLinearScaleX.invert(pos[0]-profileGraphMargin.left)),
@@ -1628,7 +1707,7 @@ window.onload = function () {
     profileDisplayData[0][index].x = sp.x;
     profileDisplayData[0][index].y = sp.y;
     //console.log("dragended() new pos: " + sp.x + "," + sp.y);
-    rawProfileData = convertDisplayToRawProfileData();
+    var rawProfileData = convertDisplayToRawProfileData();
     //console.log("dragended = " + JSON.stringify(rawProfileData));
     rawProfileData.forEach( function (item) {
       if ( ! (item.duration == 0) ) {
@@ -1642,7 +1721,7 @@ window.onload = function () {
       .duration(200)
       .style("opacity", 0.0);
 
-    d3.select(this).classed("dragging", false);
+    select(this).classed("dragging", false);
   }
 
   /* Return an array of profiles.
@@ -1656,6 +1735,7 @@ window.onload = function () {
     ];
     return p1;
   }
+  /*
   function getProfileData () {
     // Just dummy data for now
     console.log("Here is some data");
@@ -1682,9 +1762,10 @@ window.onload = function () {
     ];
     return p1;
   }
+  */
 
-  function updateProfileGraph (options) {
-    var options = options || {};
+  function updateProfileGraph (argOptions) {
+    var options = argOptions || {};
     profileData = options.data || [];
     profileOwner = options.owner || 'unknown';
     profileDisplayData = [];
@@ -1693,15 +1774,16 @@ window.onload = function () {
     console.log("At: updateProfileGraph() " + JSON.stringify(profileData) + " for owner " + profileOwner);
 
     // Clear any current graph
-    d3.select("#profilesGraphHolder").selectAll("*").remove();
-    profileGraphHolder = d3.select("#profilesGraphHolder").append("svg")
-                      .attr("id", "profiles_graph")
-                      .attr("class", "generic_graph")
-                      .attr("width", profileGraphWidth + profileGraphMargin.right + profileGraphMargin.left)
-                      .attr("height", profileGraphHeight + profileGraphMargin.top + profileGraphMargin.bottom)
-                      .style("border", "1px solid black")
-                      .on("click", newSetPoint)
-                      .call(pfZoom);
+    select("#profilesGraphHolder").selectAll("*").remove();
+    var profileGraphHolder = select("#profilesGraphHolder")
+      .append("svg")
+      .attr("id", "profiles_graph")
+      .attr("class", "generic_graph")
+      .attr("width", profileGraphWidth + profileGraphMargin.right + profileGraphMargin.left)
+      .attr("height", profileGraphHeight + profileGraphMargin.top + profileGraphMargin.bottom)
+      .style("border", "1px solid black")
+      .on("click", newSetPoint)
+      .call(pfZoom);
 
     /* From the raw profile, generate a dataset that has accumulated times
     */
@@ -1710,8 +1792,7 @@ window.onload = function () {
     var lineData = [];
     for (var sp=0;sp<profileData.length;sp++) {
       //console.log("pdata: " + profileData[sp]["duration"] + " : " + profileData[sp]["target"]);
-      setpoint = {"x":_TESTING_?nextStep:60*nextStep,
-                  "y":profileData[sp]["target"]};
+      setpoint = {"x":_TESTING_?nextStep:60*nextStep, "y":profileData[sp]["target"]};
       lineData.push(setpoint);
       //console.log("pdata: " + setpoint["x"] + " : " + setpoint["y"]);
 
@@ -1722,187 +1803,198 @@ window.onload = function () {
     // Find extent of data.
     // Then add some percentage to allow for expansion
     // due to new data points outside the data
-    var minDataPoint = d3.min(profileDisplayData[0],
-                              function(d) {return parseFloat(d.y)-5;});
-    minDataPoint = minDataPoint<defaultRange.min?minDataPoint:defaultRange.min
-    var maxDataPoint = d3.max(profileDisplayData[0],
-                              function(d) {return parseFloat(d.y)+5;});
-    maxDataPoint = maxDataPoint>defaultRange.max?maxDataPoint:defaultRange.max
-    var maxTime = d3.max(profileDisplayData[0], function(d)
-                                            {return parseFloat(d.x) * 1.3 ;});
+    var minDataPoint = min(profileDisplayData[0], function(d) {return parseFloat(d.y)-5;});
+    minDataPoint = minDataPoint<defaultRange.min?minDataPoint:defaultRange.min;
+    var maxDataPoint = max(profileDisplayData[0], function(d) {return parseFloat(d.y)+5;});
+    maxDataPoint = maxDataPoint>defaultRange.max?maxDataPoint:defaultRange.max;
+    var maxTime = max(profileDisplayData[0], function(d) {return parseFloat(d.x) * 1.3 ;});
     //console.log("minData = " + minDataPoint + ", maxData = " + maxDataPoint + ", maxTime = " + maxTime);
 
+    /*
     // Scale & display data
     if ( _TESTING_ ) {
-      var formatTime = d3.time.format("%H:%M.%S");
+      var formatTime = timeFormat("%H:%M.%S");
     } else {
-      var formatTime = d3.time.format("%-j:%H.%M");
+      var formatTime = timeFormat("%-j:%H.%M");
     }
-    profileLinearScaleY = d3.scale.linear()
-                      .domain([minDataPoint,maxDataPoint])
-                      .range([profileGraphHeight,0]);
-    var yAxis = d3.svg.axis()
-                      .scale(profileLinearScaleY)
-                      .orient("left").ticks(5);
-    var yAxisGroup = profileGraphHolder.append("g")
-                      .attr('class', 'y profileAxis unselectable')
-                      .attr("transform",
-                            "translate(" + profileGraphMargin.left + "," + profileGraphMargin.top + ")")
-                      .call(yAxis);
-    profileLinearScaleX = d3.scale.linear()
-                      .domain([0,maxTime])
-                      .range([0,profileGraphWidth]);
-    var xAxis = d3.svg.axis()
-                      .scale(profileLinearScaleX)
-                      .orient("bottom")
-                      .tickValues(makeTickValues(maxTime,18));
-    var xAxisGroup = profileGraphHolder.append("g")
-                      .attr('class', 'x profileAxis unselectable')
-                      .attr("transform",
-                            "translate(" + profileGraphMargin.left + "," + (profileGraphHeight + profileGraphMargin.top) + ")")
-                      .call(xAxis);
+    */
+    profileLinearScaleY = scaleLinear()
+      .domain([minDataPoint,maxDataPoint])
+      .range([profileGraphHeight,0]);
+    var yAxis = axisLeft(profileLinearScaleY).ticks(5);
+    //var yAxisGroup = profileGraphHolder.append("g")
+    profileGraphHolder.append("g")
+      .attr('class', 'y profileAxis unselectable')
+      .attr("transform", "translate(" + profileGraphMargin.left + "," + profileGraphMargin.top + ")")
+      .call(yAxis);
+    profileLinearScaleX = scaleTime()
+      .domain([0,maxTime])
+      .range([0,profileGraphWidth]);
+    var xAxis = axisBottom(profileLinearScaleX).tickValues(makeTickValues(maxTime,18));
+    //var xAxisGroup = profileGraphHolder.append("g")
+    profileGraphHolder.append("g")
+      .attr('class', 'x profileAxis unselectable')
+      .attr("transform", "translate(" + profileGraphMargin.left + "," + (profileGraphHeight + profileGraphMargin.top) + ")")
+      .call(xAxis);
 
     // Custom tick format
-      profileGraphHolder.selectAll('.x.profileAxis text').text(function(d) { return tickText(d) });
+    profileGraphHolder.selectAll('.x.profileAxis text')
+      .text(function(d) {
+        return tickText(d) ;
+      });
 
-      var xaxistext = profileGraphHolder.append("g")
-                      .attr("id", "xaxistext_profileGraph")
-                      .attr("class", "axistext unselectable")
-                      .append("text")
-                      .attr("transform",
-                          "translate(" + ((profileGraphWidth - profileGraphMargin.left)/2 + profileGraphMargin.left) + "," + (profileGraphHeight+ profileGraphMargin.top + profileGraphMargin.bottom) + ")")
-                          .attr("dy", "-0.35em")
-                          .style("text-anchor", "middle")
-                          .text("Duration (" + (_TESTING_?'mins:secs':'days.hours:mins') + ")");
+    //var xaxistext = profileGraphHolder
+    profileGraphHolder
+      .append("g")
+      .attr("id", "xaxistext_profileGraph")
+      .attr("class", "axistext unselectable")
+      .append("text")
+      .attr("transform",
+        "translate(" + ((profileGraphWidth - profileGraphMargin.left)/2 + profileGraphMargin.left) + "," + (profileGraphHeight+ profileGraphMargin.top + profileGraphMargin.bottom) + ")")
+      .attr("dy", "-0.35em")
+      .style("text-anchor", "middle")
+      .text("Duration (" + (_TESTING_?'mins:secs':'days.hours:mins') + ")");
 
-      for ( var profile=0;profile<profileDisplayData.length;profile++) {
-        var scaledLineData = [];
-        var lineData = profileDisplayData[profile];
+    for ( var profile=0;profile<profileDisplayData.length;profile++) {
+      var scaledLineData = [];
+      lineData = profileDisplayData[profile];
 
-        //Scale each x & y in lineData, push result into new scaledLineData array
-        lineData.forEach( function (d) {
-          scaledLineData.push({"x":profileLinearScaleX(d.x),
-                               "y":profileLinearScaleY(d.y)});
-        });
-        var profileLineFunction = d3.svg.line()
-                                  .x(function(d) { return d.x; })
-                                  .y(function(d) { return d.y; })
-                                  .interpolate(INTERPOLATE_profile_editor);
-                        var lineGraph = profileGraphHolder.append("path")
-                                  .attr("transform",
-                                        "translate(" + profileGraphMargin.left + "," + profileGraphMargin.top + ")")
-                                  .attr("d", profileLineFunction(scaledLineData))
-                                  .attr("stroke", profileLineColours[profile])
-                                  .attr("stroke-width", 2)
-                                  .attr("fill", "none");
-        var dotGraphText = profileGraphHolder.selectAll('dotText')
-                          .data(scaledLineData)
-                        .enter().append("text")
-                        .attr("id", function(d,i){return "setpointText_" + i ;})
-                        .attr("class", "profileSetPointText")
-                        .attr('x', function(d) { return d.x + 1; })
-                        .attr('y', function(d) { return d.y - 5; })
-                        .attr("transform",
-                              "translate(" + profileGraphMargin.left + "," + profileGraphMargin.top + ")")
-                        .text(function(d) {return tickText(profileLinearScaleX.invert(d.x))
-                          + ", " + parseInt(profileLinearScaleY.invert(d.y)); } );
+      //Scale each x & y in lineData, push result into new scaledLineData array
+      lineData.forEach( function (d) {
+        scaledLineData.push({"x":profileLinearScaleX(d.x), "y":profileLinearScaleY(d.y)});
+      });
+      var profileLineFunction = line()
+        .x(function(d) { return d.x; })
+        .y(function(d) { return d.y; });
+      //var lineGraph = profileGraphHolder.append("path")
+      profileGraphHolder.append("path")
+        .attr("transform", "translate(" + profileGraphMargin.left + "," + profileGraphMargin.top + ")")
+        .attr("d", profileLineFunction(scaledLineData))
+        .attr("stroke", profileLineColours[profile])
+        .attr("stroke-width", 2)
+        .attr("fill", "none");
+      //var dotGraphText = profileGraphHolder.selectAll('dotText')
+      profileGraphHolder.selectAll('dotText')
+        .data(scaledLineData)
+        .enter().append("text")
+        .attr("id", function(d,i){return "setpointText_" + i ;})
+        .attr("class", "profileSetPointText")
+        .attr('x', function(d) { return d.x + 1; })
+        .attr('y', function(d) { return d.y - 5; })
+        .attr("transform", "translate(" + profileGraphMargin.left + "," + profileGraphMargin.top + ")")
+        .text(function(d) {return tickText(profileLinearScaleX.invert(d.x))
+          + ", " + parseInt(profileLinearScaleY.invert(d.y)); } );
 
-        var dotGraph = profileGraphHolder.selectAll('dot')
-                          .data(scaledLineData)
-                        .enter().append("circle")
-                        .attr("id", function(d,i){return "setpoint_" + i ;})
-                        .attr("class", "profileSetPoint")
-                        .attr("transform",
-                              "translate(" + profileGraphMargin.left + "," + profileGraphMargin.top + ")")
-                        .attr('r', 3.5)
-                        .attr('cx', function(d) { return d.x; })
-                        .attr('cy', function(d) { return d.y; })
-                        .on("mouseover", function(d) {
-                          // d3.event.ctrlKey is masked from pfDrag
-                          // so set our own pfCtrlKey instead
-                          if (d3.event.ctrlKey) {
-                            //console.log("mouseover + ctrl key");
-                            pfCtrlKey = true;
-                            return
-                          }
-                          pfCurrentDot = this;
-                        })
-                        .on("mouseout", function(d) {
-                          if ( !(d3.select(this).classed("dragging")) ) {
-                            profileTooltip.transition()
-                              .duration(500)
-                              .style("opacity", 0);
-                          }
-                          pfCurrentDot = {"id":"none"};
-                        })
-                        .on("click", function(d) {
-                          if (d3.event.defaultPrevented) {
-                            console.log("PREVENTED");
-                            return
-                          }
-                          console.log("CLICK");
-                          d3.event.sourceEvent.stopPropagation();
-                          removeSetPoint(this);
-                        })
-                        .call(pfDrag);
+      //var dotGraph = profileGraphHolder.selectAll('dot')
+      profileGraphHolder.selectAll('dot')
+        .data(scaledLineData)
+        .enter().append("circle")
+        .attr("id", function(d,i){return "setpoint_" + i ;})
+        .attr("class", "profileSetPoint")
+        .attr("transform", "translate(" + profileGraphMargin.left + "," + profileGraphMargin.top + ")")
+        .attr('r', 3.5)
+        .attr('cx', function(d) { return d.x; })
+        .attr('cy', function(d) { return d.y; })
+        //.on("mouseover", function(d) {
+        .on("mouseover", function() {
+          // event.ctrlKey is masked from pfDrag
+          // so set our own pfCtrlKey instead
+          if (event.ctrlKey) {
+            //console.log("mouseover + ctrl key");
+            pfCtrlKey = true;
+            return;
+          }
+          pfCurrentDot = this;
+        })
+        //.on("mouseout", function(d) {
+        .on("mouseout", function() {
+          if ( !(select(this).classed("dragging")) ) {
+            profileTooltip.transition()
+              .duration(500)
+              .style("opacity", 0);
+          }
+          pfCurrentDot = {"id":"none"};
+        })
+        //.on("click", function(d) {
+        .on("click", function() {
+          if (event.defaultPrevented) {
+            console.log("PREVENTED");
+            return;
+          }
+          console.log("CLICK");
+          event.sourceEvent.stopPropagation();
+          removeSetPoint(this);
+        })
+        //.call(pfDrag);
+        .call(drag()
+          .container(function container() { return this; })
+          .subject(function () { return {x:event.x, y:event.y}; })
+          .on("start", dragstarted)
+          .on("drag", dragged)
+          .on("end", dragended));
 
     }
-    profileButtonGroup = profileGraphHolder.append("g")
-                              .attr("id", "profileButtonGroup")
-                              .attr("class", "profileButtonGroup")
-                              .attr("transform",
-                                "translate(" +
-                                (smallDevice()?profileGraphWidth-20:profileGraphWidth-40) + "," + 40 + ")")
+    //var profileButtonGroup = profileGraphHolder.append("g")
+    profileGraphHolder.append("g")
+      .attr("id", "profileButtonGroup")
+      .attr("class", "profileButtonGroup")
+      .attr("transform",
+        "translate(" +
+        (smallDevice()?profileGraphWidth-20:profileGraphWidth-40) + "," + 40 + ")");
 
 
     // Save & Return button
-    profileSaveButton = d3.select("#profileButtonGroup")
-                        .append("rect")
-                          .attr('id', 'profileSaveButton')
-                          .attr('class', 'profileSaveButton')
-                          .attr('x', 0) .attr('y', 0)
-                          .attr('width', 96).attr('height', 40)
-                          .attr('rx', 6).attr('ry', 6)
-                          .on("click", function() {
-                                //console.log("SAVE & RETURN to " + profileOwner);
-                                d3.select("#profilesGraphHolder").selectAll("*").remove();
-                                location.href = '#content_2';
-                                if (profileOwner == "jobProfileHolder") {
-                                  jobProfileHolder.setAttribute('pdata', JSON.stringify(profileData));
-                                } else if (profileOwner.search("tiProfile_") == 0) {
-                                  document.getElementById(profileOwner).setAttribute('pdata', JSON.stringify(profileData));
-                                  updateTemplateProfile({owner:profileOwner});
-                                  replace_job(profileOwner);
-                                }
-                              })
+    //var profileSaveCancelButton = select("#profileButtonGroup")
+    select("#profileButtonGroup")
+      .append("rect")
+      .attr('id', 'profileSaveButton')
+      .attr('class', 'profileSaveCancelButton')
+      .attr('x', 0) .attr('y', 0)
+      .attr('width', 96).attr('height', 40)
+      .attr('rx', 6).attr('ry', 6)
+      .on("click", function() {
+        //console.log("SAVE & RETURN to " + profileOwner);
+        select("#profilesGraphHolder").selectAll("*").remove();
+        location.href = '#content_2';
+        if (profileOwner == "jobProfileHolder") {
+          jobProfileHolder.setAttribute('pdata', JSON.stringify(profileData));
+        } else if (profileOwner.search("tiProfile_") == 0) {
+          document.getElementById(profileOwner).setAttribute('pdata', JSON.stringify(profileData));
+          updateTemplateProfile({owner:profileOwner});
+          replace_job(profileOwner);
+        }
+      });
 
-    profileSaveButtonText = d3.select("#profileButtonGroup")
-                                .append("text")
-                                .attr('class', 'profileSaveButtonText')
-                                .attr('dx', '0.1em')
-                                .attr('dy', '1.6em')
-                                .text("Save & Return")
+    select("#profileButtonGroup")
+      .append("text")
+      .attr('class', 'profileSaveCancelButtonText')
+      .attr('dx', '0.1em')
+      .attr('dy', '1.6em')
+      .text("Save & Return");
+
 
     // Cancel button
-    profileSaveButton = d3.select("#profileButtonGroup")
-                        .append("rect")
-                          .attr('id', 'profileSaveButton')
-                          .attr('class', 'profileSaveButton')
-                          .attr('x', 0) .attr('y', '3.6em')
-                          .attr('width', 96).attr('height', 40)
-                          .attr('rx', 6).attr('ry', 6)
-                          .on("click", function() {
-                                //console.log("CANCEL to " + profileOwner);
-                                d3.select("#profilesGraphHolder").selectAll("*").remove();
-                                location.href = '#content_2';
-                              })
+    //var profileCancelButton = select("#profileButtonGroup")
+    select("#profileButtonGroup")
+      .append("rect")
+      .attr('id', 'profileCancelButton')
+      .attr('class', 'profileSaveCancelButton')
+      .attr('x', 0) .attr('y', '3.6em')
+      .attr('width', 96).attr('height', 40)
+      .attr('rx', 6).attr('ry', 6)
+      .on("click", function() {
+        //console.log("CANCEL to " + profileOwner);
+        select("#profilesGraphHolder").selectAll("*").remove();
+        location.href = '#content_2';
+      });
 
-    profileSaveButtonText = d3.select("#profileButtonGroup")
-                                .append("text")
-                                .attr('class', 'profileSaveButtonText')
-                                .attr('dx', '1.8em')
-                                .attr('dy', '5.6em')
-                                .text("Cancel")
+    //var profileCancelButtonText = select("#profileButtonGroup")
+    select("#profileButtonGroup")
+      .append("text")
+      .attr('class', 'profileSaveCancelButtonText')
+      .attr('dx', '1.8em')
+      .attr('dy', '5.6em')
+      .text("Cancel");
 
   }
 
@@ -1927,38 +2019,41 @@ window.onload = function () {
     //return mins + ":" + secs;
     if (_TESTING_) {
       if (hrs < 1) {
-        return sprintf("%d:%02d", mins, secs);
+        //return sprintf("%d:%02d", mins, secs);
+        return mins.toString() + ":" + secs.toString().padStart(2,"0");
       } else {
-        return sprintf("%d.%02d:%02d", hrs, mins, secs);
+        //return sprintf("%d.%02d:%02d", hrs, mins, secs);
+        return hrs.toString() + "." + mins.toString().padStart(2,"0") + ":" + secs.toString().padStart(2,"0");
       }
     } else {
       if (days < 1 ) {
-        return sprintf("%d:%02d", hrs, mins);
+        //return sprintf("%d:%02d", hrs, mins);
+        return hrs.toString() + ":" + mins.toString().padStart(2,"0");
       } else {
         hrs -= days*24;
-        return sprintf("%d.%02d:%02d", days, hrs, mins);
-      }
-    }
+        //return sprintf("%d.%02d:%02d", days, hrs, mins);
+        return days.toString() + "." + hrs.toString().padStart(2,"0") + ":" + mins.toString().padStart(2,"0");
+      } }
   }
 
-
   function newSetPoint () {
-    if ( ! (d3.event.shiftKey)) {
+    if ( ! (event.shiftKey)) {
       return;
     }
     console.log("newSetPoint()");
-    var pos = d3.mouse(this);
+    var pos = mouse(this);
+    //console.log("newSetPoint() raw pos: " + pos[0] + "," + pos[1]);
     //console.log("newSetPoint() pos: " + (pos[0]-profileGraphMargin.left) + "," + (pos[1]-profileGraphMargin.top));
     //console.log("newSetPoint() " + JSON.stringify(profileDisplayData));
 
     var sp = {
-      x:parseInt(profileLinearScaleX.invert(pos[0]-profileGraphMargin.left)),
+      x:parseInt(profileLinearScaleX.invert(pos[0]-profileGraphMargin.left).valueOf()),
       y:parseInt(profileLinearScaleY.invert(pos[1]-profileGraphMargin.top))
     };
-    //console.log("newSetPoint(): " + sp.x + "," + sp.y);
+    console.log("newSetPoint(): " + sp.x + "," + sp.y);
     insertSetPoint(sp);
-    rawProfileData = convertDisplayToRawProfileData();
-    //console.log("rawProfileData = " + JSON.stringify(rawProfileData));
+    var rawProfileData = convertDisplayToRawProfileData();
+    console.log("rawProfileData = " + JSON.stringify(rawProfileData));
     rawProfileData.forEach( function (item) {
       if ( ! (item.duration == 0) ) {
         item.duration = invertGraphTimeValue(item.duration);
@@ -1985,7 +2080,7 @@ window.onload = function () {
     var runningTime = 0;
 
     for (var i=0;i<profileDisplayData[0].length;i++) {
-      sp = profileDisplayData[0][i];
+      var sp = profileDisplayData[0][i];
       //console.log(JSON.stringify(sp));
       var newSp = {"target":sp.y, "duration":0};
       if ( rawSetPoints.length > 0 ) {
@@ -1994,7 +2089,7 @@ window.onload = function () {
       }
       rawSetPoints.push(newSp);
 
-    };
+    }
     //console.log("rawSetPoints = " + JSON.stringify(rawSetPoints));
     return rawSetPoints;
   }
@@ -2004,10 +2099,11 @@ window.onload = function () {
      to the previous setpoint's duration
   */
   function removeSetPoint (e) {
-    //if ( ! (d3.event.ctrlKey)) {
+    //if ( ! (event.ctrlKey)) {
     //  return;
     //}
-    var datum = d3.select(e).datum();
+
+    //var datum = select(e).datum();
     //console.log("removeSetPoint() " + JSON.stringify(datum));
 
     /* element index in profileData & profileDisplayData
@@ -2016,7 +2112,7 @@ window.onload = function () {
     if (index == 0 || index == (profileData.length - 1)) return;
 
     profileDisplayData[0].splice(index, 1);
-    rawProfileData = convertDisplayToRawProfileData();
+    var rawProfileData = convertDisplayToRawProfileData();
     rawProfileData.forEach( function (item) {
       if ( ! (item.duration == 0) ) {
         item.duration = invertGraphTimeValue(item.duration);
@@ -2048,7 +2144,7 @@ window.onload = function () {
     profileGraphWidth = window.innerWidth - (profileGraphMargin.left + profileGraphMargin.right) -20;
 
     // Redraw profile editor
-    updateProfileGraph({data:profileData, owner:profileOwner})
+    updateProfileGraph({data:profileData, owner:profileOwner});
 
     //Redraw running jobs
     var runningJobs = document.getElementsByClassName("jobElementGraph");
@@ -2056,30 +2152,31 @@ window.onload = function () {
       var jobLongName = runningJobs[i].id.replace("jobElementGraph_", "");
       //console.log("Redraw " + jobLongName);
       updateJobHistoryData(0, jobLongName);
-    };
+    }
 
   };
 
-d3.select("body").on("keydown", function () {
-  //console.log("KEY DOWN");
-  if ( d3.event.shiftKey) {
-    //console.log("SHIFT KEY");
-  }
-  if ( d3.event.ctrlKey) {
-    //console.log("CTRL KEY pfCurrentDot = " + pfCurrentDot.id);
-    d3.selectAll('.profileSetPoint').each( function(d, i) {
-      if (this.id == pfCurrentDot.id) { pfCtrlKey = true; }
-    });
+  select("body").on("keydown", function () {
+    //console.log("KEY DOWN");
+    if ( event.shiftKey) {
+      //console.log("SHIFT KEY");
+    }
+    if ( event.ctrlKey) {
+      //console.log("CTRL KEY pfCurrentDot = " + pfCurrentDot.id);
+      //selectAll('.profileSetPoint').each( function(d, i) {
+      selectAll('.profileSetPoint').each( function() {
+        if (this.id == pfCurrentDot.id) { pfCtrlKey = true; }
+      });
 
-  }
-})
-d3.select("body").on("keyup", function () {
-  //console.log("KEY UP");
-  if ( d3.event.ctrlKey) {
-    //console.log("CTRL KEY UP");
-    pfCtrlKey = false;
-  }
-})
+    }
+  });
+  select("body").on("keyup", function () {
+    //console.log("KEY UP");
+    if ( event.ctrlKey) {
+      //console.log("CTRL KEY UP");
+      pfCtrlKey = false;
+    }
+  });
 
 
   /* "Display only" some profile (not editable)
@@ -2087,29 +2184,31 @@ d3.select("body").on("keyup", function () {
   */
   //function updateTemplateProfile(profileData, profileDivName) {
   function updateTemplateProfile(options) {
-    profileOwner = options.owner || 'unknown';
+    var profileOwner = options.owner || 'unknown';
     //console.log("Reached updateTemplateProfile(): " + profileOwner);
     profileData = JSON.parse(document.getElementById(profileOwner).getAttribute('pdata'));
+    var sp;
 
     var templateProfileGraphMargin = {top: 2, right: 4, bottom: 1, left: 1},
-        templateProfileGraphWidth = 576 - templateProfileGraphMargin.left - templateProfileGraphMargin.right,
-        templateProfileGraphHeight = 40 - templateProfileGraphMargin.top - templateProfileGraphMargin.bottom;
+      templateProfileGraphWidth = 576 - templateProfileGraphMargin.left - templateProfileGraphMargin.right,
+      templateProfileGraphHeight = 40 - templateProfileGraphMargin.top - templateProfileGraphMargin.bottom;
 
     // Draw the graph of profile
-    d3.select('#profile_' + profileOwner).remove();
-    var templateProfileGraphHolder = d3.select('#' + profileOwner).append("svg")
-                      .attr("id", "profile_" + profileOwner)
-                      .attr("class", "template_profileGraph")
-                      .attr("width", templateProfileGraphWidth + templateProfileGraphMargin.right + templateProfileGraphMargin.left)
-                      .attr("height", templateProfileGraphHeight + templateProfileGraphMargin.top + templateProfileGraphMargin.bottom)
-                      .style("border", "1px solid black")
+    select('#profile_' + profileOwner).remove();
+    var templateProfileGraphHolder = select('#' + profileOwner)
+      .append("svg")
+      .attr("id", "profile_" + profileOwner)
+      .attr("class", "template_profileGraph")
+      .attr("width", templateProfileGraphWidth + templateProfileGraphMargin.right + templateProfileGraphMargin.left)
+      .attr("height", templateProfileGraphHeight + templateProfileGraphMargin.top + templateProfileGraphMargin.bottom)
+      .style("border", "1px solid black");
 
     // Extract profileData into local array
     var profileLineData = [];
     var setpoint = {};
     var nextStep = 0.0;
-/*
-    for (var sp=0;sp<profileData.length;sp++) {
+    /*
+    for (sp=0;sp<profileData.length;sp++) {
       setpoint = {"x":nextStep.toFixed(2),
                   "y":profileData[sp]["target"]};
       profileLineData.push(setpoint);
@@ -2117,11 +2216,13 @@ d3.select("body").on("keyup", function () {
       //nextStep += resolveGraphTimeValue(parseFloat(profileData[sp]["duration"]));
       console.log("*** updateTemplateProfile() profile: " + setpoint["x"] + "(" + profileData[sp]["duration"] + "): " + setpoint["y"]);
     }
-*/
-    for (var sp=0;sp<profileData.length;sp++) {
+    */
+    for (sp=0;sp<profileData.length;sp++) {
       //console.log("pdata: " + profileData[sp]["duration"] + " : " + profileData[sp]["target"]);
-      setpoint = {"x":_TESTING_?nextStep:60*nextStep,
-                  "y":profileData[sp]["target"]};
+      setpoint = {
+        "x":_TESTING_?nextStep:60*nextStep,
+        "y":profileData[sp]["target"]
+      };
       profileLineData.push(setpoint);
       //console.log("pdata: " + setpoint["x"] + " : " + setpoint["y"]);
 
@@ -2133,82 +2234,78 @@ d3.select("body").on("keyup", function () {
     var maxTime = 0.0;
     //var maxDataPoint = 0.0;
     //var minDataPoint = 1000.0;
-    //var minProfile = d3.min(profileLineData, function(d) {return parseFloat(d.y);});
-    //var maxProfile = d3.max(profileLineData, function(d) {return parseFloat(d.y);}) + 1.0;
-    var maxProfileTime = d3.max(profileLineData, function(d) {return parseFloat(d.x);});
+    //var minProfile = min(profileLineData, function(d) {return parseFloat(d.y);});
+    //var maxProfile = max(profileLineData, function(d) {return parseFloat(d.y);}) + 1.0;
+    var maxProfileTime = max(profileLineData, function(d) {return parseFloat(d.x);});
 
-    var maxDataPoint = d3.max(profileLineData, function(d) {
-                                                  return parseFloat(d.y) + 5;
-                                                });
-    var minDataPoint = d3.min(profileLineData, function(d) {
-                                                  return parseFloat(d.y) - 5;
-                                                });
+    var maxDataPoint = max(profileLineData, function(d) {
+      return parseFloat(d.y) + 5;
+    });
+    var minDataPoint = min(profileLineData, function(d) {
+      return parseFloat(d.y) - 5;
+    });
     //if ( minProfile < minDataPoint ) minDataPoint = minProfile;
     //if ( maxProfile > maxDataPoint ) maxDataPoint = maxProfile;
     if ( maxProfileTime > maxTime ) maxTime = maxProfileTime;
 
     // Scale & axes
-    var templateLinearScaleY = d3.scale.linear()
-                      .domain([minDataPoint,maxDataPoint])
-                      .range([templateProfileGraphHeight,0]);
-    var templateYAxis = d3.svg.axis()
-                      .scale(templateLinearScaleY)
-                      .orient("left")
-                      .tickSize(-4)
-                      .ticks(2);
-                      //.tickValues(makeTickValues(maxDataPoint,4));
-    var templateYAxisGroup = templateProfileGraphHolder.append("g")
-                      .attr("transform",
-                            "translate(" + templateProfileGraphMargin.left + "," + templateProfileGraphMargin.top + ")")
-                      .attr('stroke-width', 2)
-                      .attr('stroke', 'black')
-                      .attr('fill', 'none')
-                      .call(templateYAxis);
-    var templateLinearScaleX = d3.scale.linear()
-                      .domain([0,maxTime])
-                      .range([0,templateProfileGraphWidth]);
-    var templateXAxis = d3.svg.axis()
-                      .scale(templateLinearScaleX)
-                      .orient("bottom")
-                      .tickSize(-4)
-                      .ticks(5);
-                      //.tickValues(makeTickValues(maxTime,18*graphWidthScale));
-    var templateXAxisGroup = templateProfileGraphHolder.append("g")
-                      .attr('class', 'x templateAxis')
-                      .attr("transform",
-                            "translate(" + templateProfileGraphMargin.left + "," + (templateProfileGraphHeight + templateProfileGraphMargin.top) + ")")
-                      .attr('stroke-width', 2)
-                      .attr('stroke', 'black')
-                      .attr('fill', 'none')
-                      .call(templateXAxis);
+    var templateLinearScaleY = scaleLinear()
+      .domain([minDataPoint,maxDataPoint])
+      .range([templateProfileGraphHeight,0]);
+    var templateYAxis = axisLeft(templateLinearScaleY)
+      .tickSize(-4)
+      .ticks(2);
+      //.tickValues(makeTickValues(maxDataPoint,4));
+    //var templateYAxisGroup = templateProfileGraphHolder.append("g")
+    templateProfileGraphHolder.append("g")
+      .attr("transform", "translate(" + templateProfileGraphMargin.left + "," + templateProfileGraphMargin.top + ")")
+      .attr('stroke-width', 2)
+      .attr('stroke', 'black')
+      .attr('fill', 'none')
+      .call(templateYAxis);
+    var templateLinearScaleX = scaleTime()
+      .domain([0,maxTime])
+      .range([0,templateProfileGraphWidth]);
+    var templateXAxis = axisBottom(templateLinearScaleX)
+      .tickSize(-4)
+      .ticks(5);
+      //.tickValues(makeTickValues(maxTime,18*graphWidthScale));
+    //var templateXAxisGroup = templateProfileGraphHolder.append("g")
+    templateProfileGraphHolder.append("g")
+      .attr('class', 'x templateAxis')
+      .attr("transform", "translate(" + templateProfileGraphMargin.left + "," + (templateProfileGraphHeight + templateProfileGraphMargin.top) + ")")
+      .attr('stroke-width', 2)
+      .attr('stroke', 'black')
+      .attr('fill', 'none')
+      .call(templateXAxis);
     // Custom tick format
     //templateProfileGraphHolder.selectAll('.x.templateAxis text').text(function(d) { return tickText(d) });
 
     // Scale profile data
     var scaledProfileLineData = [];
-    for (var sp=0;sp<profileLineData.length;sp++) {
+    for (sp=0;sp<profileLineData.length;sp++) {
       //console.log("scaled sp = " + profileLineData[sp].x + " : " + profileLineData[sp].y);
-      scaledProfileLineData.push({"x":templateLinearScaleX(profileLineData[sp].x),
-                                  "y":templateLinearScaleY(profileLineData[sp].y)});
+      scaledProfileLineData.push({
+        "x":templateLinearScaleX(profileLineData[sp].x),
+        "y":templateLinearScaleY(profileLineData[sp].y)});
     }
     // Draw profile graph
-    var templateProfileLineFunction = d3.svg.line()
-                              .x(function(d) { return d.x; })
-                              .y(function(d) { return d.y; })
-                              .interpolate(INTERPOLATE_profile_template);
-    var lineGraph = templateProfileGraphHolder.append("path")
-                              .attr("transform",
-                                    "translate(" + templateProfileGraphMargin.left + "," + templateProfileGraphMargin.top + ")")
-                              .attr("d", templateProfileLineFunction(scaledProfileLineData))
-                              .attr("stroke", "gray")
-                              .attr("stroke-width", 2)
-                              .attr("fill", "none");
+    var templateProfileLineFunction = line()
+      .x(function(d) { return d.x; })
+      .y(function(d) { return d.y; });
 
-
+    //var lineGraph = templateProfileGraphHolder.append("path")
+    templateProfileGraphHolder.append("path")
+      .attr("transform", "translate(" + templateProfileGraphMargin.left + "," + templateProfileGraphMargin.top + ")")
+      .attr("d", templateProfileLineFunction(scaledProfileLineData))
+      .attr("stroke", "gray")
+      .attr("stroke-width", 2)
+      .attr("fill", "none");
   }
 
   function replace_job(profileOwner) {
     console.log("Don't forget to save the changed job!");
+    var i;
     var elemId = profileOwner.replace('tiProfile_', '');
     console.log("template id = " + elemId);
 
@@ -2218,11 +2315,11 @@ d3.select("body").on("keyup", function () {
 
     var sensors = document.getElementById('tiSensors_' + elemId).getAttribute ('sensors').split(',');
     var useSensors = [];
-    for (var i=0;i<sensors.length;i++) { useSensors.push(sensors[i]); }
+    for (i=0;i<sensors.length;i++) { useSensors.push(sensors[i]); }
 
     var relays = document.getElementById('tiRelays_' + elemId).getAttribute ('relays').split(',');
     var useRelays = [];
-    for (var i=0;i<relays.length;i++) { useRelays.push(relays[i]); }
+    for (i=0;i<relays.length;i++) { useRelays.push(relays[i]); }
 
     var jobData = {
       name: jobName,
@@ -2237,12 +2334,13 @@ d3.select("body").on("keyup", function () {
   }
 
 
-/* END PROFILES */
+  /* END PROFILES */
 
-/***************** START JOBS Templates/Composer/History  *********************/
+  /***************** START JOBS Templates/Composer/History  *******************/
   console.log("START JOBS");
 
-  document.addEventListener('profilesLoadedEvent', function (e) {
+  //document.addEventListener('profilesLoadedEvent', function (e) {
+  document.addEventListener('profilesLoadedEvent', function () {
     //Clear the job name
     //document.getElementById("jobName").value = "";
 
@@ -2262,13 +2360,15 @@ d3.select("body").on("keyup", function () {
   // Generate a listing of stored job templates
   function createJobTemplatesList(data) {
     console.log("Reached createJobTemplatesList() ...");
+    var j;
     var jobTemplatesListHolder = document.getElementById("jobTemplatesListHolder");
-    var toolTipDiv = d3.select("body").append("div")
-                                      .attr('class', 'templateItemTooltip')
-                                      .style('opacity', 0.0)
-                                      .style('left', '200px')
-                                      .style('top', '200px');
-                                      //.style('display', 'none');
+    var toolTipDiv = select("body")
+      .append("div")
+      .attr('class', 'templateItemTooltip')
+      .style('opacity', 0.0)
+      .style('left', '200px')
+      .style('top', '200px');
+      //.style('display', 'none');
 
     // First remove existing list elements
     while ( jobTemplatesListHolder.hasChildNodes() ) {
@@ -2278,10 +2378,10 @@ d3.select("body").on("keyup", function () {
     for (var i=0;i<data.length;i++) {
       var thisJob = data[i];
       var name = thisJob['name'];
-      var preheat = "Preheat OFF";
-      if ( thisJob['preheat'] ) {
-        preheat = "Preheat  ON";
-      }
+      //var preheat = "Preheat OFF";
+      //if ( thisJob['preheat'] ) {
+      //  preheat = "Preheat  ON";
+      //}
 
       var templateItem = document.createElement('DIV');
       templateItem.id = 'ti_' + i;
@@ -2310,7 +2410,7 @@ d3.select("body").on("keyup", function () {
       templateItemSensors.className = 'templateItemSensors unselectable';
       templateItemSensors.textContent = 'Sensors';
       var loadedSensors = [];
-      for (var j=0;j<thisJob['sensors'].length;j++) {
+      for (j=0;j<thisJob['sensors'].length;j++) {
         loadedSensors.push(thisJob['sensors'][j]);
       }
       //console.log(name + ' sensors: ' + loadedSensors);
@@ -2321,7 +2421,7 @@ d3.select("body").on("keyup", function () {
       templateItemRelays.className = 'templateItemRelays unselectable';
       templateItemRelays.textContent = 'Relays';
       var loadedRelays = [];
-      for (var j=0;j<thisJob['relays'].length;j++) {
+      for (j=0;j<thisJob['relays'].length;j++) {
         loadedRelays.push(thisJob['relays'][j]);
       }
       //console.log(name + ' relays: ' + loadedRelays);
@@ -2331,7 +2431,7 @@ d3.select("body").on("keyup", function () {
       templateItemProfile.id = 'tiProfile_' + i;
       templateItemProfile.className = 'templateItemProfile generic_graph';
       var loadedProfile = [];
-      for (k=0;k<thisJob['profile'].length;k++) {
+      for (var k=0;k<thisJob['profile'].length;k++) {
         //console.log('profile step for ' + name + ': ' + thisJob['profile'][k].target + ' . ' + thisJob['profile'][k].duration);
         //loadedProfile.push({'target':parseFloat(thisJob['profile'][k].target),'duration':parseFloat(thisJob['profile'][k].duration)});
         loadedProfile.push({'target':thisJob['profile'][k].target,'duration':thisJob['profile'][k].duration});
@@ -2350,7 +2450,6 @@ d3.select("body").on("keyup", function () {
       jobTemplatesListHolder.appendChild(templateItem);
 
       // Draw the profile graph for this template item
-      //updateTemplateProfile(loadedProfile, templateItemProfile.id);
       updateTemplateProfile({owner:templateItemProfile.id});
 
       // Start of templateItemName menu
@@ -2362,14 +2461,19 @@ d3.select("body").on("keyup", function () {
           var jobName = elm.textContent;
 
           if ( templateItemIndex < 0 )
-              return;
+            return;
 
           var confirmDelete = confirm("Delete job " + jobName + "?");
           if ( confirmDelete == true ) {
             // Request job deletion
             //var jobData = { index: parseInt(templateItemIndex) };
-            var msgobj = {type:'delete_job',
-                    data:{index: parseInt(templateItemIndex), name: jobName }};
+            var msgobj = {
+              type:'delete_job',
+              data:{
+                index: parseInt(templateItemIndex),
+                name: jobName
+              }
+            };
             sendMessage({data:JSON.stringify(msgobj)});
           } else {
             return;
@@ -2386,10 +2490,10 @@ d3.select("body").on("keyup", function () {
           } else {
             jobComposer.style.display = 'block';
             var c = document.getElementById("jobItemsHolder").children;
-            var itemsWidth = 0;
+            //var itemsWidth = 0;
             var tallest = 0;
             for (var i=0;i<c.length;i++) {
-              itemsWidth += parseInt(window.getComputedStyle(c[i]).width.replace(/\D+/g, ''));
+              //itemsWidth += parseInt(window.getComputedStyle(c[i]).width.replace(/\D+/g, ''));
               var itemHeight = parseInt(window.getComputedStyle(c[i]).height.replace(/\D+/g, ''));
               if (itemHeight > tallest ) tallest = itemHeight;
             }
@@ -2407,7 +2511,8 @@ d3.select("body").on("keyup", function () {
         }
       }, {
         title: 'Run',
-        action: function(elm, data, index) {
+        //action: function(elm, data, index) {
+        action: function(elm) {
           //console.log('menu item #4 from ' + elm.id + " " + data.title + " " + index);
           var templateItemIndex = elm.getAttribute('templateItemIndex');
           var jobName = elm.textContent;
@@ -2415,8 +2520,10 @@ d3.select("body").on("keyup", function () {
           var confirmRun = confirm("Run job " + jobName + "?");
           if ( confirmRun == true ) {
             // Request job run
-            var msgobj = {type:'run_job',
-                    data:{index: parseInt(templateItemIndex), name: jobName }};
+            var msgobj = {
+              type:'run_job',
+              data:{index: parseInt(templateItemIndex), name: jobName }
+            };
             sendMessage({data:JSON.stringify(msgobj)});
 
             // Now go to status page to view job progress
@@ -2425,110 +2532,112 @@ d3.select("body").on("keyup", function () {
           } else {
             return;
           }
-      }
+        }
       }];
       // End of popup menu
 
-      d3.selectAll('.templateItemName').on('click', function(data, index) {
-                                          var elm = this;
+      selectAll('.templateItemName')
+        //.on('click', function(data, index) {
+        .on('click', function() {
+          var elm = this;
 
-                                          // create the div element that will hold the context menu
-                                          d3.selectAll('.context-menu').data([1])
-                                            .enter()
-                                            .append('div')
-                                            .attr('class', 'context-menu');
+          // create the div element that will hold the context menu
+          selectAll('.context-menu').data([1])
+            .enter()
+            .append('div')
+            .attr('class', 'context-menu');
 
-                                            // an ordinary click anywhere closes menu
-                                            d3.select('body').on('click.context-menu', function() {
-                                              d3.select('.context-menu').style('display', 'none');
-                                            });
+          // an ordinary click anywhere closes menu
+          select('body').on('click.context-menu', function() {
+            select('.context-menu').style('display', 'none');
+          });
 
-                                            // this is executed when a contextmenu event occurs
-                                            d3.selectAll('.context-menu')
-                                              .html('<center><p><b>Template Options</b></p></center><hr>')
-                                              .append('ul')
-                                              .selectAll('li')
-                                              .data(templateItemNameMenu).enter()
-                                              .append('li')
-                                              .on('click',function(d) {
-                                                          console.log('popup selected: ' + d.title);
-                                                          d.action(elm, d, i);
-                                                          d3.select('.context-menu')
-                                                            .style('display', 'none');
-                                                          return d;
-                                                        })
-                                              .text(function(d) {return d.title;});
-                                            d3.select('.context-menu').style('display', 'none');
+          // this is executed when a contextmenu event occurs
+          selectAll('.context-menu')
+            .html('<center><p><b>Template Options</b></p></center><hr>')
+            .append('ul')
+            .selectAll('li')
+            .data(templateItemNameMenu).enter()
+            .append('li')
+            .on('click',function(d) {
+              console.log('popup selected: ' + d.title);
+              d.action(elm, d, i);
+              select('.context-menu')
+                .style('display', 'none');
+              return d;
+            })
+            .text(function(d) {return d.title;});
+          select('.context-menu').style('display', 'none');
 
-                                            // show the context menu
-                                            d3.select('.context-menu')
-                                              .style('left', (d3.event.pageX - 96) + 'px')
-                                              .style('top', (d3.event.pageY - 148) + 'px')
-                                              .style('display', 'block');
-                                            d3.event.preventDefault();
+          // show the context menu
+          select('.context-menu')
+            .style('left', (event.pageX - 96) + 'px')
+            .style('top', (event.pageY - 148) + 'px')
+            .style('display', 'block');
+          event.preventDefault();
 
-                                            d3.event.stopPropagation();
-                                        });
+          event.stopPropagation();
+        });
 
 
       // templateItemSensors tooltip
-      d3.selectAll('.templateItemSensors').on('click', function() {
-                                      //console.log('click on Sensors');
-                                      if (toolTipDiv.style('opacity') == 0.0) {
-                                        var sensors = this.getAttribute('sensors').split(',');
-                                        var sensorsText = '<center>';
-                                        for (var i=0;i<sensors.length;i++) {
-                                          sensorsText = sensorsText + sensors[i] + '<br>';
-                                        }
-                                        sensorsText = sensorsText + '</center>';
-                                        toolTipDiv.style('opacity', 0.9)
-                                            .html(sensorsText)
-                                            .style('left', (getOffsetRect(this).left - 34) + 'px')
-                                            .style('top', (getOffsetRect(this).top + 12) + 'px');
-                                      } else {
-                                        toolTipDiv.style('opacity', 0.0);
-                                      }
-                                    })
+      selectAll('.templateItemSensors')
+        .on('click', function() {
+          //console.log('click on Sensors');
+          if (toolTipDiv.style('opacity') == 0.0) {
+            var sensors = this.getAttribute('sensors').split(',');
+            var sensorsText = '<center>';
+            for (var i=0;i<sensors.length;i++) {
+              sensorsText = sensorsText + sensors[i] + '<br>';
+            }
+            sensorsText = sensorsText + '</center>';
+            toolTipDiv.style('opacity', 0.9)
+              .html(sensorsText)
+              .style('left', (getOffsetRect(this).left - 34) + 'px')
+              .style('top', (getOffsetRect(this).top + 12) + 'px');
+          } else {
+            toolTipDiv.style('opacity', 0.0);
+          }
+        });
 
       // templateItemRelays tooltip
-      d3.selectAll('.templateItemRelays').on('click', function() {
-                                      //console.log('click on Relays');
-                                      if (toolTipDiv.style('opacity') == 0.0) {
-                                        var relays = this.getAttribute('relays').split(',');
-                                        var relaysText = '<center>';
-                                        for (var i=0;i<relays.length;i++) {
-                                          relaysText = relaysText + relays[i] + '<br>';
-                                        }
-                                        relaysText = relaysText + '</center>';
-                                        toolTipDiv.style('opacity', 0.9)
-                                            .html(relaysText)
-                                            .style('left', (getOffsetRect(this).left - 34) + 'px')
-                                            .style('top', (getOffsetRect(this).top + 12) + 'px');
-                                      } else {
-                                        toolTipDiv.style('opacity', 0.0);
-                                      }
-                                    })
-
-
-
+      selectAll('.templateItemRelays')
+        .on('click', function() {
+          //console.log('click on Relays');
+          if (toolTipDiv.style('opacity') == 0.0) {
+            var relays = this.getAttribute('relays').split(',');
+            var relaysText = '<center>';
+            for (var i=0;i<relays.length;i++) {
+              relaysText = relaysText + relays[i] + '<br>';
+            }
+            relaysText = relaysText + '</center>';
+            toolTipDiv.style('opacity', 0.9)
+              .html(relaysText)
+              .style('left', (getOffsetRect(this).left - 34) + 'px')
+              .style('top', (getOffsetRect(this).top + 12) + 'px');
+          } else {
+            toolTipDiv.style('opacity', 0.0);
+          }
+        });
     }
-    for (var i=0;i<data.length;i++) {
-      (function(i) {
-        document.getElementById("tiProfile_" + i).onclick = function() {
+    for (var f=0;f<data.length;f++) {
+      (function(f) {
+        document.getElementById("tiProfile_" + f).onclick = function() {
           location.href = '#content_3';
-          var templateItemProfile = document.getElementById("tiProfile_" + i);
+          var templateItemProfile = document.getElementById("tiProfile_" + f);
           //console.log("XXXX: " + templateItemProfile.getAttribute('pdata'));
           updateProfileGraph(
-              {data:JSON.parse(templateItemProfile.getAttribute('pdata')),
+            {data:JSON.parse(templateItemProfile.getAttribute('pdata')),
               owner:templateItemProfile.id});
         };
-      })(i);
+      })(f);
     }
 
   } // End function createJobTemplatesList()
 
   // Display the job Composer
-  var jobTemplatesHolder = document.getElementById('jobTemplatesHolder');
+  //var jobTemplatesHolder = document.getElementById('jobTemplatesHolder');
+  jobTemplatesHolder = document.getElementById('jobTemplatesHolder');
   jobTemplatesHolder.onclick = function(e) {
     //console.log('Target: ' + e.target.id);
     if (e.target.id != 'jobTemplatesHolder') return;
@@ -2546,22 +2655,23 @@ d3.select("body").on("keyup", function () {
       }
       // Reset Relays selector
       var relayItems = document.getElementsByClassName("relaySelectorItem");
-      for (var i=0;i<relayItems.length;i++ ) {
-        document.getElementById("ar_" + i).checked = false;
+      for (var ii=0;ii<relayItems.length;ii++ ) {
+        document.getElementById("ar_" + ii).checked = false;
       }
     }
     e.stopPropagation();
     return false;
-  }
+  };
 
   // Dismiss the job composer
-  var dismissJobComposerButton = document.getElementById('dismissJobComposerButton');
+  //var dismissJobComposerButton = document.getElementById('dismissJobComposerButton');
+  dismissJobComposerButton = document.getElementById('dismissJobComposerButton');
   dismissJobComposerButton.onclick = function() {
     var jobComposer = document.getElementById("jobComposer");
     if ( jobComposer.style.display != 'none') {
       jobComposer.style.display = 'none';
     }
-  }
+  };
 
   // Save a new job from job composer
   var saveNewJobButton = document.getElementById("jobSaveButton");
@@ -2570,9 +2680,10 @@ d3.select("body").on("keyup", function () {
     var OKtoSave = true;
 
     // Collect the job name, substituting whitespaces with single underscores
-    var jobName = document.getElementById('jobName').value
-                                                    .trim()
-                                                    .replace(/\s+/g, '_');
+    var jobName = document.getElementById('jobName')
+      .value
+      .trim()
+      .replace(/\s+/g, '_');
     if ( jobName.length == 0 ) {
       OKtoSave = false;
       alert("Please set a name for this job");
@@ -2583,9 +2694,9 @@ d3.select("body").on("keyup", function () {
     var tiNames = document.getElementsByClassName("templateItemName");
     for (var i=0;i<tiNames.length;i++) {
       if ( tiNames[i].innerHTML == jobName ) {
-          alert("The name " + jobName + " is already used. Please choose a new name");
-          return;
-        }
+        alert("The name " + jobName + " is already used. Please choose a new name");
+        return;
+      }
     }
 
     // Disallowed characters in job name?
@@ -2595,34 +2706,34 @@ d3.select("body").on("keyup", function () {
     }
 
     // Collect whether to preheat/cool
-    var jobPreHeat = false;
-    if (document.getElementById("selectPreHeat").checked) {
-      jobPreHeat = true;
-    }
+    //var jobPreHeat = false;
+    //if (document.getElementById("selectPreHeat").checked) {
+    //  jobPreHeat = true;
+    //}
 
     // Collect time/temp steps from job composer profile.
     var saveJobProfile = JSON.parse(document.getElementById("jobProfileHolder").getAttribute("pdata"));
 
-/*
+    /*
     // Add a "zero,zero" setpoint.
     if (tempType == 'F') {
-        setpoint = {target:32.0, duration:'0.0'};
+      setpoint = {target:32.0, duration:'0.0'};
     } else {
-        setpoint = {target:0.0, duration:'0.0'};
+      setpoint = {target:0.0, duration:'0.0'};
     }
     saveJobProfile.push(setpoint);
     console.log("Added setpoint " + setpoint);
-*/
+    */
 
     // Collect which sensor(s) to use
     var table = document.getElementsByClassName("sensorSelectorItem");
     var useSensors = [];
 
-    for (var i=0;i<table.length;i++) {
-      var cell = document.getElementById("as_" + i);
-      //console.log("checking " + document.getElementById("label_as_" + i).textContent);
+    for (var ii=0;ii<table.length;ii++) {
+      var cell = document.getElementById("as_" + ii);
+      //console.log("checking " + document.getElementById("label_as_" + ii).textContent);
       if ( cell.checked ) {
-        useSensors.push(document.getElementById("label_as_" + i).textContent);
+        useSensors.push(document.getElementById("label_as_" + ii).textContent);
       }
     }
     //console.log("Sensors checked: " + useSensors);
@@ -2633,14 +2744,14 @@ d3.select("body").on("keyup", function () {
     }
 
     // Collect which relay(s) to use
-    var table = document.getElementsByClassName("relaySelectorItem");
     var useRelays = [];
 
-    for (var i=0;i<table.length;i++) {
-      var cell = document.getElementById("ar_" + i);
-      //console.log("checking " + document.getElementById("label_ar_" + i).textContent);
+    table = document.getElementsByClassName("relaySelectorItem");
+    for (var iii=0;iii<table.length;iii++) {
+      cell = document.getElementById("ar_" + iii);
+      //console.log("checking " + document.getElementById("label_ar_" + iii).textContent);
       if ( cell.checked ) {
-        useRelays.push(document.getElementById("label_ar_" + i).textContent);
+        useRelays.push(document.getElementById("label_ar_" + iii).textContent);
       }
     }
     //console.log("Relays checked: " + useRelays);
@@ -2669,7 +2780,7 @@ d3.select("body").on("keyup", function () {
     } else {
       console.log("NOT OKtoSave");
     }
-  }
+  };
 
   // Create a sensor selector based on data from server (availableSensors)
   function createSensorSelector(sensors) {
@@ -2690,26 +2801,26 @@ d3.select("body").on("keyup", function () {
     selector.appendChild(sensorSelectorLabel);
 
     for(var i=0;i<sensors.length;i++) {
-        console.log("Adding sensor: " + sensors[i]);
+      console.log("Adding sensor: " + sensors[i]);
 
-        var selectorItem = document.createElement("DIV");
-        selectorItem.id = 'sensorSelectorItem_' + i;
-        selectorItem.className = 'sensorSelectorItem';
+      var selectorItem = document.createElement("DIV");
+      selectorItem.id = 'sensorSelectorItem_' + i;
+      selectorItem.className = 'sensorSelectorItem';
 
-        var check = document.createElement("INPUT");
-        check.type = "checkbox";
-        check.id = "as_" + i;
+      var check = document.createElement("INPUT");
+      check.type = "checkbox";
+      check.id = "as_" + i;
 
-        var checkLabel = document.createElement("LABEL");
-        checkLabel.setAttribute("for", "as_" + i);
-        checkLabel.textContent = sensors[i];
-        checkLabel.id = "label_as_" + i;
-        checkLabel.className = "unselectable";
+      var checkLabel = document.createElement("LABEL");
+      checkLabel.setAttribute("for", "as_" + i);
+      checkLabel.textContent = sensors[i];
+      checkLabel.id = "label_as_" + i;
+      checkLabel.className = "unselectable";
 
-        selectorItem.appendChild(check);
-        selectorItem.appendChild(checkLabel);
+      selectorItem.appendChild(check);
+      selectorItem.appendChild(checkLabel);
 
-        selector.appendChild(selectorItem);
+      selector.appendChild(selectorItem);
     }
   }
 
@@ -2732,26 +2843,26 @@ d3.select("body").on("keyup", function () {
     selector.appendChild(relaySelectorLabel);
 
     for(var i=0;i<relays.length;i++) {
-        console.log("Adding relay: " + relays[i]);
+      console.log("Adding relay: " + relays[i]);
 
-        var selectorItem = document.createElement("DIV");
-        selectorItem.id = 'relaySelectorItem_' + i;
-        selectorItem.className = 'relaySelectorItem';
+      var selectorItem = document.createElement("DIV");
+      selectorItem.id = 'relaySelectorItem_' + i;
+      selectorItem.className = 'relaySelectorItem';
 
-        var check = document.createElement("INPUT");
-        check.type = "checkbox";
-        check.id = "ar_" + i;
+      var check = document.createElement("INPUT");
+      check.type = "checkbox";
+      check.id = "ar_" + i;
 
-        var checkLabel = document.createElement("LABEL");
-        checkLabel.setAttribute("for", "ar_" + i);
-        checkLabel.textContent = relays[i];
-        checkLabel.id = "label_ar_" + i;
-        checkLabel.className = "unselectable";
+      var checkLabel = document.createElement("LABEL");
+      checkLabel.setAttribute("for", "ar_" + i);
+      checkLabel.textContent = relays[i];
+      checkLabel.id = "label_ar_" + i;
+      checkLabel.className = "unselectable";
 
-        selectorItem.appendChild(check);
-        selectorItem.appendChild(checkLabel);
+      selectorItem.appendChild(check);
+      selectorItem.appendChild(checkLabel);
 
-        selector.appendChild(selectorItem);
+      selector.appendChild(selectorItem);
     }
   }
 

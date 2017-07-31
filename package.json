@@ -14,13 +14,30 @@
     "xdg-basedir": ""
   },
   "scripts": {
-    "start": "node server.js"
+    "start": "node ./src/scripts/brewable.js"
   },
   "name": "brewable",
   "version": "0.3.0",
   "description": "Nodejs version of brewable",
-  "main": "index.js",
-  "devDependencies": {},
+  "main": "src/scripts/brewable.js",
+  "devDependencies": {
+    "babel-plugin-external-helpers": "^6.22.0",
+    "babel-preset-es2015": "^6.24.1",
+    "cssnano": "^3.10.0",
+    "d3": "^4.10.0",
+    "postcss-cssnext": "^3.0.2",
+    "postcss-nested": "^2.1.0",
+    "postcss-simple-vars": "^4.0.0",
+    "rollup": "^0.45.2",
+    "rollup-plugin-babel": "^2.7.1",
+    "rollup-plugin-commonjs": "^8.0.2",
+    "rollup-plugin-eslint": "^4.0.0",
+    "rollup-plugin-node-resolve": "^3.0.0",
+    "rollup-plugin-postcss": "^0.5.4",
+    "rollup-plugin-replace": "^1.1.1",
+    "rollup-plugin-uglify": "^2.0.1",
+    "sprintf-js": "^1.1.1"
+  },
   "author": "Christoph Willing",
   "license": "ISC",
   "repository": {
@@ -28,6 +45,6 @@
     "url": "https://github.com/cwilling/brewable.git"
   },
   "//": [
-"ex:set ai shiftwidth=2 inputtab=spaces smarttab noautotab:"
+    "ex:set ai shiftwidth=2 inputtab=spaces smarttab noautotab:"
   ]
 }
