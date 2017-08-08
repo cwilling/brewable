@@ -1,14 +1,23 @@
-var os = require('os');
-var osenv = require('osenv');
-var path = require('path');
-var fs = require('fs');
-var events = require('events');
+var os = require("os");
+var path = require("path");
+var fs = require("fs");
 
+import events from "events";
+var eventEmitter = new events.EventEmitter();
+//export { eventEmitter };
+
+/*
 var sensordevice = require("./sensor");
 var sensorLister = require("./sensorLister");
 var Relay = require("./sainsmartrelay");
 var Configuration = require("./configuration");
 var JobProcessor = require("./jobprocessor");
+*/
+import sensordevice from "./sensor";
+import sensors from "./sensorLister";
+import Relay from "./sainsmartrelay";
+import Configuration from "./configuration";
+import JobProcessor from "./jobprocessor";
 
 var sensorDevices = [];
 var sensorResults = [];
@@ -69,9 +78,9 @@ function gpioWorker (input_queue, output_queue) {
   }
 
   // Running & stopped JobProcessor instances
-  this.runningJobs = []
-  this.stoppedJobs = []
-  this.recoveredJobs = []
+  this.runningJobs = [];
+  this.stoppedJobs = [];
+  this.recoveredJobs = [];
 
   this.runDir = this.configObj.dir('jobs');
   this.historyDir = this.configObj.dir('history');
@@ -84,14 +93,16 @@ function gpioWorker (input_queue, output_queue) {
       console.log("Failed to read running jobs directory " + this.runDir);
     } else {
       console.log("job files: " + files);
-      files.forEach( function (file, index) {
+      //files.forEach( function (file) {
+      //files.forEach( function (file, index) {
+      files.forEach( function (file) {
         var filePath = path.join(this.runDir, file);
         fs.readFile(filePath, 'utf8', function (err, data) {
           if (err) {
             console.log("Failed to load_saved_job_data from" + filePath + ": " + err);
           } else {
             console.log("Read data from " + filePath + " OK.");
-            lines = data.split(os.EOL);
+            var lines = data.split(os.EOL);
             var header = JSON.parse(lines[0]);
             console.log("header: " + JSON.stringify(header));
 
@@ -114,24 +125,28 @@ function gpioWorker (input_queue, output_queue) {
     }
   }.bind(this));
 
-  // eventEmitter is global (from index.js)
+  // eventEmitter WAS global (from index.js)
   eventEmitter.on('sensor_read', allSensorsRead);
   eventEmitter.on('msg_waiting', this.processMessage.bind(this));
 
 } 
-module.exports = gpioWorker;
+//module.exports = gpioWorker;
+//export default gpioWorker;
+//export default gpioWorker;
+export { gpioWorker, eventEmitter };
 
 gpioWorker.prototype.sensorDevices = function () {
   var deviceList = [];
 
   // Obtain list of available sensor ids
   // & keep array (sensorDevices) of sensor objects
-  var sensorList = sensorLister.sensors();
+  //var sensorList = sensorLister.sensors();
+  var sensorList = sensors();
   for (var z=0;z<sensorList.length;z++) {
     deviceList.push(new sensordevice(sensorList[z]));
   }
   return deviceList;
-}
+};
 
 var allSensorsRead = function() {
   sensorsRead += 1;
@@ -149,9 +164,9 @@ gpioWorker.prototype.updateDevices = function () {
   sensorDevices.forEach( function(item) {
     //console.log("EEEEE " + item.id);
     item.getTempAsync(function (id, result) {
-      var result = {id:id,result:result};
+      var sensor_result = {id:id,result:result};
       //console.log("BBBB " + id + "  " + result);
-      sensorResults.push(result);
+      sensorResults.push(sensor_result);
       eventEmitter.emit('sensor_read');
     });
   });
@@ -167,11 +182,11 @@ gpioWorker.prototype.updateDevices = function () {
     });
   };
 */
-}
+};
 
 gpioWorker.prototype.getSensorResults = function () {
   return sensorResults;
-}
+};
 
 gpioWorker.prototype.liveUpdate = function () {
   var sensor_state = [];
@@ -195,7 +210,7 @@ gpioWorker.prototype.liveUpdate = function () {
   });
   //console.log("liveUpdate(): " + jdata);
   this.output_queue.enqueue(jdata);
-}
+};
 
 /* Like a liveUpdate but no sensor information; just relays
 */
@@ -213,7 +228,7 @@ gpioWorker.prototype.relayOnlyUpdate = function () {
   });
   //console.log("relayUpdate(): " + jdata);
   this.output_queue.enqueue(jdata);
-}
+};
 
 gpioWorker.prototype.processMessage = function () {
   console.log("Processing message " + this.input_queue._name);
@@ -262,7 +277,7 @@ gpioWorker.prototype.processMessage = function () {
       console.log("unknown key: " + key + ",  value: " + msg[key]);
     }
   }
-}
+};
 
 gpioWorker.prototype.load_startup_data = function (msg) {
   //console.log("load_startup_data():");
@@ -282,7 +297,7 @@ gpioWorker.prototype.load_startup_data = function (msg) {
   this.load_running_jobs(msg);
   this.load_saved_jobs(msg);
   //this.load_profiles();
-}
+};
 
 gpioWorker.prototype.toggle_relay = function (msg) {
   console.log("toggle_relay(): " + msg.data);
@@ -293,7 +308,7 @@ gpioWorker.prototype.toggle_relay = function (msg) {
     this.relay.ON(relayId);
   }
   this.relayOnlyUpdate();
-}
+};
 
 gpioWorker.prototype.config_change = function (msg) {
   console.log("config_change() Rcvd: " + JSON.stringify(msg.data));
@@ -310,7 +325,7 @@ gpioWorker.prototype.config_change = function (msg) {
   } else {
     console.log("config_change(): " + keys[0] + " = " + msg.data[keys[0]]);
   }
-}
+};
 
 gpioWorker.prototype.list_sensors = function (msg) {
   console.log("list_sensors() Rcvd: " + JSON.stringify(msg.data));
@@ -326,9 +341,10 @@ gpioWorker.prototype.list_sensors = function (msg) {
   });
   this.output_queue.enqueue(jdata);
   console.log("list_sensors(): " + jdata);
-}
+};
 
 gpioWorker.prototype.list_relays = function (msg) {
+  console.log("list_relays() Rcvd: " + JSON.stringify(msg.data));
   var relay_ids = [];
 
   for (var i=0;i<this.relay.deviceCount();i++) {
@@ -341,7 +357,7 @@ gpioWorker.prototype.list_relays = function (msg) {
   });
   this.output_queue.enqueue(jdata);
   console.log("list_relays(): " + jdata);
-}
+};
 
 /* Save a newly received job template to
    - file of job templates
@@ -354,12 +370,12 @@ gpioWorker.prototype.save_job = function (msg) {
   var jobTemplateDataFile = this.jobTemplateDataFile;
   //console.log("JOBS " + JSON.stringify(this.jobs));
   fs.writeFile(jobTemplateDataFile, JSON.stringify({'job_data':this.jobs}),
-          function(err) {
-            if (err)
-              console.log("Failed to write " + jobTemplateDataFile + ": ", err);
-            else
-              console.log("File " + jobTemplateDataFile + " written OK.");
-          });
+    function(err) {
+      if (err)
+        console.log("Failed to write " + jobTemplateDataFile + ": ", err);
+      else
+        console.log("File " + jobTemplateDataFile + " written OK.");
+    });
 
   /* Maybe thois should be in writeFile's callback? */
   var jdata = JSON.stringify({
@@ -368,7 +384,7 @@ gpioWorker.prototype.save_job = function (msg) {
   });
   this.output_queue.enqueue(jdata);
   //console.log("this.jobs: " + JSON.stringify(this.jobs));
-}
+};
 
 /* Update an existing job template */
 gpioWorker.prototype.replace_job = function (msg) {
@@ -400,12 +416,12 @@ gpioWorker.prototype.replace_job = function (msg) {
     'data':this.jobs
   });
   this.output_queue.enqueue(jdata);
-}
+};
 
 /* Remove a job template */
 gpioWorker.prototype.delete_job = function (msg) {
-  var jobIndex = msg.data["index"];
   var jobName = msg.data["name"];
+  //var jobIndex = msg.data["index"];
   //console.log("delete_job() index = " + jobIndex + ", name = " + jobName);
 
   /* First find index in this.jobs */
@@ -431,19 +447,21 @@ gpioWorker.prototype.delete_job = function (msg) {
   });
   this.output_queue.enqueue(jdata);
   //console.log("UPDATED JOBS: " + JSON.stringify(this.jobs));
-}
+};
 
 /* Load job templates from jobTemplateData.txt and send to client */
 gpioWorker.prototype.load_jobs = function (msg) {
+  console.log("load_jobs() Rcvd: " + JSON.stringify(msg.data));
   var jdata = JSON.stringify({
     'type':'loaded_jobs',
     'data':this.jobs
   });
   this.output_queue.enqueue(jdata);
   //console.log("this.jobs: " + JSON.stringify(this.jobs));
-}
+};
 
 gpioWorker.prototype.run_job = function (msg) {
+  var j;
   var jobIndex = msg.data["index"];
   var jobName = msg.data["name"];
   console.log("run_job() index = " + jobIndex + ", name = " + jobName);
@@ -451,7 +469,7 @@ gpioWorker.prototype.run_job = function (msg) {
   // First check that this job isn't already running
   var isRunning = false;
   //console.log("Running jobs ... " + JSON.stringify(this.runningJobs));
-  for (var j=0;j<this.runningJobs.length;j++ ) {
+  for (j=0;j<this.runningJobs.length;j++ ) {
     if (this.runningJobs[j].name == jobName ) {
       isRunning = true;
       console.log("Job " + jobName + " = " + this.runningJobs[j].name + " is already running");
@@ -460,7 +478,7 @@ gpioWorker.prototype.run_job = function (msg) {
   }
   var targetIndex = -1;
   if ( ! isRunning ) {
-    for (var j=0;j<this.jobs.length;j++ ) {
+    for (j=0;j<this.jobs.length;j++ ) {
       if (this.jobs[j].name == jobName ) {
         targetIndex = j;
         console.log("Job " + jobName + " is available to run");
@@ -480,7 +498,8 @@ gpioWorker.prototype.run_job = function (msg) {
     }
   }
   /* Do an initial processing of the new job */
-  this.runningJobs.forEach( function (job, index) {
+  //this.runningJobs.forEach( function (job, index) {
+  this.runningJobs.forEach( function (job) {
     //console.log("run_job() job.name  1 = " + job.jobName);
     //console.log("run_job() job.name  2 = " + jobName);
     if (job.jobName == jobName) {
@@ -490,7 +509,7 @@ gpioWorker.prototype.run_job = function (msg) {
   });
   this.load_running_jobs(msg);
 
-}
+};
 
 /*
   Normally, a job instance is created based on the relevant job template,
@@ -519,16 +538,17 @@ gpioWorker.prototype.setupJobRun = function (options) {
     return false;
   }
   return true;
-}
+};
 
 gpioWorker.prototype.processRunningJobs = function () {
   console.log("processRunningJobs()");
-  this.runningJobs.forEach( function (job, index) {
+  //this.runningJobs.forEach( function (job, index) {
+  this.runningJobs.forEach( function (job) {
     //console.log("Process job: " + index + " (" + job.jobName + ")");
     //console.log("Process job: " + index + " " + JSON.stringify(job.jobProfile));
     job.process();
   });
-}
+};
 
 /* Send a list of running jobs back to the client */
 gpioWorker.prototype.load_running_jobs = function (msg) {
@@ -554,7 +574,8 @@ gpioWorker.prototype.load_running_jobs = function (msg) {
   if (this.runningJobs.length > 0) {
     console.log("Send list of running jobs here");
     running_jobs = [];
-    this.runningJobs.forEach( function (job, index) {
+    //this.runningJobs.forEach( function (job, index) {
+    this.runningJobs.forEach( function (job) {
       //console.log("runningJobs history 1: " + JSON.stringify(job.history));
       if (msg['type'] == 'run_job') {
         job.process();
@@ -572,19 +593,20 @@ gpioWorker.prototype.load_running_jobs = function (msg) {
   var jdata = JSON.stringify({'type':'running_jobs','data':running_jobs});
   console.log("load_running_jobs() returning: " + jdata);
   this.output_queue.enqueue(jdata);
-}
+};
 
 gpioWorker.prototype.stop_running_job = function (options) {
+  var i;
   var msg = options.msg;
-  var stopStatus = options.stopStatus
+  var stopStatus = options.stopStatus;
   //console.log("stop_running_job() options: " + JSON.stringify(options));
 
   var jobName = msg.data["jobName"];
-  var longName = msg.data["longName"]
+  var longName = msg.data["longName"];
   var job_index = -1;
   console.log("Rcvd STOP_RUNNING_JOB: " + longName + ", stopStatus = " + stopStatus);
 
-  for (var i=0;i<this.runningJobs.length;i++) {
+  for (i=0;i<this.runningJobs.length;i++) {
     var jobLongName = this.runningJobs[i].name() + '-' + this.runningJobs[i].instanceId;
     console.log("stop_running_job() Trying: " + jobLongName);
     if (jobLongName == longName) {
@@ -599,21 +621,21 @@ gpioWorker.prototype.stop_running_job = function (options) {
   } else {
     // Perhaps the job was already stopped?
     // In which case, ensure it has correct stopStatus
-    for (var i=0;i<this.stoppedJobs.length;i++) {
-      var jobLongName = this.stoppedJobs[i].name() + '-' + this.stoppedJobs[i].instanceId;
-      var job = this.stoppedJobs[i];
+    for (i=0;i<this.stoppedJobs.length;i++) {
+      jobLongName = this.stoppedJobs[i].name() + '-' + this.stoppedJobs[i].instanceId;
       if (jobLongName == longName) {
         console.log("Job " + jobLongName + " already stopped");
         this.stoppedJobs[i].stop({'longName':longName, 'stopStatus':stopStatus});
-        var jdata = JSON.stringify({'type':'stopped_job',
-                                    'data':{'longName':longName, 'jobName':jobName}
-                                  });
+        var jdata = JSON.stringify({
+          'type':'stopped_job',
+          'data':{'longName':longName, 'jobName':jobName}
+        });
         this.output_queue.enqueue(jdata);
       }
     }
   }
 
-}
+};
 
 gpioWorker.prototype.resume_job = function (msg) {
   var job_found = false;
@@ -626,18 +648,18 @@ gpioWorker.prototype.resume_job = function (msg) {
     if (jobLongName == msg.data['jobName']) {
       job_found = true;
       console.log("Found stopped job " + job.name() + " - ready to resume");
-      break
+      break;
     }
   }
   if ( (!job_found) ) {
-      console.log("Couldn't find job " + msg['data']['jobName'] + " to resume!");
+    console.log("Couldn't find job " + msg['data']['jobName'] + " to resume!");
   } else {
-      job.resume();
+    job.resume();
   }
-}
+};
 
 gpioWorker.prototype.load_saved_jobs = function (msg) {
-  console.log("Rcvd request to LOAD SAVED JOBS");
+  console.log("Rcvd request to LOAD SAVED JOBS:" + msg);
 
   fs.readdir(this.historyDir, function (err, files) {
     if (err) {
@@ -646,20 +668,21 @@ gpioWorker.prototype.load_saved_jobs = function (msg) {
       console.log("history files: " + files);
       var goodhistoryfiles = [];
 
-      files.forEach( function (file, index) {
+      //files.forEach( function (file, index) {
+      files.forEach( function (file) {
         console.log("Reading file " + file);
         console.log("full path: " + this.historyDir);
         console.log("full path: " + file);
 
         fs.readFile(path.join(this.historyDir, file), 'utf8', function (err, data) {
-          lines = data.split(os.EOL);
+          var lines = data.split(os.EOL);
           var last_line = JSON.parse(lines[lines.length-2]);
           console.log("last line: " + JSON.stringify(last_line));
           if (last_line['running'] == 'saved') {
             goodhistoryfiles.push(file);
           }
           console.log("good history files: " + goodhistoryfiles);
-          jdata = JSON.stringify({
+          var jdata = JSON.stringify({
             'type':'saved_jobs_list',
             'data':{'historyfiles':goodhistoryfiles}
           });
@@ -669,11 +692,11 @@ gpioWorker.prototype.load_saved_jobs = function (msg) {
     }
   }.bind(this));
 
-}
+};
 
 gpioWorker.prototype.remove_running_job = function (msg) {
   var jobName = msg.data["jobName"];
-  var longName = msg.data["longName"]
+  var longName = msg.data["longName"];
   console.log("Rcvd request to REMOVE running job " + jobName + " (" + longName + ")");
   this.stop_running_job({'msg':msg, 'stopStatus':'remove'});
 
@@ -690,9 +713,10 @@ gpioWorker.prototype.remove_running_job = function (msg) {
     var job = this.stoppedJobs.splice(job_index, 1)[0];
     var jobRunFilePath = job.runFilePath;
     console.log("Job " + longName + " removed from stoppedJobs");
-    var jdata = JSON.stringify({'type':'removed_job',
-                                'data':{'longName':longName, 'jobName':jobName}
-                              });
+    var jdata = JSON.stringify({
+      'type':'removed_job',
+      'data':{'longName':longName, 'jobName':jobName}
+    });
     this.output_queue.enqueue(jdata);
 
     // Remove associated file
@@ -707,11 +731,11 @@ gpioWorker.prototype.remove_running_job = function (msg) {
     // This shouldn't be possible
     console.log("Job to remove NOT FOUND! (" + longName + ")");
   }
-}
+};
 
 gpioWorker.prototype.save_running_job = function (msg) {
   var jobName = msg.data["jobName"];
-  var longName = msg.data["longName"]
+  var longName = msg.data["longName"];
   console.log("Rcvd request to SAVE running job " + jobName + " (" + longName + ")");
   this.stop_running_job({'msg':msg, 'stopStatus':'save'});
 
@@ -734,20 +758,22 @@ gpioWorker.prototype.save_running_job = function (msg) {
         console.log("Failed to rename " + jobRunFilePath + " to " + jobHistoryFilePath + ": " + err);
       } else {
         console.log(jobRunFilePath + " renamed to " + jobHistoryFilePath + " OK.");
-        var jdata = JSON.stringify({'type':'saved_job',
-                                    'data':{'longName':longName, 'jobName':jobName}
-                                  });
+        var jdata = JSON.stringify({
+          'type':'saved_job',
+          'data':{'longName':longName, 'jobName':jobName}
+        });
         this.output_queue.enqueue(jdata);
       }
     }.bind(this));
   } else {
-    var jdata = JSON.stringify({'type':'error_saved_job',
-                                'data':{'longName':longName, 'jobName':jobName}
-                              });
+    var jdata = JSON.stringify({
+      'type':'error_saved_job',
+      'data':{'longName':longName, 'jobName':jobName}
+    });
     this.output_queue.enqueue(jdata);
   }
   this.load_saved_jobs({'type':'load_saved_jobs','data':[]});
-}
+};
 
 gpioWorker.prototype.delete_saved_job = function (msg) {
   var jobName = msg.data["jobName"];
@@ -762,13 +788,14 @@ gpioWorker.prototype.delete_saved_job = function (msg) {
     } else {
       console.log("File " + historyFilePath + " removed OK.");
       console.log("jobName = " + jobName + " instance = " + msg.data["instance"]);
-      var jdata = JSON.stringify({'type':'removed_saved_job',
-                                  'data':{'jobName':jobName, 'instance':msg.data["instance"]}
-                                });
+      var jdata = JSON.stringify({
+        'type':'removed_saved_job',
+        'data':{'jobName':jobName, 'instance':msg.data["instance"]}
+      });
       this.output_queue.enqueue(jdata);
     }
   }.bind(this));
-}
+};
 
 gpioWorker.prototype.archive_saved_job = function (msg) {
   var jobName = msg.data["jobName"];
@@ -783,13 +810,14 @@ gpioWorker.prototype.archive_saved_job = function (msg) {
       console.log("Failed to rename " + historyFilePath + " to " + archiveFilePath + ": " + err);
     } else {
       console.log(historyFilePath + " renamed to " + archiveFilePath + " OK.");
-      var jdata = JSON.stringify({'type':'archived_job',
-                                  'data':{'jobName':jobName, 'instance':msg.data['instance']}
-                                });
+      var jdata = JSON.stringify({
+        'type':'archived_job',
+        'data':{'jobName':jobName, 'instance':msg.data['instance']}
+      });
       this.output_queue.enqueue(jdata);
     }
   }.bind(this));
-}
+};
 
 gpioWorker.prototype.load_saved_job_data = function (msg) {
   console.log("Rcvd request to LOAD SAVED JOB DATA " + msg.data["fileName"] + ".txt");
@@ -801,7 +829,7 @@ gpioWorker.prototype.load_saved_job_data = function (msg) {
       console.log("Failed to load_saved_job_data from" + filepath + ": " + err);
     } else {
       //console.log("Read data from " + filePath + " OK.");
-      lines = data.split(os.EOL);
+      var lines = data.split(os.EOL);
       var header = JSON.parse(lines[0]);
       //console.log("header: " + JSON.stringify(header));
 
@@ -811,13 +839,14 @@ gpioWorker.prototype.load_saved_job_data = function (msg) {
         updates.push(JSON.parse(lines[i]));
         //console.log("-> " + JSON.stringify(updates[updates.length-1]));
       }
-      var jdata = JSON.stringify({'type':'saved_job_data',
-                                  'data':{'header':[header], 'updates':updates}
-                                });
+      var jdata = JSON.stringify({
+        'type':'saved_job_data',
+        'data':{'header':[header], 'updates':updates}
+      });
       this.output_queue.enqueue(jdata);
     }
   }.bind(this) );
-}
+};
 
 
 

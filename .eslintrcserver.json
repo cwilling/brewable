@@ -4,8 +4,10 @@
         "es6": true
     },
     "globals": {
-        "__$styleInject": true,
-        "ENV": true
+        "ENV": true,
+        "require": true,
+        "__dirname": true,
+        "process": true
     },
     "extends": "eslint:recommended",
     "parserOptions": {

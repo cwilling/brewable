@@ -3,42 +3,43 @@
 */
 
 
-function Queue(options) {
-    var options = options || {};
-    this._interval = options.interval || 1000; //milliseconds
-    this._name = options.name || 'unnamed queue';
-    this._action = options.action || function() {console.log('No action');};
+function Queue(passed_options) {
+  var options = passed_options || {};
+  this._interval = options.interval || 1000; //milliseconds
+  this._name = options.name || 'unnamed queue';
+  this._action = options.action || function() {console.log('No action');};
 
-    this._oldestIndex = 1;
-    this._newestIndex = 1;
-    this._storage = {};
+  this._oldestIndex = 1;
+  this._newestIndex = 1;
+  this._storage = {};
 
 
-    console.log(this._name + " starting with interval " + this._interval);
+  console.log(this._name + " starting with interval " + this._interval);
 }
-module.exports = Queue;
+//module.exports = Queue;
+export default Queue;
  
 Queue.prototype.size = function() {
-    return this._newestIndex - this._oldestIndex;
+  return this._newestIndex - this._oldestIndex;
 };
  
 Queue.prototype.enqueue = function(data) {
-    this._storage[this._newestIndex] = data;
-    this._newestIndex++;
+  this._storage[this._newestIndex] = data;
+  this._newestIndex++;
 };
  
 Queue.prototype.dequeue = function() {
-    var oldestIndex = this._oldestIndex,
-        newestIndex = this._newestIndex,
-        deletedData;
- 
-    if (oldestIndex !== newestIndex) {
-        deletedData = this._storage[oldestIndex];
-        delete this._storage[oldestIndex];
-        this._oldestIndex++;
- 
-        return deletedData;
-    }
+  var oldestIndex = this._oldestIndex,
+    newestIndex = this._newestIndex,
+    deletedData;
+
+  if (oldestIndex !== newestIndex) {
+    deletedData = this._storage[oldestIndex];
+    delete this._storage[oldestIndex];
+    this._oldestIndex++;
+
+    return deletedData;
+  }
 };
  
 Queue.prototype.start = function() {
@@ -47,8 +48,8 @@ Queue.prototype.start = function() {
     this._action();
 
     if (this.size > 0) {
-      message = this.dequeue();
-      console.log("Sending msg: " + messsage);
+      var message = this.dequeue();
+      console.log("Sending msg: " + message);
       /*
       for (var c=0;c<clients.length();c++) {
       }

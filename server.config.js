@@ -3,41 +3,35 @@ import babel from 'rollup-plugin-babel';
 import eslint from 'rollup-plugin-eslint';
 import resolve from 'rollup-plugin-node-resolve';
 import commonjs from 'rollup-plugin-commonjs';
+import json from 'rollup-plugin-json';
 import replace from 'rollup-plugin-replace';
 import uglify from 'rollup-plugin-uglify';
-import postcss from 'rollup-plugin-postcss';
 
-// PostCSS plugins
-import simplevars from 'postcss-simple-vars';
-import nested from 'postcss-nested';
-import cssnext from 'postcss-cssnext';
-import cssnano from 'cssnano';
 
 export default {
-  entry: 'status.js',
-  targets: [
-    { dest: 'build/js/brewableclientbundle.js', format: 'iife' },
-  ],
+  entry: 'src/scripts/brewable.js',
+  dest: 'build/js/brewableserverbundle.js',
+  format: 'cjs',
+  external: [ 'path', 'buffer', 'http', 'https', 'events', 'util', 'tty', 'net', 'url', 'fs', 'crypto' ],
+  banner: '#!/usr/bin/env node',
   sourceMap: 'inline',
   plugins: [
-    postcss({
-       plugins: [
-        simplevars(),
-        nested(),
-        cssnext({ warnForDuplicates: false, }),
-        cssnano(),
-       ],
-       extensions: [ '.css' ],
-     }),
+    json(),
     resolve({
-      jsnext: true,
       main: true,
-      browser: true,
+      preferBuiltins: true
     }),
-    commonjs(),
+    commonjs({
+      include: 'node_modules/**',
+      exclude: 'node_modules/rollup-plugin-node-builtins/**',
+      nameExports: {
+      }
+    }),
     eslint({
+      configFile: '/home/pi/src/brewable/.eslintrcserver.json',
       exclude: [
         'src/styles/**',
+        'node_modules/**'
       ]
     }),
     babel({
@@ -48,6 +42,6 @@ export default {
       ENV: JSON.stringify(process.env.NODE_ENV || 'development'),
     }),
     (process.env.NODE_ENV === 'production' && uglify()),
-  ],
+  ]
 };
 

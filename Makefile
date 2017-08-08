@@ -25,7 +25,7 @@ LOGDIR = /var/log/brewable
 
 
 
-build: default.conf brewable
+build: default.conf client server
 
 
 default.conf:	default.conf.in
@@ -35,9 +35,17 @@ default.conf:	default.conf.in
 		-e 's:%LOGDIR%:$(LOGDIR):' \
 		> default.conf
 
-brewable: server.py
-	cat server.py | sed -e 's/import gpioworker/from brewable import gpioworker/' >brewable
-	chmod 0755 brewable
+node_modules:
+	npm install
+
+client: node_modules
+	./node_modules/.bin/rollup --config client.config.js
+
+server: node_modules
+	patch -p0 < websocket-no-binaries.diff
+	./node_modules/.bin/rollup --config server.config.js
+	patch -p0 -R < websocket-no-binaries.diff
+
 
 install: build $(INSTALL_FILES)
 	mkdir -p $(DESTDIR)/etc/default
@@ -48,6 +56,10 @@ install: build $(INSTALL_FILES)
 	bash -c './postinst configure'
 
 clean:
-	rm -f *.pyc default.conf brewable
+	rm -f default.conf
+	rm -rf build
 
-.PHONY: default.conf brewable
+distclean:
+	rm -rf node_modules
+
+.PHONY: default.conf node_modules brewable

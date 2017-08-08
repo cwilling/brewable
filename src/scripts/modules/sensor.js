@@ -1,4 +1,4 @@
-var events = require('events');
+import events from 'events';
 var fs = require('fs');
 
 // SensorDevice object
@@ -11,11 +11,11 @@ function SensorDevice (id) {
   //console.log('New SensorDevice with id = ' + this.id + ', fudge = ' + this.fudge);
 
 }
-module.exports = SensorDevice;
+export default SensorDevice;
 
 SensorDevice.prototype.getId = function () {
   return this.id;
-}
+};
 
 SensorDevice.prototype.getTempAsync = function (callback) {
   var dpath = '/sys/bus/w1/devices/' + this.id + '/w1_slave';
@@ -24,27 +24,27 @@ SensorDevice.prototype.getTempAsync = function (callback) {
     if (err) {
       console.log('Error reading device data: ' + dpath);
     } else {
-      result = parseFloat(data.split(' ')[20].split('=')[1]) / 1000;
+      var result = parseFloat(data.split(' ')[20].split('=')[1]) / 1000;
       callback(id, result);
     }
   });
-}
+};
 
 SensorDevice.prototype.getTemp = function () {
-  dpath = '/sys/bus/w1/devices/' + this.id + '/w1_slave';
+  var dpath = '/sys/bus/w1/devices/' + this.id + '/w1_slave';
   var data = fs.readFileSync(dpath, 'utf8');
   //console.log('(SensorDevice)' + this.id + ' data = ' + data);
   return parseFloat(data.split(' ')[20].split('=')[1]) / 1000;
-}
+};
 
 SensorDevice.prototype.setFudge = function (fudgeFactor) {
   console.log("setFudge(): for " + this.id + " (" + fudgeFactor + ")");
   this.fudge = parseFloat(fudgeFactor);
-}
+};
 
 SensorDevice.prototype.getFudge = function () {
   return this.fudge;
-}
+};
 
 
 

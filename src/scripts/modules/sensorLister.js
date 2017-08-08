@@ -1,7 +1,7 @@
-var fs = require('fs');
+var fs =require('fs');
 
 // Return a list of sensor devices
-exports.sensors = function sensors() {
+export default function sensors() {
   var deviceDirectory = '/sys/bus/w1/devices/w1_bus_master1/w1_master_slaves';
   var returnList = [];
   var data = fs.readFileSync(deviceDirectory, 'utf8');

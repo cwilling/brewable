@@ -1,0 +1,40 @@
+--- node_modules/websocket/lib/BufferUtil.js.orig	2015-03-20 05:11:44.000000000 +1000
++++ node_modules/websocket/lib/BufferUtil.js	2017-08-07 12:42:41.594425582 +1000
+@@ -5,13 +5,4 @@
+  * MIT Licensed
+  */
+ 
+-try {
+-  module.exports = require('../build/Release/bufferutil');
+-} catch (e) { try {
+-  module.exports = require('../build/default/bufferutil');
+-} catch (e) { try {
+-  module.exports = require('./BufferUtil.fallback');
+-} catch (e) {
+-  console.error('bufferutil.node seems to not have been built. Run npm install.');
+-  throw e;
+-}}}
++module.exports = require('./BufferUtil.fallback');
+--- node_modules/websocket/lib/Validation.js.orig	2015-03-20 05:11:44.000000000 +1000
++++ node_modules/websocket/lib/Validation.js	2017-08-07 12:42:25.714166385 +1000
+@@ -5,13 +5,4 @@
+  * MIT Licensed
+  */
+ 
+-try {
+-    module.exports = require('../build/Release/validation');
+-} catch (e) { try {
+-    module.exports = require('../build/default/validation');
+-} catch (e) { try {
+-    module.exports = require('./Validation.fallback');
+-} catch (e) {
+-    console.error('validation.node seems not to have been built. Run npm install.');
+-    throw e;
+-}}}
++module.exports = require('./Validation.fallback');
+--- node_modules/websocket/index.js.orig	2015-03-20 05:11:44.000000000 +1000
++++ node_modules/websocket/index.js	2017-08-08 11:34:32.893933759 +1000
+@@ -1 +1 @@
+-module.exports = require('./lib/websocket');
+\ No newline at end of file
++exports.server = require('./lib/WebSocketServer');

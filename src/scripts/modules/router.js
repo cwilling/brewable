@@ -10,7 +10,7 @@ function route(handle, pathname, response) {
   }
 }
 
-exports.route = route;
+export default route;
 
 
 /* ex:set ai shiftwidth=2 inputtab=spaces smarttab noautotab: */

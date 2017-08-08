@@ -1,8 +1,10 @@
-var fs = require("fs");
-var osenv = require("osenv");
-var mkdirp = require("mkdirp");
-const path = require('path');
-//const xdgBasedir = require('xdg-basedir');
+//import fs from "fs";
+//import mkdirp from "mkdirp";
+//import path from 'path';
+var fs = require('fs');
+var path =require('path');
+var mkdirp = require('mkdirp');
+var home = require('os').homedir();
 
 
 var defaultConfigValues = function() {
@@ -11,42 +13,42 @@ var defaultConfigValues = function() {
     'multiSensorMeanWeight' : parseInt(50),
     'relayDelayPostON'      : parseInt(180),
     'relayDelayPostOFF'     : parseInt(480)
-  }
-}
+  };
+};
 
-function Configuration (options) {
-    var options = options || {};
-    this._project = options.name || 'brewable';
-    this._projectConfigDir = path.join(osenv.home(), this._project);
-    this.topicDirs = ['jobs', 'history', 'archive'];
-    this._configFileName = path.join(this._projectConfigDir, this._project + '.conf');
-    this._configuration = {};
+function Configuration (passed_options) {
+  var options = passed_options || {};
+  this._project = options.name || 'brewable';
+  this._projectConfigDir = path.join(home, this._project);
+  this.topicDirs = ['jobs', 'history', 'archive'];
+  this._configFileName = path.join(this._projectConfigDir, this._project + '.conf');
+  this._configuration = {};
 
-    //console.log("this._projectConfigDir: " + this._projectConfigDir);
-    mkdirp(this._projectConfigDir, function (err) {
+  //console.log("this._projectConfigDir: " + this._projectConfigDir);
+  mkdirp(this._projectConfigDir, function (err) {
+    if (err) {
+      console.log("Problem making directory:" + this._projectConfigDir);
+    }
+    //console.log("Make " + target + " OK");
+    return;
+  });
+
+  this.topicDirs.forEach(function (dir) {
+    var target = path.join(this._projectConfigDir, dir);
+    //console.log("Creating topic dir path : " + target);
+    mkdirp(target, function (err) {
       if (err) {
-        console.log("Problem making directory:" + this._projectConfigDir);
+        console.log("Problem making directory:" + target);
       }
       //console.log("Make " + target + " OK");
       return;
     });
+  }.bind(this));
 
-    this.topicDirs.forEach(function (dir) {
-      var target = path.join(this._projectConfigDir, dir);
-      //console.log("Creating topic dir path : " + target);
-      mkdirp(target, function (err) {
-        if (err) {
-          console.log("Problem making directory:" + target);
-        }
-        //console.log("Make " + target + " OK");
-        return;
-      });
-    }.bind(this));
-
-    // Populate ._configuration
-    this.loadConfigFromFile();
+  // Populate ._configuration
+  this.loadConfigFromFile();
 }
-module.exports = Configuration;
+export default Configuration;
 
 /* Read the user's configuration (or generate a new one)
 */
@@ -60,11 +62,11 @@ Configuration.prototype.loadConfigFromFile = function () {
     this._configuration = JSON.parse(JSON.stringify(defaultConfigValues()));
     fs.writeFileSync(this._configFileName, JSON.stringify(this._configuration));
   }
-}
+};
 
 Configuration.prototype.getConfiguration = function () {
   return this._configuration;
-}
+};
 
 Configuration.prototype.dir = function (topic) {
   if ( topic == '' ) {
@@ -80,7 +82,7 @@ Configuration.prototype.dir = function (topic) {
   } else {
     return '/tmp';
   }
-}
+};
 
 Configuration.prototype.updateFudgeEntry = function (sensorIds) {
   var config = this._configuration;
@@ -92,7 +94,7 @@ Configuration.prototype.updateFudgeEntry = function (sensorIds) {
     console.log("OLD STYLE sensorFudgeFactor");
     var val = this._configuration['sensorFudgeFactor'];
     delete this._configuration['sensorFudgeFactor'];
-    newFudges = {};
+    var newFudges = {};
     sensorIds.forEach( function (sensor) {
       console.log(sensor.id + " : " + parseFloat(val));
       newFudges[sensor.id] = parseFloat(val);
@@ -110,7 +112,7 @@ Configuration.prototype.updateFudgeEntry = function (sensorIds) {
     // First use - no fudges exist
     newFudges = {};
     sensorIds.forEach( function (sensor) {
-       newFudges[sensor.id] = parseFloat(0.0);
+      newFudges[sensor.id] = parseFloat(0.0);
     });
     this._configuration['sensorFudgeFactors'] = newFudges;
     fs.writeFileSync(this._configFileName, JSON.stringify(this._configuration));
@@ -136,7 +138,7 @@ Configuration.prototype.updateFudgeEntry = function (sensorIds) {
   config.sensorFudgeFactors = newFudges;
   fs.writeFileSync(this._configFileName, JSON.stringify(config));
   return;
-}
+};
 
 Configuration.prototype.setMultiSensorMeanWeight = function (value) {
   console.log("updateMultiSensorMeanWeight(" + value + ")");
@@ -148,7 +150,7 @@ Configuration.prototype.setMultiSensorMeanWeight = function (value) {
   }
   config['multiSensorMeanWeight'] = value;
   fs.writeFileSync(this._configFileName, JSON.stringify(config));
-}
+};
 
 
 /********

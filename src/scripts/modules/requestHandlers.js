@@ -1,21 +1,17 @@
-var exec = require("child_process").exec;
-var fs = require("fs");
+const fs = require("fs");
 const path = require('path');
-
-function start(response) {
-  console.log("Request handler 'start' was called.");
-
-  exec("find /", {timeout:10000, macBuffer: 20000*1024 },
-    function (error, stdout, stderr) {
-      response.writeHead(200, {"Content-Type": "text/plain"});
-      response.write(stdout);
-      response.end();
-    });
-}
 
 function index(response) {
   console.log("Request handler 'index' was called.");
-  fs.readFile(path.join(__dirname, "../../../build/index.html"), function (err, data) {
+  var indexData = " <!doctype HTML> <html> <head> <meta name=\"viewport\" content=\"width=device-width,user-scalable=no\" /> <meta charset=\"UTF-8\"> </head> <body class=\"status\"> <script type=\"text/javascript\" src=\"status.js\"></script> </body> </html>";
+  console.log("DATA: " + indexData);
+  response.writeHead(200, {"Content-Type": "text/html"});
+  response.write(indexData);
+  response.end();
+  /*
+  // index.html in same directory alongside server bundle
+  console.log("index.html at " + path.join(__dirname, "./index.html"));
+  fs.readFile(path.join(__dirname, "index.html"), function (err, data) {
     if(err){
       response.writeHead(404);
       response.write("Not Found!");
@@ -25,6 +21,7 @@ function index(response) {
     }
     response.end();
   });
+  */
 }
 
 function favicon(response) {
@@ -44,7 +41,11 @@ function favicon(response) {
 function status(response) {
   console.log("Request handler 'status' was called.");
   //fs.readFile(path.join(__dirname, "../../../status.js"), function (err, data) {
-  fs.readFile(path.join(__dirname, "../../../build/js/brewablebundle.js"), function (err, data) {
+  // client bundle in same directory alongside server bundle
+  //console.log("currently at " + process.cwd());
+  //console.log("brewableclientbundle.js at " + path.join(__dirname, "./brewableclientbundle.js"));
+  //fs.readFile(path.join(__dirname, "../../../build/js/brewableclientbundle.js"), function (err, data) {
+  fs.readFile(path.join(__dirname, "brewableclientbundle.js"), function (err, data) {
     if(err){
       response.writeHead(404);
       response.write("Not Found!");
@@ -56,23 +57,6 @@ function status(response) {
     response.end();
   });
 }
-
-/*
-function d3(response) {
-  console.log("Request handler 'd3' was called.");
-  fs.readFile(path.join(__dirname, "../../../d3.v3.min.js"), function (err, data) {
-    if(err){
-      response.writeHead(404);
-      response.write("Not Found!");
-      console.log("d3.js not found");
-    } else {
-      response.writeHead(200, {"Content-Type": "text/plain"});
-      response.write(data);
-    }
-    response.end();
-  });
-}
-*/
 
 function css(response) {
   console.log("Request handler 'css' was called.");
@@ -96,11 +80,6 @@ function ws(response) {
   response.end();
 }
 
-exports.status = status;
-//exports.d3 = d3;
-exports.css = css;
-exports.index = index;
-exports.favicon = favicon;
-exports.ws = ws;
+export { status, css, index, favicon, ws };
 
 /* ex:set ai shiftwidth=2 inputtab=spaces smarttab noautotab: */

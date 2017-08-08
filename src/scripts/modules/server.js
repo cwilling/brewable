@@ -1,6 +1,9 @@
-var WebSocketServer = require('websocket').server;
+//var WebSocketServer = require('websocket').server;
+//var createServer = require("http").createServer;
 var http = require("http");
 var url = require("url");
+import { server as WebSocketServer } from "websocket";
+//import http from "http";
 
 function start(route, handle, clients, msgQueue) {
   function onRequest(request, response) {
@@ -11,6 +14,7 @@ function start(route, handle, clients, msgQueue) {
   }
 
   var server = http.createServer(onRequest).listen(8888);
+  //var server = createServer(onRequest).listen(8888);
   console.log("Server has started.");
 
   server.wsServer = new WebSocketServer({
@@ -20,11 +24,11 @@ function start(route, handle, clients, msgQueue) {
     msgQueue: msgQueue
   });
 
-  function originIsAllowed(origin) {
-    // put logic here to detect whether the specified origin is allowed.
-    console.log("XXXXX " + origin);
-    return true;
-  }
+  //function originIsAllowed(origin) {
+  //  // put logic here to detect whether the specified origin is allowed.
+  //  console.log("XXXXX " + origin);
+  //  return true;
+  //}
 
   server.wsServer.on('request', function(request) {
     var connection = request.accept(null, request.origin);
@@ -41,7 +45,7 @@ function start(route, handle, clients, msgQueue) {
     connection.on('close', function(reason, description) {
       for (var i=clients.length;i--;) {
         if (clients[i] === connection) {
-          console.log("Removing connection " + connection.remoteAddress);
+          console.log("Removing connection " + connection.remoteAddress + ":" + description);
           clients.splice(i, 1);
         }
       }
@@ -50,6 +54,7 @@ function start(route, handle, clients, msgQueue) {
   });
 }
 
-exports.start = start;
+//exports.start = start;
+export default start;
 
 /* ex:set ai shiftwidth=2 inputtab=spaces smarttab noautotab: */
