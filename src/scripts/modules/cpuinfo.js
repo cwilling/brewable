@@ -4,7 +4,7 @@ const fs = require("fs");
 function cpuinfo () {
   this.possibleHardware = [
     'BCM2708',
-    'BCM27089',
+    'BCM2709',
     'BCM2835',
     'BCM2836',
     'BCM2837'
