@@ -1,20 +1,13 @@
 SHELL = /bin/bash
-INSTALL_FILES = brewable.css \
-		d3.v3.min.js \
-		ds18b20.py \
-		gpioworker.py \
-		LICENSE \
-		LICENSE.d3 \
-		README.md \
-		sainsmartrelay.py \
-		seeedrelay.py \
-		server.py \
-		sprintf.js \
-		status.js
+
+TEST_FILES = test-status.js \
+		src/scripts/modules/jsogpio.js \
+		src/scripts/modules/cpuinfo.js \
+		src/scripts/modules/sainsmartrelay.js
 
 DESTDIR = /
 
-# Where the files to server by tornado are installed
+# Where any app files are installed
 RUNDIR = /usr/share/brewable
 
 # Who the server will be run as
@@ -28,6 +21,9 @@ LOGDIR = /var/log/brewable
 build: default.conf client server
 
 
+test: test.js
+
+
 default.conf:	default.conf.in
 	cat default.conf.in | sed \
 		-e 's:%RUNDIR%:$(RUNDIR):' \
@@ -38,19 +34,30 @@ default.conf:	default.conf.in
 node_modules:
 	npm install
 
-client: node_modules
+#client: node_modules
+client:
 	./node_modules/.bin/rollup --config client.config.js
 
-server: node_modules
+test.js: $(TEST_FILES)
+	./node_modules/.bin/rollup --config test.config.js
+	chmod a+x test.js
+
+#server: node_modules
+server:
 	patch -p0 < websocket-no-binaries.diff
 	./node_modules/.bin/rollup --config server.config.js
 	patch -p0 -R < websocket-no-binaries.diff
+	chmod a+x build/js/brewableserverbundle.js
 
 
-install: build $(INSTALL_FILES)
+brewable: server client
+	./makeself.make
+
+install: build brewable
 	mkdir -p $(DESTDIR)/etc/default
 	mkdir -p $(DESTDIR)/etc/init.d
-	python setup.py install --root=$(DESTDIR)
+	mkdir -p $(DESTDIR)/usr/bin
+	install -m 0755 brewable $(DESTDIR)/usr/bin
 	install -m 0644 default.conf $(DESTDIR)/etc/default/brewable
 	install -m 0755 rcbrewable $(DESTDIR)/etc/init.d/brewable
 	bash -c './postinst configure'
@@ -58,8 +65,9 @@ install: build $(INSTALL_FILES)
 clean:
 	rm -f default.conf
 	rm -rf build
+	rm -f test.js
 
 distclean:
 	rm -rf node_modules
 
-.PHONY: default.conf node_modules brewable
+.PHONY: default.conf node_modules brewable test

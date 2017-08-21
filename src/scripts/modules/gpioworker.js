@@ -359,6 +359,10 @@ gpioWorker.prototype.list_relays = function (msg) {
   console.log("list_relays(): " + jdata);
 };
 
+gpioWorker.prototype.closeRelays = function () {
+  this.relay.closeConnected();
+};
+
 /* Save a newly received job template to
    - file of job templates
    - live list of job templates (self.jobs in python version)

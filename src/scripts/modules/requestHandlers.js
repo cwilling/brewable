@@ -1,5 +1,5 @@
-const fs = require("fs");
-const path = require('path');
+var fs = require("fs");
+var path = require('path');
 
 function index(response) {
   console.log("Request handler 'index' was called.");

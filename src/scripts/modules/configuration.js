@@ -1,9 +1,9 @@
 //import fs from "fs";
-//import mkdirp from "mkdirp";
+import mkdirp from "mkdirp";
 //import path from 'path';
 var fs = require('fs');
 var path =require('path');
-var mkdirp = require('mkdirp');
+//var mkdirp = require('mkdirp');
 var home = require('os').homedir();
 
 

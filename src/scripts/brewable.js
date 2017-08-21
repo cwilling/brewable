@@ -18,6 +18,49 @@ import { ws as rhws } from "./modules/requestHandlers";
 import Queue from "./modules/queue";
 import { gpioWorker as gpioworker } from "./modules/gpioworker";
 
+
+// Command line options
+var options = {};
+//process.argv.forEach((val, index) => {
+process.argv.forEach((val) => {
+  //console.log(`${index}: ${val}`);
+  if (val.indexOf('=') > -1) {
+    var opt = val.split('=');
+    options[opt[0]] = opt[1];
+  }
+  if (val == "help") {
+    showUsage();
+    process.exit();
+  }
+});
+
+if ("port" in options) {
+  options.port = parseInt(options.port);
+} else {
+  options.port = 8888;
+}
+//console.log("options: " + JSON.stringify(options));
+
+if ("interval" in options) {
+  options.jobCheckInterval = parseInt(options.interval);
+} else {
+  options.jobCjeckInterval = 30; // seconds
+}
+//console.log("options: " + JSON.stringify(options));
+
+function showUsage() {
+  console.log("\nUsage:");
+  console.log("    brewable [options]");
+  console.log("\nOptions:");
+  console.log("    port=<n>");
+  console.log("    where <n> is a valid port number (default is 8888)");
+  console.log("\n    interval=<n>");
+  console.log("    where <n> is the interval, in seconds, between processings of current jobs");
+  console.log("    (default is 60)");
+  console.log("\nExample:");
+  console.log("    brewable port=8686 interval=30\n");
+}
+
 //global.eventEmitter = new events.EventEmitter();
 import { eventEmitter } from "./modules/gpioworker";
 var clients = [];
@@ -64,7 +107,7 @@ handle["/ws"] = rhws;
 
 input_queue.start();
 output_queue.start();
-start(route, handle, clients, input_queue);
+start(route, handle, clients, input_queue, options);
 
 setInterval( function() {
   //console.log("\nDoing device updates");
@@ -76,8 +119,27 @@ setInterval( function() {
   30000 = 30s
 */
 setInterval( function() {
+  console.log("jobCheckInterval = " + new Date());
   worker.processRunningJobs();
-}, (30000 + Math.floor((Math.random() * 1000) + 1)));
+//}, (30000 + Math.floor((Math.random() * 1000) + 1)));
+}, ((1000 * options.jobCheckInterval) + Math.floor((Math.random() * 1000) + 1)));
+
+process.on('SIGHUP', () => {
+  console.log(`\nExit ...`);
+  worker.closeRelays();
+  process.exit();
+});
+process.on('SIGINT', () => {
+  console.log(`\nExit ...`);
+  worker.closeRelays();
+  process.exit();
+});
+process.on('SIGTERM', () => {
+  console.log(`\nExit ...`);
+  worker.closeRelays();
+  process.exit();
+});
+
 
 
 /* ex:set ai shiftwidth=2 inputtab=spaces smarttab noautotab: */

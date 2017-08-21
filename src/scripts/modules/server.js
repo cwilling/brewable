@@ -5,7 +5,10 @@ var url = require("url");
 import { server as WebSocketServer } from "websocket";
 //import http from "http";
 
-function start(route, handle, clients, msgQueue) {
+function start(route, handle, clients, msgQueue, opts) {
+  var options = opts || {};
+  var port = options.port || 8888;
+
   function onRequest(request, response) {
     var pathname = url.parse(request.url).pathname;
     console.log("Request for " + pathname + " received from " + request.connection.remoteAddress);
@@ -13,9 +16,9 @@ function start(route, handle, clients, msgQueue) {
     route(handle, pathname, response);
   }
 
-  var server = http.createServer(onRequest).listen(8888);
-  //var server = createServer(onRequest).listen(8888);
-  console.log("Server has started.");
+  var server = http.createServer(onRequest).listen(port);
+  //var server = createServer(onRequest).listen(port);
+  console.log("Server has started at port " + port);
 
   server.wsServer = new WebSocketServer({
     httpServer: server,

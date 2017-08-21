@@ -6,6 +6,7 @@ import commonjs from 'rollup-plugin-commonjs';
 import json from 'rollup-plugin-json';
 import replace from 'rollup-plugin-replace';
 import uglify from 'rollup-plugin-uglify';
+import { minify } from 'uglify-es';
 
 
 export default {
@@ -41,7 +42,7 @@ export default {
       exclude: 'node_modules/**',
       ENV: JSON.stringify(process.env.NODE_ENV || 'development'),
     }),
-    (process.env.NODE_ENV === 'production' && uglify()),
+    (process.env.NODE_ENV === 'production' && uglify({}, minify)),
   ]
 };
 

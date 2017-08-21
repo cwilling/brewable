@@ -1,5 +1,9 @@
-const readline = require('readline');
-const fs = require("fs");
+/*
+  Roughly translated from Ben Croston's cpuinfo.c
+  (https://sourceforge.net/p/raspberry-gpio-python/code/ci/default/tree/source/cpuinfo.c)
+*/
+
+var fs = require("fs");
 
 function cpuinfo () {
   this.possibleHardware = [
@@ -13,7 +17,8 @@ function cpuinfo () {
   var split, rlen;
 
   var lines = fs.readFileSync("/proc/cpuinfo", 'utf-8').split(/[\n\r]/);
-  lines.forEach( function (line, index) {
+  //lines.forEach( function (line, index) {
+  lines.forEach( function (line) {
     split = line.split(" ");
     if (split[0].search("Hardware") == 0) {
       this.info.hardware = split[1];
@@ -48,101 +53,101 @@ function cpuinfo () {
 
     //console.log("switch: " + this.info.revision[rlen-2]);
     switch(this.info.revision[rlen-2]) {
-      case '0':
-        this.info.type = "Model A";
-        this.info.p1_revision = 2;
-        break;
-      case '1':
-        this.info.type = "Model B";
-        this.info.p1_revision = 2;
-        break;
-      case '2':
-        this.info.type = "Model A+";
-        this.info.p1_revision = 3;
-        break;
-      case '3':
-        this.info.type = "Model B+";
-        this.info.p1_revision = 3;
-        break;
-      case '4':
-        this.info.type = "Pi 2 Model B";
-        this.info.p1_revision = 3;
-        break;
-      case '5':
-        this.info.type = "Alpha";
-        this.info.p1_revision = 3;
-        break;
-      case '6':
-        this.info.type = "Compute";
-        this.info.p1_revision = 0;
-        break;
-      case '8':
-        this.info.type = "Pi 3 Model B";
-        this.info.p1_revision = 3;
-        break;
-      case '9':
-        this.info.type = "Zero";
-        this.info.p1_revision = 3;
-        break;
-      case 'c':
-        this.info.type = "Zero W";
-        this.info.p1_revision = 3;
-        break;
-      default:
-        this.info.type = "Unknown";
-        this.info.p1_revision = 3;
-        break;
+    case '0':
+      this.info.type = "Model A";
+      this.info.p1_revision = 2;
+      break;
+    case '1':
+      this.info.type = "Model B";
+      this.info.p1_revision = 2;
+      break;
+    case '2':
+      this.info.type = "Model A+";
+      this.info.p1_revision = 3;
+      break;
+    case '3':
+      this.info.type = "Model B+";
+      this.info.p1_revision = 3;
+      break;
+    case '4':
+      this.info.type = "Pi 2 Model B";
+      this.info.p1_revision = 3;
+      break;
+    case '5':
+      this.info.type = "Alpha";
+      this.info.p1_revision = 3;
+      break;
+    case '6':
+      this.info.type = "Compute";
+      this.info.p1_revision = 0;
+      break;
+    case '8':
+      this.info.type = "Pi 3 Model B";
+      this.info.p1_revision = 3;
+      break;
+    case '9':
+      this.info.type = "Zero";
+      this.info.p1_revision = 3;
+      break;
+    case 'c':
+      this.info.type = "Zero W";
+      this.info.p1_revision = 3;
+      break;
+    default:
+      this.info.type = "Unknown";
+      this.info.p1_revision = 3;
+      break;
     }
     //console.log("type: " + this.info.type);
 
     switch (this.info.revision[rlen-4]) {
-      case '0':
-       this. info.processor = "BCM2835";
-        break;
-      case '1':
-        this.info.processor = "BCM2836";
-        break;
-      case '2':
-        this.info.processor = "BCM2837";
-        break;
-      default :
-        this.info.processor = "Unknown";
-        break;
+    case '0':
+      this. info.processor = "BCM2835";
+      break;
+    case '1':
+      this.info.processor = "BCM2836";
+      break;
+    case '2':
+      this.info.processor = "BCM2837";
+      break;
+    default :
+      this.info.processor = "Unknown";
+      break;
     }
     //console.log("processor: " + this.info.processor);
 
     switch (this.info.revision[rlen-5]) {
-      case '0':
-        this.info.manufacturer = "Sony";
-        break;
-      case '1':
-        this.info.manufacturer = "Egoman";
-        break;
-      case '2':
-        this.info.manufacturer = "Embest";
-        break;
-      case '4':
-        this.info.manufacturer = "Embest";
-        break;
-      default :
-        this.info.manufacturer = "Unknown";
-        break;
+    case '0':
+      this.info.manufacturer = "Sony";
+      break;
+    case '1':
+      this.info.manufacturer = "Egoman";
+      break;
+    case '2':
+      this.info.manufacturer = "Embest";
+      break;
+    case '4':
+      this.info.manufacturer = "Embest";
+      break;
+    default :
+      this.info.manufacturer = "Unknown";
+      break;
     }
     //console.log("manufacturer: " + this.info.manufacturer);
 
     switch (parseInt(this.info.revision[rlen-6],16) & 7) {
-      case 0:
-        this.info.ram = "256M";
-        break;
-      case 1:
-        this.info.ram = "512M";
-        break;
-      case 2:
-        this.info.ram = "1024M";
-        break;
-      default:
-        this.info.ram = "Unknown";
-        break;
+    case 0:
+      this.info.ram = "256M";
+      break;
+    case 1:
+      this.info.ram = "512M";
+      break;
+    case 2:
+      this.info.ram = "1024M";
+      break;
+    default:
+      this.info.ram = "Unknown";
+      break;
     }
     //console.log("ram: " + this.info.ram);
   }
@@ -257,7 +262,8 @@ function cpuinfo () {
 
 
 }
-module.exports = cpuinfo;
+//module.exports = cpuinfo;
+export default cpuinfo;
 
 cpuinfo.prototype.showInfo = function () {
   console.log("Hardware = " + this.info.hardware);

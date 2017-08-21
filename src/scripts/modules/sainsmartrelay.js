@@ -1,5 +1,6 @@
-var rpio = require('rpio');
+//var rpio = require('rpio');
 //import rpio from 'rpio';
+import { default as rpio } from './jsogpio';
 
 
 /* BCM numbering
@@ -28,8 +29,8 @@ var RELAY_OFF = rpio.HIGH;
 
 var RelayPins = {};
 
-const BREWTEST_DELAY_SET = {'on_time':3, 'off_time':12, 'isset':false};
-const NORMAL_DELAY_SET = {'on_time':180, 'off_time':480, 'isset':false};
+var BREWTEST_DELAY_SET = {'on_time':3, 'off_time':12, 'isset':false};
+var NORMAL_DELAY_SET = {'on_time':180, 'off_time':480, 'isset':false};
 //var DEFAULT_DELAY_SET = NORMAL_DELAY_SET;
 
 function Relay () {
@@ -63,14 +64,18 @@ function Relay () {
         RelayPins['PIN_RELAY_' + counted] = PossibleRelayPins[i];
       }
     }
-    // Reset for normal use
+    // Reset for normal use - leave only connected pins open
+    var connectedPins = showConnectedPins();
     for (i=0;i<PossibleRelayPins.length;i++) {
       rpio.close(PossibleRelayPins[i]);
-      rpio.open(PossibleRelayPins[i], rpio.OUTPUT, RELAY_OFF);
+      if (connectedPins.indexOf(PossibleRelayPins[i]) > -1) {
+        rpio.open(PossibleRelayPins[i], rpio.OUTPUT, RELAY_OFF);
+      }
     }
     return counted;
   };
 
+  //rpio.init({gpiomem: true, mapping: PIN_NUMBERING_MODE, exportDelay: 8});
   rpio.init({gpiomem: true, mapping: PIN_NUMBERING_MODE});
 
   // Look for connected pins (populates RelayPins)
@@ -86,6 +91,14 @@ function Relay () {
   console.log("Relay setup done. Using connected pins: " + showConnectedPins());
 } 
 export default Relay;
+
+Relay.prototype.closeConnected = function () {
+  var pins = [];
+  for (var x in RelayPins) {pins.push(RelayPins[x]);}
+  pins.forEach(function (item) {
+    rpio.close(item);
+  });
+};
 
 // Switch each connected pin on for 1 second
 Relay.prototype.testConnected = function () {
