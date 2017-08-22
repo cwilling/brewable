@@ -44,7 +44,7 @@ if ("port" in options) {
 if ("interval" in options) {
   options.jobCheckInterval = parseInt(options.interval);
 } else {
-  options.jobCjeckInterval = 30; // seconds
+  options.jobCheckInterval = 30; // seconds
 }
 //console.log("options: " + JSON.stringify(options));
 

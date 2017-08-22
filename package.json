@@ -34,7 +34,6 @@
     "rollup-plugin-replace": "^1.1.1",
     "rollup-plugin-uglify": "^2.0.1",
     "rpio": "^0.9.17",
-    "twilio": "^2.1.1",
     "uglify-es": "^3.0.27",
     "websocket": "^1.0.24"
   },
