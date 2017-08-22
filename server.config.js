@@ -4,6 +4,7 @@ import eslint from 'rollup-plugin-eslint';
 import resolve from 'rollup-plugin-node-resolve';
 import commonjs from 'rollup-plugin-commonjs';
 import json from 'rollup-plugin-json';
+import progress from 'rollup-plugin-progress';
 import replace from 'rollup-plugin-replace';
 import uglify from 'rollup-plugin-uglify';
 import { minify } from 'uglify-es';
@@ -17,6 +18,9 @@ export default {
   banner: '#!/usr/bin/env node',
   sourceMap: 'inline',
   plugins: [
+    progress({
+      clearLine: true // default: true
+    }),
     json(),
     resolve({
       main: true,
