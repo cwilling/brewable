@@ -67,7 +67,7 @@ server: node_modules src/scripts/brewable.js
 brewable: server client makeself.make
 	./makeself.make
 
-install: brewable default.conf
+install:
 	mkdir -p $(DESTDIR)/etc/default
 	mkdir -p $(DESTDIR)/etc/init.d
 	mkdir -p $(DESTDIR)/usr/bin

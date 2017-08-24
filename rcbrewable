@@ -50,7 +50,7 @@ brewable_start () {
     touch /var/log/brewable/brewable_stderr.log
     chown -R $BREWABLE_USER:$BREWABLE_USER $BREWABLE_LOG_DIR
 
-    mkdir -p BREWABLE_RUN_DIR
+    mkdir -p $BREWABLE_RUN_DIR
     cd $BREWABLE_RUN_DIR
     su -c \
         $BREWABLE_SERVER \
