@@ -1,4 +1,6 @@
-//import { default as gpio } from './src/scripts/modules/jsogpio';
+import { default as gpio } from './src/scripts/modules/jsogpio';
+
+console.log("pid=" + process.pid);
 
 var options = {};
 process.argv.forEach((val, index) => {

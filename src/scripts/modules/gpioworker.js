@@ -545,7 +545,7 @@ gpioWorker.prototype.setupJobRun = function (options) {
 };
 
 gpioWorker.prototype.processRunningJobs = function () {
-  console.log("processRunningJobs()");
+  //console.log("processRunningJobs()");
   //this.runningJobs.forEach( function (job, index) {
   this.runningJobs.forEach( function (job) {
     //console.log("Process job: " + index + " (" + job.jobName + ")");

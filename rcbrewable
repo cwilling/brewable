@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Copyright (c) 2016 Christoph Willing (Brisbane, Australia)
+# Copyright (c) 2016-2017 Christoph Willing (Brisbane, Australia)
 # All rights reserved.
 #
 # Author: Christoph Willing, 2016
@@ -14,7 +14,7 @@
 # Default-Start:     3 5
 # Default-Stop:      0 1 2 6
 # Short-Description: brewable temperature controller daemon
-# Description:       The brewable daemon starts a tornado web server
+# Description:       The brewable daemon starts a nodejs web server
 #	enabling remote browser control of a temperature control system.
 #	We want it to be active in runlevels 3 and 5,
 #	as these are the runlevels with the network available.
@@ -31,19 +31,33 @@ test -r $BREWABLE_CONFIG || { echo "$BREWABLE_CONFIG not found";
 . $BREWABLE_CONFIG
 
 # Check for server file
-BREWABLE_SERVER=$BREWABLE_RUN_DIR/brewable
+BREWABLE_SERVER=/usr/bin/brewable
 test -x $BREWABLE_SERVER || { echo "$BREWABLE_SERVER not installed";
 	if [ "$1" = "stop" ]; then exit 0;
 	else exit 5; fi; }
 
 brewable_start () {
     echo "Starting brewable"
+
+    # Ensure the pid can be written by the application
+    PIDDIR=$(dirname $BREWABLE_PID_FILE)
+    mkdir -p $PIDDIR 
+    chown $BREWABLE_USER $PIDDIR
+
+    # Ensure logs can be written somewhere
     mkdir -p $BREWABLE_LOG_DIR
     touch /var/log/brewable/brewable_stdout.log
     touch /var/log/brewable/brewable_stderr.log
     chown -R $BREWABLE_USER:$BREWABLE_USER $BREWABLE_LOG_DIR
+
+    mkdir -p BREWABLE_RUN_DIR
     cd $BREWABLE_RUN_DIR
-    su -c $BREWABLE_SERVER $BREWABLE_USER \
+    su -c \
+        $BREWABLE_SERVER \
+        $BREWABLE_USER \
+        -- \
+        port=$BREWABLE_PORT \
+        interval=$BREWABLE_JOBCHECKINTERVAL \
             1>/var/log/brewable/brewable_stdout.log \
             2>/var/log/brewable/brewable_stderr.log \
             &
@@ -51,11 +65,21 @@ brewable_start () {
 
 brewable_stop () {
     echo "Stopping brewable"
-    ps -ef \
-        | grep -v grep \
-        | grep "python $BREWABLE_SERVER" \
-        | awk '{print $2}' \
-        | xargs kill
+
+    pid=$(cat $BREWABLE_PID_FILE)
+    case $pid in
+        ''|*[!0-9]*)
+            ps -ef \
+                | grep -v grep \
+                | grep "node brewable" \
+                | awk '{print $2}' \
+                | xargs kill -HUP
+            ;;
+
+        *)
+            kill -HUP $pid
+            ;;
+    esac
 }
 
 case "$1" in

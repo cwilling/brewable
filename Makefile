@@ -5,7 +5,9 @@ TEST_FILES = test-status.js \
 		src/scripts/modules/cpuinfo.js \
 		src/scripts/modules/sainsmartrelay.js
 
-DESTDIR = /
+DESTDIR ?=
+
+PKGVERSION ?= 0.3
 
 # Where any app files are installed
 RUNDIR = /usr/share/brewable
@@ -16,9 +18,18 @@ USER = pi
 # Where daemon log files will be
 LOGDIR = /var/log/brewable
 
+# PID file
+PIDFILE = /var/run/brewable/pid
+
+# Default server port
+PORT = 8888
+
+# Default interval (seconds) between checking job progress
+INTERVAL = 60
 
 
-build: default.conf client server
+
+default: brewable
 
 
 test: test.js
@@ -29,45 +40,60 @@ default.conf:	default.conf.in
 		-e 's:%RUNDIR%:$(RUNDIR):' \
 		-e 's:%USER%:$(USER):' \
 		-e 's:%LOGDIR%:$(LOGDIR):' \
+		-e 's:%PIDFILE%:$(PIDFILE):' \
+		-e 's:%PORT%:$(PORT):' \
+		-e 's:%INTERVAL%:$(INTERVAL):' \
 		> default.conf
 
 node_modules:
 	npm install
 
-#client: node_modules
-client:
+client: node_modules
 	./node_modules/.bin/rollup --config client.config.js
+	touch client
 
 test.js: $(TEST_FILES)
 	./node_modules/.bin/rollup --config test.config.js
 	chmod a+x test.js
 
-#server: node_modules
-server:
+server: node_modules src/scripts/brewable.js
 	patch -p0 < websocket-no-binaries.diff
 	./node_modules/.bin/rollup --config server.config.js
 	patch -p0 -R < websocket-no-binaries.diff
 	chmod a+x build/js/brewableserverbundle.js
+	touch server
 
 
-brewable: server client
+brewable: server client makeself.make
 	./makeself.make
 
-install: build brewable
+install: brewable default.conf
 	mkdir -p $(DESTDIR)/etc/default
 	mkdir -p $(DESTDIR)/etc/init.d
 	mkdir -p $(DESTDIR)/usr/bin
 	install -m 0755 brewable $(DESTDIR)/usr/bin
 	install -m 0644 default.conf $(DESTDIR)/etc/default/brewable
 	install -m 0755 rcbrewable $(DESTDIR)/etc/init.d/brewable
-	bash -c './postinst configure'
+#	bash -c './postinst configure'
+
+uninstall:
+	rm $(DESTDIR)/etc/default/brewable
+	rm $(DESTDIR)/etc/init.d/brewable
+	rm $(DESTDIR)/usr/bin/brewable
+
+pkg:	brewable default.conf rcbrewable
+	rm -rf brewable-$(PKGVERSION); mkdir -p brewable-$(PKGVERSION);
+	install -m 0755 brewable brewable-$(PKGVERSION)
+	install -m 0755 default.conf brewable-$(PKGVERSION)
+	install -m 0755 rcbrewable brewable-$(PKGVERSION)
+	install -m 0755 Makefile brewable-$(PKGVERSION)
+	tar cvf brewable-$(PKGVERSION)-armv61-1.tar.gz brewable-$(PKGVERSION)
+	
 
 clean:
-	rm -f default.conf
-	rm -rf build
-	rm -f test.js
+	rm -rf default.conf test.js brewable-$(PKGVERSION)*
 
-distclean:
-	rm -rf node_modules
+distclean: clean
+	rm -rf node_modules brewable client server
 
-.PHONY: default.conf node_modules brewable test
+.PHONY:

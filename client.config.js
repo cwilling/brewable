@@ -19,7 +19,7 @@ export default {
   targets: [
     { dest: 'build/js/brewableclientbundle.js', format: 'iife' },
   ],
-  sourceMap: 'inline',
+  sourceMap: 'none',
   plugins: [
     progress({
       clearLine: true // default: true
