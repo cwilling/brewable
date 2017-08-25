@@ -1,4 +1,3 @@
-
 *.unselectable {
     -webkit-user-select:   none;
     -webkit-touch-callout: none;
@@ -112,6 +111,44 @@ td {
     font-size: 80%;
     fill: rgb(100, 100, 100);
 }
+.profileAxis path {
+    stroke:	#000;
+    stroke-width: 2px;
+    fill:       none;
+}
+.profileSaveCancelButton {
+    stroke:	black;
+    stroke-width: 1px;
+    fill:       #036;
+}
+.profileSaveCancelButton:hover {
+    fill:       #69c;
+    cursor:     pointer;
+}
+.profileSaveCancelButtonText {
+    font-size:  90%;
+    stroke:	none;
+    fill:       white;
+    pointer-events: none;
+}
+.runningButtonGroup {
+    opacity:    0.8;
+}
+.runningResumeButton {
+    stroke:	black;
+    stroke-width: 1px;
+    fill:       #036;
+}
+.runningResumeButton:hover {
+    fill:       #69c;
+    cursor:     pointer;
+}
+.runningResumeButtonText {
+    font-size:  90%;
+    stroke:	none;
+    fill:       white;
+    pointer-events: none;
+}
 
 /*.title_text text {*/
 .title_Text {
@@ -126,14 +163,40 @@ td {
     text-decoration: underline;
     fill: rgb(0, 0, 0);
 }
+.tick line {
+    stroke:     #000;
+/*    stroke-width: 2px; */
+    fill:       none;
+}
+.tick text {
+    font-size:  80%;
+}
 
 .grid .tick {
     stroke: lightgrey;
     stroke-opacity: 0.7;
-    shape-rendering: crispEdges;
+/*    shape-rendering: crispEdges; */
 }
 .grid path {
     stroke-width: 0;
+}
+
+div.tooltip {
+    position:   absolute;
+    text-align: center;
+    width:      71;
+    height:     14px;
+    padding:    2px;
+    font:       12px sans-serif;
+    background: lightsteelblue;
+    border:     0px;
+    border-radius: 8px;
+    pointer-events: none;
+}
+.profileSetPointText {
+    position:   absolute;
+    text-align: center;
+    font:       12px sans-serif;
 }
 
 
@@ -144,7 +207,7 @@ div#live_updateHolderContainer {
     display:                    -webkit-flex;
     -webkit-align-items:	center;
 
-    /*width:	100%;*/
+/*    width:	80%; */
     height:	96px;
     margin:     auto;
     transform-style: preserve-3d;
@@ -257,7 +320,8 @@ ul#navigation a:hover {
 div#main_content {
     float:	right;
     width:	100%;
-    height:	960px;
+/*    height:	960px; */
+    height:	800px;
     background:	#444;
     overflow:	hidden
 }
@@ -395,11 +459,17 @@ div#content_4 {
 #jobSaveButton {
     float:	left;
     margin-right: 5px;
-    padding:	0;
+    padding:	1em;
     text-decoration: none;
-    background:	#000;
-    width:      72px;
+    background:	#036;
+    width:      3.6em;
+    min-width:  3.6em;
     border:	1px solid white;
+    border-radius: 4px;
+    text-align: center;
+
+    -webkit-align-items:	center;
+    -webkit-justify-content:	center;
 }
 #jobSaveButton a {
     display:    block;
@@ -409,46 +479,54 @@ div#content_4 {
     margin:     0;
     padding:	16px;
 }
-#jobSaveButton a:hover {
-    color:      #000;
-    background: #69c;
-}
-#jobNameHolder {
-    text-align: center;
-    float:	left;
-    width:      226px;
-    margin-right: 5px;
-    padding-top: 10px;
-    border:	1px solid white;
-}
-#jobName {
-    padding:	0;
-}
-#jobPreHeat {
-    float:	left;
-    margin-right: 5px;
-    padding-top: 15px;
-    width:      172px;
-    height:     36px;
-    text-align: center;
-    border:	1px solid white;
-}
-#dismissJobComposerButton {
-    float:	left;
-    margin-left: 5px;
-    padding:	1em;
-    text-decoration: none;
-    background:	#036;
-    width:      3.6em;
-    border:	1px solid white;
-}
-#dismissJobComposerButton:hover {
+#jobSaveButton:hover {
     color:      #000;
     background: #69c;
     cursor:     pointer;
 }
+#jobNameHolder {
+    width:      11em;
+    min-width:  11em;
+    text-align: center;
+    float:	left;
+    margin-right: 5px;
+    padding-top: 6px;
+    border:	1px solid white;
+    border-radius: 4px;
+}
+#jobName {
+    width:      100%;
+    width:      -moz-available;
+    width:	-webkit-fill-available;
 
-/* Profiles page */
+    padding:	0px;
+}
+#jobPreHeat {
+    display:    flex;
+    justify-content: center;
+    align-items: center;
+
+    margin-right: 5px;
+    padding:	0.5em;
+    width:      9em;
+    min-width:  9em;
+    height:     2.3em;
+    border:	1px solid white;
+    border-radius: 4px;
+
+    display:                 -webkit-flex;
+    -webkit-justify-content: center;
+    -webkit-align-items:     center;
+}
+.selectorLabel {
+    display:    flex;
+    justify-content: center;
+    text-decoration: underline;
+    margin-bottom:   0.4em;
+
+    display:                 -webkit-flex;
+    -webkit-justify-content: center;
+}
 #jobProfileHolder {
     display:    flex;
     align-items: center;
@@ -458,34 +536,61 @@ div#content_4 {
     -webkit-align-items:	center;
     -webkit-justify-content:	center;
 
-    float:	left;
-    padding:	0;
+    padding:	0.5em;
     margin-right: 5px;
-    height:     51px;
+    width:      9em;
+    min-width:  9em;
+    height:     2.3em;
     border:	1px solid white;
+    border-radius: 4px;
+
+    background-color: #cfb484;
 }
-#jobProfileSelector {
-    float:	left;
-    width:      192px;
-    padding:	0;
-    margin:	14px 28px;
-    background:	#aaa;
+#jobProfileHolder:hover {
+    color:      #000;
+    background: #69c;
+    cursor:     pointer;
 }
 #jobSensorsHolder {
     float:	left;
-    width:      192px;
+    width:      11em;
+    min-width:  11em;
+    padding:	0.5em 0.5em 0.5em 0.4em;
     margin-right: 5px;
-    padding:	3px 0px 3px 0px;
     border:	1px solid white;
+    border-radius: 4px;
 }
 #jobRelaysHolder {
     float:	left;
-    width:      192px;
-    margin:	0;
-    padding:	3px 0px 3px 0px;
+    width:      6em;
+    min-width:  6em;
+    padding:	0.5em 0.5em 0.5em 0.5em;
+    margin-right: 5px;
     border:	1px solid white;
+    border-radius: 4px;
+}
+#dismissJobComposerButton {
+    float:	left;
+    margin-left: 5px;
+    padding:	1em;
+    text-decoration: none;
+    background:	#036;
+    width:      3.6em;
+    min-width:      3.6em;
+    border:	1px solid white;
+    border-radius: 4px;
+    text-align: center;
+
+    -webkit-align-items:	center;
+    -webkit-justify-content:	center;
+}
+#dismissJobComposerButton:hover {
+    color:      #000;
+    background: #69c;
+    cursor:     pointer;
 }
 
+/* Templates page */
 #jobsListHolder {
     border-bottom:	5px solid red;
     float:      left;
@@ -652,6 +757,9 @@ div#jobComposer {
     top:	0;
     display:    none;
 }
+#jobItemsHolderContainer {
+    overflow-x: auto;
+}
 #jobItemsHolder {
     display:    flex;
     align-items: center;
@@ -661,8 +769,12 @@ div#jobComposer {
     -webkit-align-items: center;
     -webkit-justify-content: center;
 
+    min-width:  63em;
+    min-width:  -moz-min-content;
+    min-width:  -webkit-min-content;
+
     padding:    1em;
-    overflow-x: auto;
+    overflow-x: hidden;
 }
 #historyList {
     display:    flex;
@@ -773,6 +885,11 @@ div#jobComposer {
 }
 
 
+.historyAxis path {
+    stroke:	#000;
+    stroke-width: 2px;
+    fill:       none;
+}
 .historyElementGraph {
     direction:  ltr;
     border-bottom: 1px solid #000;
@@ -851,6 +968,32 @@ div#jobComposer {
 }
 #configEntryHolder {
     border:	1px solid #000;
+}
+.configItem {
+}
+.configItemName {
+    float:      left;
+    width:      256px;
+    text-align: right;
+    margin:     3px 10px;
+}
+.configItemData {
+    float:      left;
+    width:      256px;
+    margin:     3px 10px;
+    text-align: center;
+}
+.configItemDataValue {
+    width:      10em;
+    margin:     3px 10px;
+    border:	2px solid #000;
+}
+.configItemDataValueInput,.configItemSensorFudge {
+    width:      94%;
+    text-align: center;
+}
+.configItemSensorFudge {
+    text-align: center;
 }
 .config_label {
     display:    inline-block;

@@ -1,0 +1,50 @@
+{
+  "dependencies": {},
+  "scripts": {
+    "xxxx": "echo hello",
+    "build:client": "rollup --config client.config.js",
+    "build:server": "rollup --config server.config.js",
+    "start": "node ./src/scripts/brewable.js",
+    "clean": "rm -r build/*"
+  },
+  "name": "brewable",
+  "version": "0.3.0",
+  "description": "Nodejs version of brewable",
+  "main": "src/scripts/brewable.js",
+  "devDependencies": {
+    "babel-plugin-external-helpers": "^6.22.0",
+    "babel-plugin-syntax-dynamic-import": "^6.18.0",
+    "babel-preset-es2015": "^6.24.1",
+    "cssnano": "^3.10.0",
+    "d3": "^4.10.0",
+    "ds18b20": "^0.1.0",
+    "mkdirp": "^0.5.1",
+    "postcss-cssnext": "^3.0.2",
+    "postcss-nested": "^2.1.0",
+    "postcss-simple-vars": "^4.0.0",
+    "rollup": "^0.45.2",
+    "rollup-plugin-babel": "^2.7.1",
+    "rollup-plugin-commonjs": "^8.0.2",
+    "rollup-plugin-eslint": "^4.0.0",
+    "rollup-plugin-json": "^2.3.0",
+    "rollup-plugin-node-builtins": "^2.1.2",
+    "rollup-plugin-node-globals": "^1.1.0",
+    "rollup-plugin-node-resolve": "^3.0.0",
+    "rollup-plugin-postcss": "^0.5.4",
+    "rollup-plugin-progress": "^0.4.0",
+    "rollup-plugin-replace": "^1.1.1",
+    "rollup-plugin-uglify": "^2.0.1",
+    "rpio": "^0.9.17",
+    "uglify-es": "^3.0.27",
+    "websocket": "^1.0.24"
+  },
+  "author": "Christoph Willing",
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cwilling/brewable.git"
+  },
+  "//": [
+    "ex:set ai shiftwidth=2 inputtab=spaces smarttab noautotab:"
+  ]
+}

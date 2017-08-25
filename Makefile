@@ -1,21 +1,15 @@
 SHELL = /bin/bash
-INSTALL_FILES = brewable.css \
-		d3.v3.min.js \
-		ds18b20.py \
-		gpioworker.py \
-		LICENSE \
-		LICENSE.d3 \
-		README.md \
-		sainsmartrelay.py \
-		seeedrelay.py \
-		server.py \
-		sprintf.js \
-		status.html \
-		status.js
 
-DESTDIR = /
+TEST_FILES = test-status.js \
+		src/scripts/modules/jsogpio.js \
+		src/scripts/modules/cpuinfo.js \
+		src/scripts/modules/sainsmartrelay.js
 
-# Where the files to server by tornado are installed
+DESTDIR ?=
+
+PKGVERSION ?= 0.3
+
+# Where any app files are installed
 RUNDIR = /usr/share/brewable
 
 # Who the server will be run as
@@ -24,9 +18,21 @@ USER = pi
 # Where daemon log files will be
 LOGDIR = /var/log/brewable
 
+# PID file
+PIDFILE = /var/run/brewable/pid
+
+# Default server port
+PORT = 8888
+
+# Default interval (seconds) between checking job progress
+INTERVAL = 60
 
 
-build: default.conf brewable
+
+default: brewable
+
+
+test: test.js
 
 
 default.conf:	default.conf.in
@@ -34,21 +40,60 @@ default.conf:	default.conf.in
 		-e 's:%RUNDIR%:$(RUNDIR):' \
 		-e 's:%USER%:$(USER):' \
 		-e 's:%LOGDIR%:$(LOGDIR):' \
+		-e 's:%PIDFILE%:$(PIDFILE):' \
+		-e 's:%PORT%:$(PORT):' \
+		-e 's:%INTERVAL%:$(INTERVAL):' \
 		> default.conf
 
-brewable: server.py
-	cat server.py | sed -e 's/import gpioworker/from brewable import gpioworker/' >brewable
-	chmod 0755 brewable
+node_modules:
+	npm install
 
-install: build $(INSTALL_FILES)
+client: node_modules
+	./node_modules/.bin/rollup --config client.config.js
+	touch client
+
+test.js: $(TEST_FILES)
+	./node_modules/.bin/rollup --config test.config.js
+	chmod a+x test.js
+
+server: node_modules src/scripts/brewable.js
+	patch -p0 < websocket-no-binaries.diff
+	./node_modules/.bin/rollup --config server.config.js
+	patch -p0 -R < websocket-no-binaries.diff
+	chmod a+x build/js/brewableserverbundle.js
+	touch server
+
+
+brewable: server client makeself.make
+	./makeself.make
+
+install:
 	mkdir -p $(DESTDIR)/etc/default
 	mkdir -p $(DESTDIR)/etc/init.d
-	python setup.py install --root=$(DESTDIR)
+	mkdir -p $(DESTDIR)/usr/bin
+	install -m 0755 brewable $(DESTDIR)/usr/bin
 	install -m 0644 default.conf $(DESTDIR)/etc/default/brewable
 	install -m 0755 rcbrewable $(DESTDIR)/etc/init.d/brewable
-	bash -c './postinst configure'
+#	bash -c './postinst configure'
+
+uninstall:
+	rm $(DESTDIR)/etc/default/brewable
+	rm $(DESTDIR)/etc/init.d/brewable
+	rm $(DESTDIR)/usr/bin/brewable
+
+pkg:	brewable default.conf rcbrewable
+	rm -rf brewable-$(PKGVERSION); mkdir -p brewable-$(PKGVERSION);
+	install -m 0755 brewable brewable-$(PKGVERSION)
+	install -m 0755 default.conf brewable-$(PKGVERSION)
+	install -m 0755 rcbrewable brewable-$(PKGVERSION)
+	install -m 0755 Makefile brewable-$(PKGVERSION)
+	tar cvf brewable-$(PKGVERSION)-armv61-1.tar.gz brewable-$(PKGVERSION)
+	
 
 clean:
-	rm -f *.pyc default.conf brewable
+	rm -rf default.conf test.js brewable-$(PKGVERSION)*
 
-.PHONY: default.conf brewable
+distclean: clean
+	rm -rf node_modules brewable client server
+
+.PHONY:
