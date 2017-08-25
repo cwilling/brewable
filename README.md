@@ -12,4 +12,3 @@ This is a complete javascript rewrite of the original (pre 0.3) python version.
 
 See https://cwilling.github.io/brewable for installation and usage information.
 
-Note that the develop branch is a rewrite of the server code using nodejs, replacing the python version in master branch.
