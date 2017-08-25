@@ -7,7 +7,7 @@ TEST_FILES = test-status.js \
 
 DESTDIR ?=
 
-PKGVERSION ?= 0.3
+PKGVERSION ?= 0.3.1
 
 # Where any app files are installed
 RUNDIR = /usr/share/brewable
@@ -81,12 +81,13 @@ uninstall:
 	rm $(DESTDIR)/etc/init.d/brewable
 	rm $(DESTDIR)/usr/bin/brewable
 
-pkg:	brewable default.conf rcbrewable
+pkg:	brewable default.conf postinst rcbrewable
 	rm -rf brewable-$(PKGVERSION); mkdir -p brewable-$(PKGVERSION);
 	install -m 0755 brewable brewable-$(PKGVERSION)
 	install -m 0755 default.conf brewable-$(PKGVERSION)
 	install -m 0755 rcbrewable brewable-$(PKGVERSION)
 	install -m 0755 Makefile brewable-$(PKGVERSION)
+	install -m 0755 postinst brewable-$(PKGVERSION)
 	tar cvf brewable-$(PKGVERSION)-armv61-1.tar.gz brewable-$(PKGVERSION)
 	
 
@@ -96,4 +97,4 @@ clean:
 distclean: clean
 	rm -rf node_modules brewable client server
 
-.PHONY:
+.PHONY: postinst
