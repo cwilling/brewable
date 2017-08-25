@@ -74,7 +74,7 @@ install:
 	install -m 0755 brewable $(DESTDIR)/usr/bin
 	install -m 0644 default.conf $(DESTDIR)/etc/default/brewable
 	install -m 0755 rcbrewable $(DESTDIR)/etc/init.d/brewable
-#	bash -c './postinst configure'
+	bash -c './postinst configure'
 
 uninstall:
 	rm $(DESTDIR)/etc/default/brewable
