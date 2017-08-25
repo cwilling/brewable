@@ -72,15 +72,16 @@ to see the GPIO connector's pin arrangements.
 </p>
 <p>Any external equipment to be switched is connected to the Raspberry Pi
 via relays. Brewable supports multiple
-<a href="http://www.sainsmart.com/4-channel-5v-relay-module-for-pic-arm-avr-dsp-arduino-msp430-ttl-logic.html">SainSmart 5V relay modules</a>,
-as well as the four channel
+<a href="http://www.sainsmart.com/4-channel-5v-relay-module-for-pic-arm-avr-dsp-arduino-msp430-ttl-logic.html">SainSmart 5V relay modules</a>.
+Previous versions of the software (earlier than 0.3) also supported the four channel
 <a href="http://www.seeedstudio.com/depot/Raspberry-Pi-Relay-Board-v10-p-2409.html">Seeed Relay Board</a>.
-While it is somewhat
+While that board is somewhat
 more expensive, an advantage of the Seeed Relay Board is that it fits directly
 onto the Raspberry Pi GPIO strip and no further relay interconnection is required.
 The Seeed Relay Board is mounted onto the Raspberry Pi's first 26 GPIO pins but
 nevertheless extends them so that the DS18B20 sensors can be attached using the
 same pins mentioned above.
+Support for the Seeed Relay Board will be reinstated in a future version of the software.
 </p>
 <p>
 Apart from their lower cost, a possible advantage of the SainSmart board modules is that
@@ -119,13 +120,14 @@ either remotely, using any ssh client program (e.g. 'ssh' on Linux & Mac, Putty 
 on the Raspberry Pi using keyboard, mouse & display if they're still connected. If installing remotely,
 connect with ssh or putty to the Raspberry Pi at its previously noted IP address. If installing directly,
 open a Terminal window. In either case, run the following commands:
-<br>&nbsp;&nbsp;&nbsp;&nbsp;<code>sudo apt-get install -y python-tornado</code>
 <br>&nbsp;&nbsp;&nbsp;&nbsp;<code id="code_wget"></code>
 <br>&nbsp;&nbsp;&nbsp;&nbsp;<code id="code_tar"></code>
 <br>&nbsp;&nbsp;&nbsp;&nbsp;<code id="code_cd"></code>
 <br>&nbsp;&nbsp;&nbsp;&nbsp;<code>sudo make install</code>
+<!--
 <br>If using the Seeed Relay Board, also run the command:
 <br>&nbsp;&nbsp;&nbsp;&nbsp;<code>sudo apt-get install -y python-smbus</code>
+-->
 <br>Now reboot the Raspberry Pi (<code>sudo reboot</code>). This is necessary to enable the GPIO
 pins, as well as to start the brewable server. The software is started
 automatically whenever the Raspberry Pi boots up so there's generally no
@@ -166,11 +168,11 @@ See also:
   xmlhttp.send();
   function processTagData(arr) {
     var dl_version = arr[0].name;
-    var tarball_url = 'http://github.com/cwilling/brewable/archive/' + dl_version + '/brewable-' + dl_version + '.tar.gz';
+    var tarball_url = 'http://github.com/cwilling/brewable/archive/' + dl_version + '/brewable-' + dl_version + '-armv61-1.tar.gz';
     //console.log('Download: ' + tarball_url);
     document.getElementById('download-tar-gz').setAttribute("href", tarball_url);
     document.getElementById('code_wget').innerHTML = 'wget <a href="' + tarball_url + '">' + tarball_url + '</a>';
-    document.getElementById('code_tar').innerHTML = 'tar xf brewable-' + dl_version + '.tar.gz';
+    document.getElementById('code_tar').innerHTML = 'tar xf brewable-' + dl_version + '-armv61-1.tar.gz';
     document.getElementById('code_cd').innerHTML = 'cd brewable-' + dl_version;
   }
 </script>
