@@ -164,6 +164,13 @@ gpioWorker.prototype.sensorDevices = function () {
   for (var z=0;z<sensorList.length;z++) {
     deviceList.push(new sensordevice(sensorList[z]));
   }
+
+  // Sort the device list by (slightly mangled) id's
+  deviceList.sort(function(a, b) {
+    var aval = parseInt(a.id.substr(0,a.id.search("-")),16) + parseInt(a.id.substr(a.id.search("-") + 1),16);
+    var bval = parseInt(b.id.substr(0,b.id.search("-")),16) + parseInt(b.id.substr(b.id.search("-") + 1),16);
+    return aval - bval;
+  });
   return deviceList;
 };
 

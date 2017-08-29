@@ -1,5 +1,5 @@
 // Import styles (automatically injected into <head>).
-import "./styles/brewable.css";
+import "../../styles/brewable.css";
 
 import { select, selectAll, event, mouse } from "d3-selection";
 import { max, min } from "d3-array";

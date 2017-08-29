@@ -16,6 +16,9 @@ SERVER_FILES = \
 	src/scripts/modules/sensorLister.js \
 	src/scripts/modules/server.js
 
+CLIENT_FILES = \
+	src/scripts/status.js \
+
 TEST_FILES = test-status.js \
 		src/scripts/modules/jsogpio.js \
 		src/scripts/modules/cpuinfo.js \
@@ -64,7 +67,7 @@ default.conf:	default.conf.in
 node_modules:
 	npm install
 
-client: node_modules
+client: node_modules $(CLIENT_FILES)
 	./node_modules/.bin/rollup --config client.config.js
 	touch client
 

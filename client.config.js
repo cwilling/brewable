@@ -15,7 +15,7 @@ import cssnext from 'postcss-cssnext';
 import cssnano from 'cssnano';
 
 export default {
-  entry: 'status.js',
+  entry: 'src/scripts/status.js',
   targets: [
     { dest: 'build/js/brewableclientbundle.js', format: 'iife' },
   ],
