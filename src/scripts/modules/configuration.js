@@ -1,9 +1,6 @@
-//import fs from "fs";
+import fs from "fs";
 import mkdirp from "mkdirp";
-//import path from 'path';
-var fs = require('fs');
-var path =require('path');
-//var mkdirp = require('mkdirp');
+import path from 'path';
 var home = require('os').homedir();
 
 
@@ -12,7 +9,13 @@ var defaultConfigValues = function() {
     'sensorFudgeFactors'     : {},
     'multiSensorMeanWeight' : parseInt(50),
     'relayDelayPostON'      : parseInt(180),
-    'relayDelayPostOFF'     : parseInt(480)
+    'relayDelayPostOFF'     : parseInt(480),
+    'iSpindelA'             : {
+      "name":"iSpindel",
+      "calfactor0":0.00438551,
+      "calfactor1":0.13647658,
+      "calfactor2":6.968821422
+    }
   };
 };
 
@@ -64,6 +67,13 @@ Configuration.prototype.loadConfigFromFile = function () {
   }
 };
 
+/* Save the user's configuration
+*/
+Configuration.prototype.saveConfigToFile = function () {
+  console.log("saveConfigToFile()");
+  fs.writeFileSync(this._configFileName, JSON.stringify(this._configuration));
+};
+
 Configuration.prototype.getConfiguration = function () {
   return this._configuration;
 };
@@ -85,6 +95,8 @@ Configuration.prototype.dir = function (topic) {
 };
 
 Configuration.prototype.updateFudgeEntry = function (sensorIds) {
+  console.log("updateFudgeEntry()");
+
   var config = this._configuration;
   /* Case 1 - Simple conversion
      from: single 'global' fudge factor (applying to all sensors)
@@ -141,7 +153,7 @@ Configuration.prototype.updateFudgeEntry = function (sensorIds) {
 };
 
 Configuration.prototype.setMultiSensorMeanWeight = function (value) {
-  console.log("updateMultiSensorMeanWeight(" + value + ")");
+  console.log("setMultiSensorMeanWeight(" + value + ")");
   var config = this._configuration;
   if (value < 0 ) {
     value = 0;
@@ -152,6 +164,24 @@ Configuration.prototype.setMultiSensorMeanWeight = function (value) {
   fs.writeFileSync(this._configFileName, JSON.stringify(config));
 };
 
+Configuration.prototype.setRelayDelayPost = function (onoff, value) {
+  console.log("setRelayDelayPost(" + onoff + ", " + value + ")");
+  if (onoff == 'relayDelayPostON' || onoff == 'relayDelayPostOFF' ) {
+    var config = this._configuration;
+    config[onoff] = value;
+    fs.writeFileSync(this._configFileName, JSON.stringify(config));
+  } else {
+    console.log("Unkown config item (" + onoff + ")");
+  }
+};
+
+Configuration.prototype.setFudgeFactor = function (key, val) {
+  //console.log("setFudgeFactor() " + key + ", val " + val);
+
+  var config = this._configuration;
+  config.sensorFudgeFactors[key] = val;
+  fs.writeFileSync(this._configFileName, JSON.stringify(config));
+};
 
 /********
 atest = new Configuration();

@@ -1,5 +1,24 @@
 SHELL = /bin/bash
 
+SERVER_FILES = \
+	src/scripts/brewable.js \
+	src/scripts/modules/configuration.js \
+	src/scripts/modules/cpuinfo.js \
+	src/scripts/modules/fhem.js \
+	src/scripts/modules/gpioworker.js \
+	src/scripts/modules/jobprocessor.js \
+	src/scripts/modules/jsogpio.js \
+	src/scripts/modules/queue.js \
+	src/scripts/modules/requestHandlers.js \
+	src/scripts/modules/router.js \
+	src/scripts/modules/sainsmartrelay.js \
+	src/scripts/modules/sensor.js \
+	src/scripts/modules/sensorLister.js \
+	src/scripts/modules/server.js
+
+CLIENT_FILES = \
+	src/scripts/status.js \
+
 TEST_FILES = test-status.js \
 		src/scripts/modules/jsogpio.js \
 		src/scripts/modules/cpuinfo.js \
@@ -48,7 +67,7 @@ default.conf:	default.conf.in
 node_modules:
 	npm install
 
-client: node_modules
+client: node_modules $(CLIENT_FILES)
 	./node_modules/.bin/rollup --config client.config.js
 	touch client
 
@@ -56,7 +75,7 @@ test.js: $(TEST_FILES)
 	./node_modules/.bin/rollup --config test.config.js
 	chmod a+x test.js
 
-server: node_modules src/scripts/brewable.js
+server: node_modules $(SERVER_FILES)
 	patch -p0 < websocket-no-binaries.diff
 	./node_modules/.bin/rollup --config server.config.js
 	patch -p0 -R < websocket-no-binaries.diff

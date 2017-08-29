@@ -1,4 +1,4 @@
-var fs =require('fs');
+import fs from "fs";
 
 // Return a list of sensor devices
 export default function sensors() {

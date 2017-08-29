@@ -3,6 +3,7 @@ import start from "./modules/server";
 import route from "./modules/router";
 import { index as rhindex } from "./modules/requestHandlers";
 import { favicon as rhfavicon } from "./modules/requestHandlers";
+import { fhem as rhfhem } from "./modules/requestHandlers";
 import { status as rhstatus } from "./modules/requestHandlers";
 import { ws as rhws } from "./modules/requestHandlers";
 import Queue from "./modules/queue";
@@ -101,6 +102,7 @@ handle["/index"] = rhindex;
 handle["/index.htm"] = rhindex;
 handle["/index.html"] = rhindex;
 handle["/favicon.ico"] = rhfavicon;
+handle["/fhem"] = rhfhem;
 handle["/status.js"] = rhstatus;
 handle["/ws"] = rhws;
 
