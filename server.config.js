@@ -14,7 +14,7 @@ export default {
   entry: 'src/scripts/brewable.js',
   dest: 'build/js/brewableserverbundle.js',
   format: 'cjs',
-  external: [ 'os', 'path', 'buffer', 'http', 'https', 'events', 'util', 'tty', 'net', 'url', 'fs', 'crypto' ],
+  external: [ 'os', 'path', 'buffer', 'http', 'https', 'events', 'util', 'tty', 'net', 'url', 'fs', 'crypto', 'querystring' ],
   banner: '#!/usr/bin/env node',
   sourceMap: 'inline',
   plugins: [

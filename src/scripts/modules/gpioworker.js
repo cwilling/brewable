@@ -23,6 +23,7 @@ var sensorDevices = [];
 var sensorResults = [];
 var sensorsRead = 0;
 
+
 function gpioWorker (input_queue, output_queue) {
   this.input_queue = input_queue;
   this.output_queue = output_queue;
@@ -48,6 +49,10 @@ function gpioWorker (input_queue, output_queue) {
   // Relay device
   this.relay = new Relay();
   //this.relay.testConnected();
+  for (var i=0;i<this.relay.deviceCount();i++) {
+    this.relay.setDelaySetValue(i+1, 'on_time', this.configuration['relayDelayPostON']);
+    this.relay.setDelaySetValue(i+1, 'off_time', this.configuration['relayDelayPostOFF']);
+  }
 
   // Temperature sensors
   sensorDevices = this.sensorDevices();
@@ -57,7 +62,7 @@ function gpioWorker (input_queue, output_queue) {
   this.configObj.updateFudgeEntry(sensorDevices);
   console.log("Using configuration: " + JSON.stringify(this.configuration));
 
-  // Set sensor fudge according to configuration
+  // Now set sensor fudge according to updated configuration
   sensorDevices.forEach( function (sensor) {
     sensor.setFudge(parseFloat(config['sensorFudgeFactors'][sensor.getId()]));
   });
@@ -125,15 +130,29 @@ function gpioWorker (input_queue, output_queue) {
     }
   }.bind(this));
 
-  // eventEmitter WAS global (from index.js)
   eventEmitter.on('sensor_read', allSensorsRead);
   eventEmitter.on('msg_waiting', this.processMessage.bind(this));
+
+  eventEmitter.on('fhem_reading', function(obj) {
+    this.fhemReading(obj);
+  }.bind(this));
 
 } 
 //module.exports = gpioWorker;
 //export default gpioWorker;
-//export default gpioWorker;
 export { gpioWorker, eventEmitter };
+
+gpioWorker.prototype.fhemReading = function (reading) {
+  //console.log("fhemReading() " + JSON.stringify(reading));
+  var name = reading.name;
+  var tilt = reading.tilt;
+  var temp = reading.temp;
+  var batt = reading.batt;
+  console.log("fhem() " + name + ", " + tilt + ", " + temp + ", " + batt);
+
+  //var plato = calcPlato(tilt, temp);
+  //console.log("plato = " + plato);
+};
 
 gpioWorker.prototype.sensorDevices = function () {
   var deviceList = [];
@@ -320,11 +339,25 @@ gpioWorker.prototype.config_change = function (msg) {
         item.setFudge(msg.data['fudge']);
       }
     });
+    //this.configuration.sensorFudgeFactors[msg.data['sensorFudgeFactors']] = msg.data['fudge'];
+    this.configObj.setFudgeFactor(msg.data['sensorFudgeFactors'], msg.data['fudge']);
   } else if (keys[0] == 'multiSensorMeanWeight') {
     this.configObj.setMultiSensorMeanWeight(msg.data['multiSensorMeanWeight']);
+  } else if (keys[0] == 'relayDelayPostON' || keys[0] == 'relayDelayPostOFF') {
+    for (var i=0;i<this.relay.deviceCount();i++) {
+      if (keys[0] == 'relayDelayPostON') {
+        this.relay.setDelaySetValue(i+1, 'on_time', msg.data[keys[0]]);
+      } else {
+        this.relay.setDelaySetValue(i+1, 'off_time', msg.data[keys[0]]);
+      }
+    }
+    //this.configuration[keys[0]] = msg.data[keys[0]];
+    this.configObj.setRelayDelayPost(keys[0], msg.data[keys[0]]);
   } else {
     console.log("config_change(): " + keys[0] + " = " + msg.data[keys[0]]);
   }
+  console.log("this.configuration = " + JSON.stringify(this.configuration));
+  //this.configObj.saveConfigToFile();
 };
 
 gpioWorker.prototype.list_sensors = function (msg) {

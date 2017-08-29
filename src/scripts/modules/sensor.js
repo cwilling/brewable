@@ -20,11 +20,12 @@ SensorDevice.prototype.getId = function () {
 SensorDevice.prototype.getTempAsync = function (callback) {
   var dpath = '/sys/bus/w1/devices/' + this.id + '/w1_slave';
   var id = this.id;
+  var fudge = this.fudge;
   fs.readFile(dpath, 'utf8', function (err, data) {
     if (err) {
       console.log('Error reading device data: ' + dpath);
     } else {
-      var result = parseFloat(data.split(' ')[20].split('=')[1]) / 1000;
+      var result = fudge + parseFloat(data.split(' ')[20].split('=')[1]) / 1000;
       callback(id, result);
     }
   });
@@ -34,7 +35,7 @@ SensorDevice.prototype.getTemp = function () {
   var dpath = '/sys/bus/w1/devices/' + this.id + '/w1_slave';
   var data = fs.readFileSync(dpath, 'utf8');
   //console.log('(SensorDevice)' + this.id + ' data = ' + data);
-  return parseFloat(data.split(' ')[20].split('=')[1]) / 1000;
+  return this.fudge + parseFloat(data.split(' ')[20].split('=')[1]) / 1000;
 };
 
 SensorDevice.prototype.setFudge = function (fudgeFactor) {

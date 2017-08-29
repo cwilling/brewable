@@ -11,9 +11,11 @@ function start(route, handle, clients, msgQueue, opts) {
 
   function onRequest(request, response) {
     var pathname = url.parse(request.url).pathname;
+    var query = url.parse(request.url).query;
     console.log("Request for " + pathname + " received from " + request.connection.remoteAddress);
+    console.log("Request query = " + query);
 
-    route(handle, pathname, response);
+    route(handle, pathname, query, response);
   }
 
   var server = http.createServer(onRequest).listen(port);
@@ -41,7 +43,7 @@ function start(route, handle, clients, msgQueue, opts) {
     //console.log("ws request from " + request.connection.remoteAddress);
 
     connection.on('message', function(message) {
-      console.log("Rcvd message: " + message);
+      console.log("Rcvd message: " + JSON.stringify(message));
       msgQueue.enqueue(message);
     });
 

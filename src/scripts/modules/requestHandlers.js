@@ -1,5 +1,6 @@
 var fs = require("fs");
 var path = require('path');
+import { newReading } from './fhem.js';
 
 function index(response) {
   console.log("Request handler 'index' was called.");
@@ -36,6 +37,24 @@ function favicon(response) {
     }
     response.end();
   });
+}
+
+function fhem(response, query) {
+  console.log("Request handler 'fhem' was called with query: " + query);
+  newReading(query);
+  /*
+  fs.readFile(path.join(__dirname, "../../../favicon.ico"), function (err, data) {
+    if(err){
+      response.writeHead(404);
+      response.write("Not Found!");
+    } else {
+      response.writeHead(200, {"Content-Type": "image/x-icon"});
+      response.write(data);
+    }
+    response.end();
+  });
+  */
+  response.end();
 }
 
 function status(response) {
@@ -80,6 +99,6 @@ function ws(response) {
   response.end();
 }
 
-export { status, css, index, favicon, ws };
+export { status, css, index, favicon, ws, fhem };
 
 /* ex:set ai shiftwidth=2 inputtab=spaces smarttab noautotab: */
