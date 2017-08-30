@@ -19,6 +19,37 @@ console.log("options: " + JSON.stringify(options));
 if ("port" in options) options.port = parseInt(options.port);
 console.log("options: " + JSON.stringify(options));
 
+class Rectangle {
+  constructor(height, width) {
+    this.height = height;
+    this.width = width;
+  }
+
+  get area() {
+    return this.height * this.width;
+  }
+
+  speak() {
+    console.log("I am not an animal");
+  }
+}
+
+var square = new Rectangle(10,10);
+console.log("Area = " + square.area);
+
+class Dog extends Rectangle {
+  constructor (w,h) {
+    super(w,h);
+  }
+  speak() {
+    super.speak();
+    console.log("Woof " + this.area);
+  }
+}
+var d = new Dog(5,5);
+d.speak();
+
+
 process.exit();
 
 /* Physical numbering */

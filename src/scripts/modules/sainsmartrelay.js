@@ -54,7 +54,7 @@ function Relay () {
     for (var i=0;i<PossibleRelayPins.length;i++) {
       rpio.close(PossibleRelayPins[i]);
       //console.log("Pins: " + PossibleRelayPins[i]);
-      rpio.open(PossibleRelayPins[i], rpio.OUTPUT, rpio.LOW);
+      rpio.open(PossibleRelayPins[i], rpio.OUTPUT, RELAY_OFF);
     }
     for (i=0;i<PossibleRelayPins.length;i++) {
       rpio.mode(PossibleRelayPins[i], rpio.INPUT);
