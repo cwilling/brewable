@@ -13,7 +13,6 @@ SERVER_FILES = \
 	src/scripts/modules/router.js \
 	src/scripts/modules/sainsmartrelay.js \
 	src/scripts/modules/sensor.js \
-	src/scripts/modules/sensorLister.js \
 	src/scripts/modules/server.js
 
 CLIENT_FILES = \

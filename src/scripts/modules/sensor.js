@@ -1,17 +1,35 @@
 import events from 'events';
-var fs = require('fs');
+import fs from 'fs';
+
 
 // SensorDevice object
-function SensorDevice (id) {
-  this.id = id;
-  this.fudge = parseFloat(0.7);
-  events.EventEmitter.call(this);
-  SensorDevice.prototype.__proto__ = events.EventEmitter.prototype;
+class SensorDevice {
+  constructor (id) {
+    this.id = id;
+    this.fudge = parseFloat(0.7);
+    events.EventEmitter.call(this);
+    SensorDevice.prototype.__proto__ = events.EventEmitter.prototype;
 
-  //console.log('New SensorDevice with id = ' + this.id + ', fudge = ' + this.fudge);
+    //console.log('New SensorDevice with id = ' + this.id + ', fudge = ' + this.fudge);
+  }
+
+  // Return a list of sensor devices
+  static sensors() {
+    var deviceDirectory = '/sys/bus/w1/devices/w1_bus_master1/w1_master_slaves';
+    var returnList = [];
+    var data = fs.readFileSync(deviceDirectory, 'utf8');
+    var devs = data.split('\n');
+    devs.pop();
+    for (var i=0;i<devs.length;i++) {
+      //console.log("substr = " + devs[i].substr(-8));
+      if (devs[i].substr(-8) != "00000000") returnList.push(devs[i]);
+    }
+    return returnList;
+  }
 
 }
 export default SensorDevice;
+
 
 SensorDevice.prototype.getId = function () {
   return this.id;
@@ -46,8 +64,6 @@ SensorDevice.prototype.setFudge = function (fudgeFactor) {
 SensorDevice.prototype.getFudge = function () {
   return this.fudge;
 };
-
-
 
 
 /* ex:set ai shiftwidth=2 inputtab=spaces smarttab noautotab: */

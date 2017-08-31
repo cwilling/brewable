@@ -1,20 +1,11 @@
-var os = require("os");
-var path = require("path");
-var fs = require("fs");
+import os from "os";
+import path from "path";
+import fs from "fs";
 
 import events from "events";
 var eventEmitter = new events.EventEmitter();
-//export { eventEmitter };
 
-/*
-var sensordevice = require("./sensor");
-var sensorLister = require("./sensorLister");
-var Relay = require("./sainsmartrelay");
-var Configuration = require("./configuration");
-var JobProcessor = require("./jobprocessor");
-*/
-import sensordevice from "./sensor";
-import sensors from "./sensorLister";
+import SensorDevice from "./sensor";
 import Relay from "./sainsmartrelay";
 import Configuration from "./configuration";
 import JobProcessor from "./jobprocessor";
@@ -159,10 +150,9 @@ gpioWorker.prototype.sensorDevices = function () {
 
   // Obtain list of available sensor ids
   // & keep array (sensorDevices) of sensor objects
-  //var sensorList = sensorLister.sensors();
-  var sensorList = sensors();
+  var sensorList = SensorDevice.sensors();
   for (var z=0;z<sensorList.length;z++) {
-    deviceList.push(new sensordevice(sensorList[z]));
+    deviceList.push(new SensorDevice(sensorList[z]));
   }
 
   // Sort the device list by (slightly mangled) id's
