@@ -251,12 +251,83 @@ div#sensor_updateHolder {
 }
 .sensor_update {
     position:   relative;
+    width:	128px;
     height:	64px;
     line-height: 60px;
     float:	left;
     text-align: center;
 }
-div#relay_updateHolder {
+.isp_sensor_update {
+    display:    flex;
+    flex-direction: column;
+    alilgn-items: center;
+    justify-content: center;
+
+    display:    -webkit-flex;
+    -webkit-flex-direction: column;
+    -webkit-align-items:	center;
+    -webkit-justify-content:	center;
+
+    width:	128px;
+    height:	64px;
+}
+.isp_entry {
+    font-size: 100%;
+}
+/* isp_sensor_overlay */
+.isp_sol {
+    background-color: #000;
+    opacity:    .7;
+    /* filter: alpha(opacity=70); */
+    width:      168px;
+    height:	152;
+    z-index:    10;
+
+    border:	1px solid white;
+    border-radius: 4px;
+    color:      white;
+}
+/* isp_sensor_overlay_title */
+.isp_sol_title {
+    display:    flex;
+    alilgn-items: center;
+    justify-content: center;
+
+    display:    -webkit-flex;
+    -webkit-align-items:	center;
+    -webkit-justify-content:	center;
+
+    font-weight: bold;
+    font-size:  100%;
+    padding:	0.5em;
+}
+/* isp_sensor_overlay_detail */
+.isp_sol_detail {
+    display:    flex;
+    alilgn-items: center;
+    justify-content: center;
+
+    display:    -webkit-flex;
+    -webkit-align-items:	center;
+    -webkit-justify-content:	center;
+}
+.isp_sol_key {
+    display:    flex;
+    display:    -webkit-flex;
+
+    width:      32%;
+    padding-right: 12px;
+
+    justify-content: right;
+    -webkit-justify-content:	rlight;
+}
+.isp_sol_val {
+    display:    flex;
+    display:    -webkit-flex;
+
+    width:      68%;
+}
+#relay_updateHolder {
     display:    flex;
     align-items: center;
     justify-content: center;
@@ -988,11 +1059,11 @@ div#jobComposer {
     margin:     3px 10px;
     border:	2px solid #000;
 }
-.configItemDataValueInput,.configItemSensorFudge {
+.configItemDataValueInput,.configItemSensorFudge,.configItemSensorIspindel {
     width:      94%;
     text-align: center;
 }
-.configItemSensorFudge {
+.configItemSensorFudge,.configItemSensorIspindel {
     text-align: center;
 }
 .config_label {

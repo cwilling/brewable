@@ -6,6 +6,7 @@ import events from "events";
 var eventEmitter = new events.EventEmitter();
 
 import SensorDevice from "./sensor";
+import fhemDevice from "./fhem";
 import Relay from "./sainsmartrelay";
 import Configuration from "./configuration";
 import JobProcessor from "./jobprocessor";
@@ -133,16 +134,20 @@ function gpioWorker (input_queue, output_queue) {
 //export default gpioWorker;
 export { gpioWorker, eventEmitter };
 
+/*
+  Just for testing.
+  We should really just call liveUpdate which should extract data from
+  any/all devices (including the one whose data report triggered the
+  'fhem_reading' event which is probably what brought us here.
+*/
 gpioWorker.prototype.fhemReading = function (reading) {
   //console.log("fhemReading() " + JSON.stringify(reading));
   var name = reading.name;
   var tilt = reading.tilt;
   var temp = reading.temp;
   var batt = reading.batt;
-  console.log("fhem() " + name + ", " + tilt + ", " + temp + ", " + batt);
-
-  //var plato = calcPlato(tilt, temp);
-  //console.log("plato = " + plato);
+  var grav = reading.grav;
+  console.log("fhemReading() " + name + ", " + tilt + ", " + temp + ", " + batt + ", " + grav);
 };
 
 gpioWorker.prototype.sensorDevices = function () {
@@ -161,6 +166,7 @@ gpioWorker.prototype.sensorDevices = function () {
     var bval = parseInt(b.id.substr(0,b.id.search("-")),16) + parseInt(b.id.substr(b.id.search("-") + 1),16);
     return aval - bval;
   });
+  console.log("deviceList = " + JSON.stringify(deviceList));
   return deviceList;
 };
 
@@ -211,6 +217,15 @@ gpioWorker.prototype.liveUpdate = function () {
   sensorResults.forEach( function(item) {
     //console.log("liveUpdate(): " + item['id'] + " = " + item['result']);
     sensor_state.push({'sensorId':item['id'], 'temperature':item['result']});
+  });
+  //console.log("liveUpdate(): " + JSON.stringify(sensor_state));
+
+  var fhemDevices = fhemDevice.devices();
+  fhemDevices.forEach( function (item) {
+    if (item.fresh) {
+      console.log("FHEM device: " + item.name + ", " + item.stamp);
+      sensor_state.push({'sensorId':item.name, 'temperature':item.temp, 'tilt':item.tilt, 'batt':item.batt, 'grav':item.grav, 'stamp':item.stamp});
+    }
   });
   //console.log("liveUpdate(): " + JSON.stringify(sensor_state));
 
@@ -297,12 +312,13 @@ gpioWorker.prototype.processMessage = function () {
 
 gpioWorker.prototype.load_startup_data = function (msg) {
   //console.log("load_startup_data():");
+  var configObj = new Configuration();
 
   var jdata = JSON.stringify({
     'type':'startup_data',
     'data': {
       'testing': this.brewtest(),
-      'config' : this.configObj.getConfiguration(),
+      'config' : configObj.getConfiguration(),
       'the_end': 'orange'
     }
   });
@@ -338,6 +354,22 @@ gpioWorker.prototype.config_change = function (msg) {
     });
     //this.configuration.sensorFudgeFactors[msg.data['sensorFudgeFactors']] = msg.data['fudge'];
     this.configObj.setFudgeFactor(msg.data['sensorFudgeFactors'], msg.data['fudge']);
+  } else if (keys[0] == 'iSpindels') {
+    console.log("config_change() iSpindels: "  + msg.data['iSpindels'] + " (" + msg.data['timeout'] + ")");
+
+    // First update the configuration
+    this.configObj.setIspindelTimeout(msg.data['iSpindels'], msg.data['timeout']);
+
+    // Now apply to the device itself
+    var fhemDevices = fhemDevice.devices();
+    fhemDevices.forEach( function (item) {
+      console.log("reconfig FHEM device: " + item.name + ", " + item.stamp);
+      if (item.name == msg.data['iSpindels']) {
+        console.log("Found the right one:" + item.name);
+        item.setNewTimeout(msg.data['timeout']);
+      }
+    });
+
   } else if (keys[0] == 'multiSensorMeanWeight') {
     this.configObj.setMultiSensorMeanWeight(msg.data['multiSensorMeanWeight']);
   } else if (keys[0] == 'relayDelayPostON' || keys[0] == 'relayDelayPostOFF') {

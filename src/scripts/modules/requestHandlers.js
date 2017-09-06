@@ -32,7 +32,7 @@ function favicon(response) {
       response.writeHead(404);
       response.write("Not Found!");
     } else {
-      response.writeHead(200, {"Content-Type": "image/x-icon"});
+      response.writeHead(200, {"Content-Type": "text/plain"});
       response.write(data);
     }
     response.end();
@@ -42,18 +42,7 @@ function favicon(response) {
 function fhem(response, query) {
   console.log("Request handler 'fhem' was called with query: " + query);
   newReading(query);
-  /*
-  fs.readFile(path.join(__dirname, "../../../favicon.ico"), function (err, data) {
-    if(err){
-      response.writeHead(404);
-      response.write("Not Found!");
-    } else {
-      response.writeHead(200, {"Content-Type": "image/x-icon"});
-      response.write(data);
-    }
-    response.end();
-  });
-  */
+  response.writeHead(200, {"Content-Type": "image/x-icon"});
   response.end();
 }
 

@@ -16,6 +16,7 @@ SERVER_FILES = \
 	src/scripts/modules/server.js
 
 CLIENT_FILES = \
+	styles/brewable.css \
 	src/scripts/status.js \
 
 TEST_FILES = test-status.js \

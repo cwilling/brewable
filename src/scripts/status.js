@@ -20,6 +20,8 @@ var global_x = 0;
 
 var availableSensors = [];
 var availableRelays  = [];
+var iSpindelDevices = [];
+var iSpindelWaitTimes = {};
 
 var profileData = [];
 var profileDisplayData = [];        // "processed" data for display
@@ -122,6 +124,282 @@ if (!String.prototype.padStart) {
   };
 }
 
+/**
+* From https://stackoverflow.com/questions/8211744/convert-time-interval-given-in-seconds-into-more-human-readable-form
+*
+* Translates seconds into human readable format of seconds, minutes, hours, days, and years
+* 
+* @param  {number} seconds The number of seconds to be processed
+* @return {string}         The phrase describing the the amount of time
+*/
+function forHumans ( seconds ) {
+  var levels = [
+    [Math.floor(seconds / 31536000), 'Y'], /* years */
+    [Math.floor((seconds % 31536000) / 86400), 'd'], /*days */
+    [Math.floor(((seconds % 31536000) % 86400) / 3600), 'h'], /*hours*/
+    [Math.floor((((seconds % 31536000) % 86400) % 3600) / 60), 'm'], /*mins*/
+    [(((seconds % 31536000) % 86400) % 3600) % 60, 's'], /* seconds */
+  ];
+  var returntext = '';
+
+  for (var i = 0, max = levels.length; i < max; i++) {
+    if ( levels[i][0] === 0 ) continue;
+    returntext += ' ' + levels[i][0] + ' ' + (levels[i][0] === 1 ? levels[i][1].substr(0, levels[i][1].length-1): levels[i][1]);
+  }
+  return returntext.trim();
+} 
+
+
+class Ispindel {
+  constructor (report, parent) {
+    this.name = report.sensorId;
+    this.tilt = report.tilt;
+    this.temp = report.temperature;
+    this.grav = report.grav;
+    //this.plato = report.plato;
+    this.batt = report.batt;
+    this.stamp = report.stamp;
+    this.parent = parent;
+    this.elementName = 'sensor_update_' + this.name;
+
+    // How long to wait (ms) after last report before removing this device
+    // 61 * 60 * 1000 = 3660000 (61 minutes)
+    var defaultWaitTime = 60000;     // 60000 = 1min
+    //if (iSpindelWaitTimes[report.sensorId]) {
+    console.log("iSpindelWaitTimes has keys: " + JSON.stringify(Object.keys(iSpindelWaitTimes)));
+    console.log("iSpindelWaitTimes has " + JSON.stringify(iSpindelWaitTimes));
+    console.log("report.sensorId = " + report.sensorId);
+    console.log("waitTime should be = " + iSpindelWaitTimes[report.sensorId]);
+    this.waitTime = 1000 * iSpindelWaitTimes[report.sensorId] || defaultWaitTime;
+
+    var isp_temp, isp_tilt, isp_grav, isp_batt, isp_stamp;
+
+    isp_tilt = document.createElement("DIV");
+    isp_tilt.id = this.elementName + "_tilt";
+    isp_tilt.className = "isp_entry";
+    this.parent.appendChild(isp_tilt);
+
+    isp_temp = document.createElement("DIV");
+    isp_temp.id = this.elementName + "_temp";
+    isp_temp.className = "isp_entry";
+    this.parent.appendChild(isp_temp);
+
+    isp_grav = document.createElement("DIV");
+    isp_grav.id = this.elementName + "_grav";
+    isp_grav.className = "isp_entry";
+    this.parent.appendChild(isp_grav);
+
+    this.ispindelUpdateInterval = setInterval(this.checkIspindelTimeout, 1000, this);
+    console.log("A new Ispindel device for " + this.parent.id);
+  }
+
+  set_contents (state, tempScale) {
+
+    this.temp = state.temperature;
+    if (tempScale == 'F') {
+      document.getElementById(this.elementName + "_temp").textContent = ((state.temperature * 9 / 5 ) + 32).toFixed(2);
+    } else {
+      document.getElementById(this.elementName + "_temp").textContent = (state.temperature).toFixed(2);
+    }
+    this.grav = state.grav;
+    document.getElementById(this.elementName + "_grav").textContent = (state.grav).toFixed(2);
+    this.tilt = state.tilt;
+    document.getElementById(this.elementName + "_tilt").textContent = (state.tilt).toFixed(2);
+    this.batt = state.batt;
+
+    this.stamp = state.stamp;
+
+  }
+
+  setNewWaitTime(val) {
+    console.log("Setting new timeout (" + val + ") for " + this.name);
+
+    var newWaitTime = parseInt(val);
+    if (newWaitTime < 10) return;
+    this.waitTime = 1000 * newWaitTime;
+  }
+
+  checkIspindelTimeout(ispindel) {
+    console.log("Checking iSpindel timeout " + ispindel.waitTime);
+
+    var elapsed = new Date() - new Date(ispindel.stamp);
+    if (elapsed > ispindel.waitTime ) {
+      clearInterval(ispindel.ispindelUpdateInterval);
+      console.log("Toooo long since last report");
+      ispindel.removeOverlay();
+      var x = document.getElementById(ispindel.elementName);
+      if (x) x.parentNode.removeChild(x);
+
+      var itemToRemove = -1;
+      iSpindelDevices.forEach( function (item, index) {
+        if (item.name == ispindel.name) {
+          itemToRemove = index;
+        }
+      });
+      console.log("Removing item " + itemToRemove + " from " + JSON.stringify(iSpindelDevices));
+      if (itemToRemove > -1 ) iSpindelDevices.splice(itemToRemove,1);
+      console.log("Changed iSpindelDevices: " + JSON.stringify(iSpindelDevices));
+      return;
+    }
+  }
+
+  showOverlay () {
+    var el = document.getElementById(this.elementName);
+
+    // Size of enclosing DIV (css isp_sensor_update)
+    var els = {"w":128, "h":64};
+    // Size of overlay (css .isp_sol)
+    var ols = {"w":168, "h":152};
+
+    this.overlay = document.createElement("DIV");
+    this.overlay.id = this.elementName + "_overlay";
+    this.overlay.className = "isp_sol unselectable";
+    this.overlay.style.position = "fixed";
+    this.overlay.style.top = getOffsetRect(el).top - (ols.h - els.h)/2 + 'px';
+    this.overlay.style.left = getOffsetRect(el).left - (ols.w - els.w)/2 + 'px';
+    document.body.appendChild(this.overlay);
+
+    // Overlay contents
+    var olTitle = document.createElement("DIV");
+    olTitle.id = this.elementName + "_overlay_title";
+    olTitle.className = "isp_sol_title unselectable";
+    olTitle.textContent = this.name;
+    this.overlay.appendChild(olTitle);
+
+    var olTilt = document.createElement("DIV");
+    olTilt.id = this.elementName + "_overlay_tilt";
+    olTilt.className = "isp_sol_detail unselectable";
+    var olTiltKey = document.createElement("DIV");
+    olTiltKey.id = this.elementName + "_overlay_tilt_key";
+    olTiltKey.className = "isp_sol_key unselectable";
+    olTiltKey.textContent = "Tilt:";
+    var olTiltVal = document.createElement("DIV");
+    olTiltVal.id = this.elementName + "_overlay_tilt_val";
+    olTiltVal.className = "isp_sol_val unselectable";
+    olTiltVal.textContent = this.tilt + "\u00B0";
+    olTilt.appendChild(olTiltKey);
+    olTilt.appendChild(olTiltVal);
+    this.overlay.appendChild(olTilt);
+
+    var olTemp = document.createElement("DIV");
+    olTemp.id = this.elementName + "_overlay_temp";
+    olTemp.className = "isp_sol_detail unselectable";
+    var olTempKey = document.createElement("DIV");
+    olTempKey.id = this.elementName + "_overlay_temp_key";
+    olTempKey.className = "isp_sol_key unselectable";
+    olTempKey.textContent = "Temp:";
+    var olTempVal = document.createElement("DIV");
+    olTempVal.id = this.elementName + "_overlay_temp_val";
+    olTempVal.className = "isp_sol_val unselectable";
+    olTempVal.textContent = this.temp + "\u00B0";
+    olTemp.appendChild(olTempKey);
+    olTemp.appendChild(olTempVal);
+    this.overlay.appendChild(olTemp);
+
+    var olGrav = document.createElement("DIV");
+    olGrav.id = this.elementName + "_overlay_grav";
+    olGrav.className = "isp_sol_detail unselectable";
+    var olGravKey = document.createElement("DIV");
+    olGravKey.id = this.elementName + "_overlay_grav_key";
+    olGravKey.className = "isp_sol_key unselectable";
+    olGravKey.textContent = "Grav:";
+    var olGravVal = document.createElement("DIV");
+    olGravVal.id = this.elementName + "_overlay_grav_val";
+    olGravVal.className = "isp_sol_val unselectable";
+    olGravVal.textContent = this.grav.toFixed(2);
+    olGrav.appendChild(olGravKey);
+    olGrav.appendChild(olGravVal);
+    this.overlay.appendChild(olGrav);
+
+    /*
+    var olPlato = document.createElement("DIV");
+    olPlato.id = this.elementName + "_overlay_plato";
+    olPlato.className = "isp_sol_detail unselectable";
+    var olPlatoKey = document.createElement("DIV");
+    olPlatoKey.id = this.elementName + "_overlay_plato_key";
+    olPlatoKey.className = "isp_sol_key unselectable";
+    olPlatoKey.textContent = "Plato:";
+    var olPlatoVal = document.createElement("DIV");
+    olPlatoVal.id = this.elementName + "_overlay_plato_val";
+    olPlatoVal.className = "isp_sol_val unselectable";
+    olPlatoVal.textContent = this.plato.toFixed(2);
+    olPlato.appendChild(olPlatoKey);
+    olPlato.appendChild(olPlatoVal);
+    this.overlay.appendChild(olPlato);
+    */
+
+    var olBatt = document.createElement("DIV");
+    olBatt.id = this.elementName + "_overlay_batt";
+    olBatt.className = "isp_sol_detail unselectable";
+    var olBattKey = document.createElement("DIV");
+    olBattKey.id = this.elementName + "_overlay_batt_key";
+    olBattKey.className = "isp_sol_key unselectable";
+    olBattKey.textContent = "Batt:";
+    var olBattVal = document.createElement("DIV");
+    olBattVal.id = this.elementName + "_overlay_batt_val";
+    olBattVal.className = "isp_sol_val unselectable";
+    olBattVal.textContent = this.batt + "v";
+    olBatt.appendChild(olBattKey);
+    olBatt.appendChild(olBattVal);
+    this.overlay.appendChild(olBatt);
+
+    var olLast = document.createElement("DIV");
+    olLast.id = this.elementName + "_overlay_last";
+    olLast.className = "isp_sol_detail unselectable";
+    var olLastKey = document.createElement("DIV");
+    olLastKey.id = this.elementName + "_overlay_last_key";
+    olLastKey.className = "isp_sol_key unselectable";
+    olLastKey.textContent = "Last:";
+    var olLastVal = document.createElement("DIV");
+    olLastVal.id = this.elementName + "_overlay_last_val";
+    olLastVal.className = "isp_sol_val unselectable";
+    olLastVal.textContent = forHumans(parseInt((new Date() - new Date(this.stamp))/1000));
+    olLast.appendChild(olLastKey);
+    olLast.appendChild(olLastVal);
+    this.overlay.appendChild(olLast);
+
+    this.overlayUpdateInterval = setInterval(this.checkOverlayTimeout, 1000, this);
+
+    this.overlay.addEventListener("mouseout", function () {
+      this.removeOverlay();
+    }.bind(this));
+
+    this.overlay.addEventListener("dblclick", function (e) {
+      console.log("Pressed button " + e.button + " at " + this.name);
+      this.configureIspindel(this);
+    }.bind(this));
+
+  }
+
+  configureIspindel (ispindel) {
+    console.log("configureIspindel() " + ispindel.name);
+    ispindel.removeOverlay();
+    location.href = '#content_4';
+  }
+
+  checkOverlayTimeout (ispindel) {
+    //console.log("checkOverlayTimeout() " + ispindel.stamp);
+
+    var elapsed = new Date() - new Date(ispindel.stamp);
+    if (elapsed > ispindel.waitTime ) {
+      console.log("Too long since last report");
+      ispindel.removeOverlay();
+      var x = document.getElementById(ispindel.elementName);
+      if (x) x.parentNode.removeChild(x);
+      return;
+    }
+
+    var olLastVal = document.getElementById(ispindel.elementName + "_overlay_last_val");
+    if (olLastVal) {
+      olLastVal.textContent = forHumans(parseInt((new Date() - new Date(ispindel.stamp))/1000));
+    }
+  }
+  removeOverlay () {
+    var x = document.getElementById(this.elementName + "_overlay");
+    if (x) document.body.removeChild(x);
+    if (this.overlayUpdateInterval) clearInterval(this.overlayUpdateInterval);
+  }
+}
 
 // main()
 //domReady( function(){
@@ -546,6 +824,7 @@ window.onload = function () {
     socket.send(message.data);
   };
 
+ 
   function live_update(data) {
     var sensor_state = data.sensor_state;
     var relay_state = data.relay_state;
@@ -583,6 +862,8 @@ window.onload = function () {
     var tempScale = el.getAttribute('tempScale');
     el.textContent = 'Temp. (' + tempScale + '):';
 
+    var isp;
+    var existingIspNames;
     for (i=0;i<sensor_state.length;i++) {
       //console.log("sensor_state: " + sensor_state[i].sensorId + " = " + sensor_state[i].temperature);
       elementName = 'sensor_update_' + sensor_state[i].sensorId;
@@ -590,20 +871,53 @@ window.onload = function () {
         sensor_updateHolder = document.getElementById('sensor_updateHolder');
         asensor = document.createElement("DIV");
         asensor.id = elementName;
-        asensor.title = sensor_state[i].sensorId;
-        asensor.className = 'sensor_update';
-        asensor.style.width = '128px';
-        //asensor.oncontextmenu = function(e) { return false; };
         asensor.oncontextmenu = function() { return false; };
-        asensor.onmousedown = function(e) {
-          console.log("Pressed button " + e.button + " at " + this.id);
-        };
+        existingIspNames = [];
+        if (sensor_state[i].tilt) {
+          //console.log("We have an iSpindel!");
+          asensor.className = 'isp_sensor_update';
+          for (var ispi=0;ispi<iSpindelDevices.length;ispi++) {
+            console.log("checking: " + sensor_state[i].name + " vs. " + iSpindelDevices[ispi].name);
+            if (sensor_state[i].name == iSpindelDevices[ispi].name) {
+              existingIspNames.push(sensor_state[i].name);
+            }
+          }
+          console.log("Already have: " + JSON.stringify(existingIspNames));
+          console.log("iSpindelDevices was: " + JSON.stringify(iSpindelDevices));
+          if (! (sensor_state[i].name in existingIspNames)) {
+            isp = new Ispindel(sensor_state[i], asensor);
+            iSpindelDevices.push(isp);
+            addIspindelConfigData({data:{"name":isp.name,"timeout":parseInt(isp.waitTime/1000)}});
+          }
+          console.log("iSpindelDevices now: " + JSON.stringify(iSpindelDevices));
+          asensor.onmouseover = function(e) {
+            isp.showOverlay(e);
+          };
+        } else {
+          asensor.className = 'sensor_update';
+          asensor.title = sensor_state[i].sensorId;
+          asensor.onmousedown = function(e) {
+            console.log("Pressed button " + e.button + " at " + this.id);
+          };
+        }
         sensor_updateHolder.appendChild(asensor);
       }
-      if (tempScale == 'F') {
-        document.getElementById(elementName).textContent = ((parseFloat(sensor_state[i].temperature) * 9 / 5 ) + 32).toFixed(2);
+      if (sensor_state[i].tilt) {
+        isp = undefined;
+        for (var j=0;j<iSpindelDevices.length;j++) {
+          //console.log(iSpindelDevices[j].name + ", " + sensor_state[i].sensorId);
+          if (iSpindelDevices[j].name == sensor_state[i].sensorId) {
+            isp = iSpindelDevices[j];
+            break;
+          }
+        }
+        if(isp) isp.set_contents(sensor_state[i], tempScale);
       } else {
-        document.getElementById(elementName).textContent = (sensor_state[i].temperature).toFixed(2);
+        if (tempScale == 'F') {
+          document.getElementById(elementName).textContent = ((parseFloat(sensor_state[i].temperature) * 9 / 5 ) + 32).toFixed(2);
+        } else {
+          document.getElementById(elementName).textContent = (sensor_state[i].temperature).toFixed(2);
+        }
       }
     }
     // Set width of bounding box
@@ -811,6 +1125,72 @@ window.onload = function () {
     }
   }
 
+  /*
+    Ispindel config data can come from saved data
+    or from new instances appearing on the network.
+  */
+  function addIspindelConfigData(passedArgs) {
+    var isp_sensor = passedArgs.data;
+    var configItemData = passedArgs.branch || document.getElementById("configItemData_iSpindels");
+    console.log("addIspindelConfigData() args: " + JSON.stringify(passedArgs));
+
+    iSpindelWaitTimes[isp_sensor.name] = parseInt(isp_sensor.timeout);
+
+    if (configItemData.querySelector("#configItemDataValue_" + isp_sensor.name)) {
+      console.log("Already have #configItemDataValue_" + isp_sensor.name);
+      return;
+    }
+    var configItemDataValue = document.createElement('DIV');
+    configItemDataValue.id = 'configItemDataValue_' + isp_sensor.name;
+    configItemDataValue.className = 'configItemDataValue';
+
+    var configItemSensorName = document.createElement('DIV');
+    configItemSensorName.id = 'configItemSensorName_' + isp_sensor.name;
+    configItemSensorName.className = 'configItemSensorName';
+    configItemSensorName.textContent = isp_sensor.name;
+    var configItemSensorIspindel = document.createElement('INPUT');
+    configItemSensorIspindel.id = 'configItemSensorIspindel_' + isp_sensor.name;
+    configItemSensorIspindel.className = 'configItemSensorIspindel';
+    configItemSensorIspindel.setAttribute('type', 'text');
+    configItemSensorIspindel.value = isp_sensor.timeout;
+
+    // Let server know about it
+    msgobj = {
+      type:'config_change',
+      data:{
+        'iSpindels':isp_sensor.name,
+        'timeout':isp_sensor.timeout
+      }
+    };
+    sendMessage({data:JSON.stringify(msgobj)});
+
+    configItemSensorIspindel.onblur = function () {
+      console.log("key: " + this.id + "  " + this.id.replace(/.+_/,''));
+      var idata = {};
+      idata['iSpindels'] = this.id.substring(this.id.indexOf("_") + 1);
+      idata['timeout'] = this.value;
+      msgobj = {type:'config_change', data:idata};
+      sendMessage({data:JSON.stringify(msgobj)});
+
+      // Apply to local instances
+      iSpindelWaitTimes[idata['iSpindels']] = idata['timeout'];
+      console.log("Set: " + JSON.stringify(iSpindelWaitTimes));
+      console.log("Have " + iSpindelDevices.length + " iSpindelDevices to reconfigure");
+      iSpindelDevices.forEach( function (item) {
+        console.log("name " + item.name);
+        if (item.name == idata['iSpindels']) {
+          console.log("Found " + item.name);
+          item.setNewWaitTime(idata['timeout']);
+        }
+      });
+    };
+
+
+    configItemDataValue.appendChild(configItemSensorName);
+    configItemDataValue.appendChild(configItemSensorIspindel);
+    configItemData.appendChild(configItemDataValue);
+  }
+
   function build_config_entries(configItems) {
     var configEntryHolder = document.getElementById('configEntryHolder');
     for (var key in configItems) {
@@ -858,6 +1238,63 @@ window.onload = function () {
           configItemDataValue.appendChild(configItemSensorFudge);
           configItemData.appendChild(configItemDataValue);
         }
+      } else if (key == "iSpindels") {
+        console.log("Configure ISpindels");
+        var isp_sensor;
+        for (var i in configItems[key]) {
+          isp_sensor = configItems[key][i];
+          console.log("isp: " + JSON.stringify(isp_sensor));
+          addIspindelConfigData({"branch":configItemData, "data":isp_sensor});
+
+          /*
+          iSpindelWaitTimes[isp_sensor.name] = parseInt(isp_sensor.timeout);
+
+          configItemDataValue = document.createElement('DIV');
+          configItemDataValue.id = 'configItemDataValue_' + isp_sensor.name;
+          configItemDataValue.className = 'configItemDataValue';
+
+          configItemSensorName = document.createElement('DIV');
+          configItemSensorName.id = 'configItemSensorName_' + isp_sensor.name;
+          configItemSensorName.className = 'configItemSensorName';
+          configItemSensorName.textContent = isp_sensor.name;
+          var configItemSensorIspindel = document.createElement('INPUT');
+          configItemSensorIspindel.id = 'configItemSensorIspindel_' + isp_sensor.name;
+          configItemSensorIspindel.className = 'configItemSensorIspindel';
+          configItemSensorIspindel.setAttribute('type', 'text');
+          configItemSensorIspindel.value = isp_sensor.timeout;
+          configItemSensorIspindel.onblur = function () {
+            console.log("key: " + this.id + "  " + this.id.replace(/.+_/,''));
+            var idata = {};
+            idata['iSpindels'] = this.id.substring(this.id.indexOf("_") + 1);
+            idata['timeout'] = this.value;
+            msgobj = {type:'config_change', data:idata};
+            sendMessage({data:JSON.stringify(msgobj)});
+
+            // Apply to local instances
+            iSpindelWaitTimes[idata['iSpindels']] = idata['timeout'];
+            console.log("Set: " + JSON.stringify(iSpindelWaitTimes));
+            console.log("Have " + iSpindelDevices.length + " iSpindelDevices to reconfigure");
+            iSpindelDevices.forEach( function (item) {
+              console.log("name " + item.name);
+              if (item.name == idata['iSpindels']) {
+                console.log("Found " + item.name);
+                item.setNewWaitTime(idata['timeout']);
+              }
+            });
+          };
+
+
+          configItemDataValue.appendChild(configItemSensorName);
+          configItemDataValue.appendChild(configItemSensorIspindel);
+          configItemData.appendChild(configItemDataValue);
+          */
+        }
+
+        configItemName.classList.add("unselectable");
+        configItemName.title = "Double click to configure new iSpindel device";
+        configItemName.addEventListener("dblclick", function() {
+          console.log("Add new iSpindel configuration");
+        });
       } else {
         configItemDataValue = document.createElement('DIV');
         configItemDataValue.id = 'configItemDataValue_' + key;

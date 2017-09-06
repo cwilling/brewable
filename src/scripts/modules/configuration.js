@@ -10,12 +10,9 @@ var defaultConfigValues = function() {
     'multiSensorMeanWeight' : parseInt(50),
     'relayDelayPostON'      : parseInt(180),
     'relayDelayPostOFF'     : parseInt(480),
-    'iSpindelA'             : {
-      "name":"iSpindel",
-      "calfactor0":0.00438551,
-      "calfactor1":0.13647658,
-      "calfactor2":6.968821422
-    }
+    'iSpindels'             : [
+      { "name":"iSpindel", "timeout":60 }
+    ]
   };
 };
 
@@ -59,6 +56,7 @@ Configuration.prototype.loadConfigFromFile = function () {
   console.log("conf file: " + path.join(this._projectConfigDir, this._project + ".conf"));
   try {
     this._configuration = JSON.parse(fs.readFileSync(this._configFileName, 'utf8'));
+    console.log("config from file: " + JSON.stringify(this._configuration));
   }
   catch (err) {
     console.log("Error reading " + this._configFileName + ". Using default configuration");
@@ -181,6 +179,31 @@ Configuration.prototype.setFudgeFactor = function (key, val) {
   var config = this._configuration;
   config.sensorFudgeFactors[key] = val;
   fs.writeFileSync(this._configFileName, JSON.stringify(config));
+};
+
+Configuration.prototype.setIspindelTimeout = function (key, val) {
+  console.log("setIspindelTimeout() " + key + ", val " + val);
+
+  var config = this._configuration;
+  var found = false;
+  config.iSpindels.forEach( function(item) {
+    if (item.name == key ) {
+      found = true;
+      item.timeout = val;
+    }
+  });
+  if (!found) {
+    config.iSpindels.push({"name":key, "timeout":val});
+  }
+  fs.writeFileSync(this._configFileName, JSON.stringify(config));
+};
+
+Configuration.prototype.newIspindel = function (name) {
+  var config = this._configuration;
+  var defaultTimeout = defaultConfigValues().iSpindels[0].timeout;
+  config.iSpindels.push({"name":name, "timeout":defaultTimeout});
+  fs.writeFileSync(this._configFileName, JSON.stringify(config));
+  this.loadConfigFromFile();
 };
 
 /********
