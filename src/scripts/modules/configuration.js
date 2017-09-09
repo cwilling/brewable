@@ -1,8 +1,9 @@
 import fs from "fs";
 import mkdirp from "mkdirp";
 import path from 'path';
-var home = require('os').homedir();
+import os from 'os';
 
+//var home = os.homedir();
 
 var defaultConfigValues = function() {
   return {
@@ -19,7 +20,7 @@ var defaultConfigValues = function() {
 function Configuration (passed_options) {
   var options = passed_options || {};
   this._project = options.name || 'brewable';
-  this._projectConfigDir = path.join(home, this._project);
+  this._projectConfigDir = path.join(os.homedir(), this._project);
   this.topicDirs = ['jobs', 'history', 'archive'];
   this._configFileName = path.join(this._projectConfigDir, this._project + '.conf');
   this._configuration = {};

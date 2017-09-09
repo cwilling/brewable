@@ -3,7 +3,7 @@
   (https://sourceforge.net/p/raspberry-gpio-python/code/ci/default/tree/source/cpuinfo.c)
 */
 
-var fs = require("fs");
+import fs from "fs";
 
 function cpuinfo () {
   this.possibleHardware = [

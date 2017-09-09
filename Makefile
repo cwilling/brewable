@@ -27,7 +27,7 @@ TEST_FILES = test-status.js \
 
 DESTDIR ?=
 
-PKGVERSION ?= 0.3.2
+PKGVERSION ?= 0.4.0
 
 # Where any app files are installed
 RUNDIR = /usr/share/brewable

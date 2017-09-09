@@ -4,9 +4,8 @@
   nodefs internal fs interface).
 */
 
-//const cpuInfo = require('./cpuinfo');
 import cpuInfo from './cpuinfo';
-var fs = require('fs');
+import fs from 'fs';
 
 
 var cpuinfo = new cpuInfo();

@@ -1,9 +1,8 @@
 //var WebSocketServer = require('websocket').server;
 //var createServer = require("http").createServer;
-var http = require("http");
-var url = require("url");
+import http from "http";
+import url from "url";
 import { server as WebSocketServer } from "websocket";
-//import http from "http";
 
 function start(route, handle, clients, msgQueue, opts) {
   var options = opts || {};

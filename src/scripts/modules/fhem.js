@@ -66,16 +66,13 @@ class fhemDevice {
     // Check for existing configuration
     var configObj = new Configuration();
     var config = configObj.getConfiguration();
-    console.log("Configurations: " + JSON.stringify(config));
-    console.log("Configurations: " + Object.keys(config));
-    console.log("Configurations: " + Object.keys(config.iSpindels));
 
     this.timeout;
     for (var i=0;i<config.iSpindels.length;i++) {
-      console.log("Comparing " + config.iSpindels[i].name + " vs. " + raw.name);
+      //console.log("Comparing " + config.iSpindels[i].name + " vs. " + raw.name);
       if (config.iSpindels[i].name == raw.name) {
         this.timeout = 1000 * parseInt(config.iSpindels[i].timeout);
-        console.log("Comparing was OK");
+        //console.log("Comparing was OK");
         break;
       }
     }
@@ -192,7 +189,6 @@ class fhemDevice {
     60 * 60 * 1000 = 3600000
   */
   deviceReaper (caller) {
-    //console.log("Reaping ... fhemDeviceList length = " + fhemDeviceList.length);
     var reap = false;
     var i;
     for (i=0;i<fhemDeviceList.length;i++) {
@@ -200,14 +196,14 @@ class fhemDevice {
         //console.log("dur: " + (new Date() - new Date(fhemDeviceList[i].stamp)));
         //console.log("timeout = " + caller.timeout);
         if ((new Date() - new Date(fhemDeviceList[i].stamp)) > caller.timeout ) {
-          console.log("Planning removal of " + fhemDeviceList[i].name + ", caller = " + caller.name);
+          //console.log("Planning removal of " + fhemDeviceList[i].name + ", caller = " + caller.name);
           reap = true;
         }
         break;
       }
     }
     if (reap ) {
-      console.log("Removing " + fhemDeviceList[i].name + ", caller = " + caller.name);
+      console.log("Reaping " + fhemDeviceList[i].name + ", caller = " + caller.name);
       clearInterval(caller.reaper);
       fhemDeviceList.splice(i, 1);
     }

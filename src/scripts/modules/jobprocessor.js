@@ -145,11 +145,17 @@ function JobProcessor(options) {
     job_status['running'] = 'recovered';
   }
 
-  //this.jobSensorIds.forEach( function (sensor, index) {
+  // Apply fudges to job configuration
+  var fudges = options.parent.configObj.getConfiguration()['sensorFudgeFactors'];
+  var keys = Object.keys(fudges);
   this.jobSensorIds.forEach( function (sensor) {
+    for (var sensorKey in keys) {
+      if (keys[sensorKey] == jSensors[sensor].name) {
+        console.log("Setting fudge of " + keys[sensorKey] + " to " + fudges[keys[sensorKey]]);
+        jSensors[sensor].fudge = fudges[keys[sensorKey]];
+      }
+    }
     job_status['sensors'].push(sensor);
-    console.log("jobStatus() jSensors: " + JSON.stringify(jSensors));
-    //job_status[sensor] = jSensors[sensor].getTemp();
     job_status[sensor] = jSensors[sensor].temp;
   });
   console.log("job_status: " + JSON.stringify(job_status));
@@ -210,7 +216,6 @@ JobProcessor.prototype.jobStatus = function (nowTime, obj) {
   //obj.jobSensorIds.forEach( function (sensor, index) {
   obj.jobSensorIds.forEach( function (sensor) {
     job_status['sensors'].push(sensor);
-    //job_status[sensor] = obj.jobSensors[sensor].getTemp();
     job_status[sensor] = obj.jobSensors[sensor].temp;
   });
   //console.log("job_status: " + JSON.stringify(job_status));
@@ -541,11 +546,8 @@ JobProcessor.prototype.temperatureAdjust = function (target) {
     take the first sensor's reading into account at all.
   */
   if (this.jobSensorIds.length == 1) {
-    //temp = this.jobSensors[this.jobSensorIds[0]].getTemp();
     temp = this.jobSensors[this.jobSensorIds[0]].temp;
   } else if (this.jobSensorIds.length > 1) {
-    //var temp0 = parseFloat(this.jobSensors[this.jobSensorIds[0]].getTemp());
-    //var temp1 = parseFloat(this.jobSensors[this.jobSensorIds[1]].getTemp());
     var temp0 = parseFloat(this.jobSensors[this.jobSensorIds[0]].temp);
     var temp1 = parseFloat(this.jobSensors[this.jobSensorIds[1]].temp);
     var mswm = parseFloat(this.parent.configuration['multiSensorMeanWeight']);
