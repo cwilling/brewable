@@ -5,7 +5,7 @@ import fs from "fs";
 import events from "events";
 var eventEmitter = new events.EventEmitter();
 
-import SensorDevice from "./sensor";
+import ds18b20Device from "./ds18b20";
 import fhemDevice from "./fhem";
 import Relay from "./sainsmartrelay";
 import Configuration from "./configuration";
@@ -56,7 +56,7 @@ function gpioWorker (input_queue, output_queue) {
 
   // Now set sensor fudge according to updated configuration
   sensorDevices.forEach( function (sensor) {
-    sensor.setFudge(parseFloat(config['sensorFudgeFactors'][sensor.getId()]));
+    sensor.fudge = parseFloat(config['sensorFudgeFactors'][sensor.id]);
   });
 
   // Populate this.jobs from saved data
@@ -155,9 +155,9 @@ gpioWorker.prototype.sensorDevices = function () {
 
   // Obtain list of available sensor ids
   // & keep array (sensorDevices) of sensor objects
-  var sensorList = SensorDevice.sensors();
+  var sensorList = ds18b20Device.sensors();
   for (var z=0;z<sensorList.length;z++) {
-    deviceList.push(new SensorDevice(sensorList[z]));
+    deviceList.push(new ds18b20Device(sensorList[z]));
   }
 
   // Sort the device list by (slightly mangled) id's
@@ -185,7 +185,7 @@ gpioWorker.prototype.updateDevices = function () {
 
   sensorDevices.forEach( function(item) {
     //console.log("EEEEE " + item.id);
-    item.getTempAsync(function (id, result) {
+    item.getTempAsync(function (result, id) {
       var sensor_result = {id:id,result:result};
       //console.log("BBBB " + id + "  " + result);
       sensorResults.push(sensor_result);
@@ -196,7 +196,7 @@ gpioWorker.prototype.updateDevices = function () {
 /*
   for (var i=0;i<sensorDevices.length;i++) {
     item = sensorDevices[i];
-    item.getTempAsync(function (id, result) {
+    item.getTempAsync(function (result, id) {
       var result = {id:id,result:result};
       //console.log("BBBB " + id + "  " + result);
       sensorResults.push(result);
@@ -344,16 +344,25 @@ gpioWorker.prototype.toggle_relay = function (msg) {
 
 gpioWorker.prototype.config_change = function (msg) {
   console.log("config_change() Rcvd: " + JSON.stringify(msg.data));
+  var i;
   var keys = Object.keys(msg.data);
+
   if (keys[0] == 'sensorFudgeFactors') {
     console.log("config_change(): " + keys[0] + " = " + msg.data['sensorFudgeFactors'] + " (" + msg.data['fudge'] + ")");
     sensorDevices.forEach( function(item) {
-      if (item.getId() == msg.data['sensorFudgeFactors']) {
-        item.setFudge(msg.data['fudge']);
+      if (item.id == msg.data['sensorFudgeFactors']) {
+        //item.setFudge(msg.data['fudge']);
+        item.fudge = msg.data['fudge'];
       }
     });
     //this.configuration.sensorFudgeFactors[msg.data['sensorFudgeFactors']] = msg.data['fudge'];
     this.configObj.setFudgeFactor(msg.data['sensorFudgeFactors'], msg.data['fudge']);
+
+    // Apply to running jobs too
+    for (i=0;i<this.runningJobs.length;i++ ) {
+      console.log("Dealing with job: " + this.runningJobs[i].name());
+      this.runningJobs[i].resetFudges(msg.data);
+    }
   } else if (keys[0] == 'iSpindels') {
     console.log("config_change() iSpindels: "  + msg.data['iSpindels'] + " (" + msg.data['timeout'] + ")");
 
@@ -373,7 +382,7 @@ gpioWorker.prototype.config_change = function (msg) {
   } else if (keys[0] == 'multiSensorMeanWeight') {
     this.configObj.setMultiSensorMeanWeight(msg.data['multiSensorMeanWeight']);
   } else if (keys[0] == 'relayDelayPostON' || keys[0] == 'relayDelayPostOFF') {
-    for (var i=0;i<this.relay.deviceCount();i++) {
+    for (i=0;i<this.relay.deviceCount();i++) {
       if (keys[0] == 'relayDelayPostON') {
         this.relay.setDelaySetValue(i+1, 'on_time', msg.data[keys[0]]);
       } else {

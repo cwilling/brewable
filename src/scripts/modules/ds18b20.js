@@ -1,0 +1,95 @@
+import fs from 'fs';
+
+const DSNAME = Symbol();
+const FUDGE = Symbol();
+
+// ds18b20Device object
+class ds18b20Device {
+  constructor (val) {
+    //this.name = val;
+    //this.id = val;
+    this[DSNAME] = val;
+    this[FUDGE] = parseFloat(0.7);
+
+    console.log("ds18b20Device constructor() name = " + this.name);
+
+    //console.log('New ds18b20Device with id = ' + this.id + ', fudge = ' + this.fudge);
+  }
+
+  // Return a list of sensor devices
+  static sensors() {
+    var deviceDirectory = '/sys/bus/w1/devices/w1_bus_master1/w1_master_slaves';
+    var returnList = [];
+    var data = fs.readFileSync(deviceDirectory, 'utf8');
+    var devs = data.split('\n');
+    devs.pop();
+    for (var i=0;i<devs.length;i++) {
+      //console.log("substr = " + devs[i].substr(-8));
+      if (devs[i].substr(-8) != "00000000") returnList.push(devs[i]);
+    }
+    return returnList;
+  }
+
+  set name (val) {}
+  get name () { return this[DSNAME]; }
+  set id (val) {}
+  get id () { return this[DSNAME]; }
+
+  set fudge (fudgeFactor) {
+    this[FUDGE] = fudgeFactor;
+  }
+  get fudge () {
+    return this[FUDGE];
+  }
+
+  get temp () {
+    var dpath = '/sys/bus/w1/devices/' + this.id + '/w1_slave';
+    var data = fs.readFileSync(dpath, 'utf8');
+    console.log('(ds18b20Device) ' + this.id + ' data = ' + data);
+    console.log('(ds18b20Device) fudge ' + this.fudge);
+    console.log('(ds18b20Device) ' + parseFloat(data.split(' ')[20].split('=')[1]) / 1000);
+    return parseFloat(this.fudge) + parseFloat(data.split(' ')[20].split('=')[1]) / 1000;
+  }
+
+  getTempAsync (callback) {
+    var dpath = '/sys/bus/w1/devices/' + this.id + '/w1_slave';
+    var id = this.id;
+    var fudge = this.fudge;
+    fs.readFile(dpath, 'utf8', function (err, data) {
+      if (err) {
+        console.log('Error reading device data: ' + dpath);
+      } else {
+        var result = parseFloat(fudge) + parseFloat(data.split(' ')[20].split('=')[1]) / 1000;
+        callback(result, id);
+      }
+    });
+  }
+
+}
+export default ds18b20Device;
+
+
+/*
+ds18b20Device.prototype.getTempAsync = function (callback) {
+  var dpath = '/sys/bus/w1/devices/' + this.id + '/w1_slave';
+  var id = this.id;
+  var fudge = parseFloat(this.fudge);
+  fs.readFile(dpath, 'utf8', function (err, data) {
+    if (err) {
+      console.log('Error reading device data: ' + dpath);
+    } else {
+      var result = parseFloat(fudge) + parseFloat(data.split(' ')[20].split('=')[1]) / 1000;
+      callback(result, id);
+    }
+  });
+};
+
+ds18b20Device.prototype.getTemp = function () {
+  var dpath = '/sys/bus/w1/devices/' + this.id + '/w1_slave';
+  var data = fs.readFileSync(dpath, 'utf8');
+  console.log("getTemp(): " + parseFloat(data.split(' ')[20].split('=')[1]) / 1000);
+  return (parseFloat(this.fudge) +parseFloat(data.split(' ')[20].split('=')[1]) / 1000);
+};
+*/
+
+/* ex:set ai shiftwidth=2 inputtab=spaces smarttab noautotab: */

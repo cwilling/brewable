@@ -4,6 +4,8 @@ SERVER_FILES = \
 	src/scripts/brewable.js \
 	src/scripts/modules/configuration.js \
 	src/scripts/modules/cpuinfo.js \
+	src/scripts/modules/sensor.js \
+	src/scripts/modules/ds18b20.js \
 	src/scripts/modules/fhem.js \
 	src/scripts/modules/gpioworker.js \
 	src/scripts/modules/jobprocessor.js \
@@ -12,7 +14,6 @@ SERVER_FILES = \
 	src/scripts/modules/requestHandlers.js \
 	src/scripts/modules/router.js \
 	src/scripts/modules/sainsmartrelay.js \
-	src/scripts/modules/sensor.js \
 	src/scripts/modules/server.js
 
 CLIENT_FILES = \

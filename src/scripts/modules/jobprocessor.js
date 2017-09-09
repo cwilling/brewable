@@ -1,6 +1,6 @@
-var os = require('os');
-var fs = require('fs');
-var path = require('path');
+import os from 'os';
+import fs from 'fs';
+import path from 'path';
 
 
 function JobProcessor(options) {
@@ -66,14 +66,14 @@ function JobProcessor(options) {
   var jSensors = {};
   //options.parent.sensorDevices().forEach( function (sensor, index) {
   options.parent.sensorDevices().forEach( function (sensor) {
-    //console.log("ID = " + sensor.getId());
+    //console.log("ID = " + sensor.id);
     //console.log("jobSensorIds (jsIds): " + JSON.stringify(jsIds));
-    if (jsIds.indexOf(sensor.getId()) > -1 ) {
-      jSensors[sensor.getId()] = sensor;
+    if (jsIds.indexOf(sensor.id) > -1 ) {
+      jSensors[sensor.id] = sensor;
     }
   });
   this.jobSensors = jSensors;
-  //console.log("jobSensors: " + JSON.stringify(this.jobSensors));
+  console.log("jobSensors: " + JSON.stringify(this.jobSensors));
 
   var jRelays;
   if ( (isNewJob) )
@@ -148,10 +148,11 @@ function JobProcessor(options) {
   //this.jobSensorIds.forEach( function (sensor, index) {
   this.jobSensorIds.forEach( function (sensor) {
     job_status['sensors'].push(sensor);
-    //console.log("jobStatus(): " + JSON.stringify(jSensors));
-    job_status[sensor] = jSensors[sensor].getTemp();
+    console.log("jobStatus() jSensors: " + JSON.stringify(jSensors));
+    //job_status[sensor] = jSensors[sensor].getTemp();
+    job_status[sensor] = jSensors[sensor].temp;
   });
-  //console.log("job_status: " + JSON.stringify(job_status));
+  console.log("job_status: " + JSON.stringify(job_status));
   //console.log("jobRelays: " + JSON.stringify(this.jobRelays));
   //this.jobRelays.forEach( function (relay, index) {
   this.jobRelays.forEach( function (relay) {
@@ -209,10 +210,10 @@ JobProcessor.prototype.jobStatus = function (nowTime, obj) {
   //obj.jobSensorIds.forEach( function (sensor, index) {
   obj.jobSensorIds.forEach( function (sensor) {
     job_status['sensors'].push(sensor);
-    job_status[sensor] = obj.jobSensors[sensor].getTemp();
+    //job_status[sensor] = obj.jobSensors[sensor].getTemp();
+    job_status[sensor] = obj.jobSensors[sensor].temp;
   });
   //console.log("job_status: " + JSON.stringify(job_status));
-  //obj.jobRelays.forEach( function (relay, index) {
   obj.jobRelays.forEach( function (relay) {
     if (obj.relay.isOn(parseInt(relay.split(' ')[1])) ) {
       job_status[relay] = 'ON';
@@ -260,7 +261,7 @@ JobProcessor.prototype.validateSensors = function (sensorIds) {
   //console.log("sensorDevices = " + JSON.stringify(this.sensorDevices()));
   //this.sensorDevices().forEach( function (item, index) {
   this.sensorDevices().forEach( function (item) {
-    var sid = item.getId();
+    var sid = item.id;
     valid_ids.push(sid);
     //console.log("Found sensor: " + sid);
     if (sensorIds.indexOf(sid) > -1) {
@@ -288,6 +289,16 @@ JobProcessor.prototype.makeStamp = function (now) {
 JobProcessor.prototype.report = function () {
   console.log("REPORT time for job " + this.jobName + ": " + new Date().toString());
   //console.log(JSON.stringify(this.history));
+};
+
+JobProcessor.prototype.resetFudges = function (data) {
+  //console.log("Resetting fudges for job: " + this.name() + " with data: " + JSON.stringify(data));
+  for (var sensor in this.jobSensors) {
+    if (this.jobSensors[sensor].name == data["sensorFudgeFactors"]) {
+      this.jobSensors[sensor].fudge = data["fudge"];
+      console.log("resetFudges() reset = " + this.jobSensors[sensor].name + " with " + data["fudge"]);
+    }
+  }
 };
 
 /* Return the target temperature for a given time */
@@ -530,10 +541,13 @@ JobProcessor.prototype.temperatureAdjust = function (target) {
     take the first sensor's reading into account at all.
   */
   if (this.jobSensorIds.length == 1) {
-    temp = this.jobSensors[this.jobSensorIds[0]].getTemp();
+    //temp = this.jobSensors[this.jobSensorIds[0]].getTemp();
+    temp = this.jobSensors[this.jobSensorIds[0]].temp;
   } else if (this.jobSensorIds.length > 1) {
-    var temp0 = parseFloat(this.jobSensors[this.jobSensorIds[0]].getTemp());
-    var temp1 = parseFloat(this.jobSensors[this.jobSensorIds[1]].getTemp());
+    //var temp0 = parseFloat(this.jobSensors[this.jobSensorIds[0]].getTemp());
+    //var temp1 = parseFloat(this.jobSensors[this.jobSensorIds[1]].getTemp());
+    var temp0 = parseFloat(this.jobSensors[this.jobSensorIds[0]].temp);
+    var temp1 = parseFloat(this.jobSensors[this.jobSensorIds[1]].temp);
     var mswm = parseFloat(this.parent.configuration['multiSensorMeanWeight']);
     //console.log("temperatureAdjust() mswm = " + mswm);
     temp = (temp1 * mswm + temp0 * (100-mswm))/100.0;

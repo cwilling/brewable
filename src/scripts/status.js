@@ -1146,7 +1146,7 @@ window.onload = function () {
 
     var configItemSensorName = document.createElement('DIV');
     configItemSensorName.id = 'configItemSensorName_' + isp_sensor.name;
-    configItemSensorName.className = 'configItemSensorName';
+    configItemSensorName.className = 'configItemSensorName unselectable';
     configItemSensorName.textContent = isp_sensor.name;
     var configItemSensorIspindel = document.createElement('INPUT');
     configItemSensorIspindel.id = 'configItemSensorIspindel_' + isp_sensor.name;
@@ -1237,6 +1237,8 @@ window.onload = function () {
           configItemDataValue.appendChild(configItemSensorName);
           configItemDataValue.appendChild(configItemSensorFudge);
           configItemData.appendChild(configItemDataValue);
+
+          configItemDataValue.blur();
         }
       } else if (key == "iSpindels") {
         console.log("Configure ISpindels");
