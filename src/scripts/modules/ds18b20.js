@@ -1,12 +1,14 @@
 import fs from 'fs';
+import Sensor from './sensor';
 
-const DSNAME = Symbol();
+//const NAME = Symbol();
 const FUDGE = Symbol();
 
 // ds18b20Device object
-class ds18b20Device {
+class ds18b20Device extends Sensor {
   constructor (val) {
-    this[DSNAME] = val;
+    super(val);
+    //this[NAME] = val;
     this[FUDGE] = parseFloat(0.0);
 
     console.log('New ds18b20Device with id = ' + this.id + ', fudge = ' + this.fudge);
@@ -26,10 +28,10 @@ class ds18b20Device {
     return returnList;
   }
 
-  set name (val) {}
-  get name () { return this[DSNAME]; }
-  set id (val) {}
-  get id () { return this[DSNAME]; }
+  //set name (val) {}
+  //get name () { return this[NAME]; }
+  //set id (val) {}
+  //get id () { return this[NAME]; }
 
   set fudge (fudgeFactor) {
     this[FUDGE] = parseFloat(fudgeFactor);

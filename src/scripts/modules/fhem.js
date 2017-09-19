@@ -20,6 +20,7 @@
 import querystring from "querystring";
 import { eventEmitter } from "./gpioworker";
 import Configuration from "./configuration";
+import Sensor from './sensor';
 
 
 /*
@@ -56,11 +57,12 @@ var searchDeviceListByName = function (name) {
   return result;
 };
 
-class fhemDevice {
+class fhemDevice extends Sensor {
   constructor (raw) {
     console.log("Creating new fhemDevice object from: " + JSON.stringify(raw));
+    super(raw.name);
     this.raw = raw;
-    this.name = raw.name;
+    //this.name = raw.name;
     this.date = new Date();
 
     // Check for existing configuration

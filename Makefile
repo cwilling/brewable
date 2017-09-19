@@ -20,7 +20,7 @@ CLIENT_FILES = \
 	styles/brewable.css \
 	src/scripts/status.js \
 
-TEST_FILES = test-status.js \
+TEST_FILES = test-status.js rectangle.js \
 		src/scripts/modules/jsogpio.js \
 		src/scripts/modules/cpuinfo.js \
 		src/scripts/modules/sainsmartrelay.js
