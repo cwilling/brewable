@@ -153,6 +153,7 @@ function forHumans ( seconds ) {
 class Ispindel {
   constructor (report, parent) {
     this.name = report.sensorId;
+    this.chipId = report.chipId;
     this.tilt = report.tilt;
     this.temp = report.temperature;
     this.grav = report.grav;
@@ -172,12 +173,15 @@ class Ispindel {
     console.log("waitTime should be = " + iSpindelWaitTimes[report.sensorId]);
     this.waitTime = 1000 * iSpindelWaitTimes[report.sensorId] || defaultWaitTime;
 
-    var isp_temp, isp_tilt, isp_grav, isp_batt, isp_stamp;
+    var isp_temp, isp_grav;
+    /*
+    var isp_batt, isp_stamp, isp_tilt;
 
     isp_tilt = document.createElement("DIV");
     isp_tilt.id = this.elementName + "_tilt";
     isp_tilt.className = "isp_entry";
     this.parent.appendChild(isp_tilt);
+    */
 
     isp_temp = document.createElement("DIV");
     isp_temp.id = this.elementName + "_temp";
@@ -204,7 +208,7 @@ class Ispindel {
     this.grav = state.grav;
     document.getElementById(this.elementName + "_grav").textContent = (state.grav).toFixed(2);
     this.tilt = state.tilt;
-    document.getElementById(this.elementName + "_tilt").textContent = (state.tilt).toFixed(2);
+    //document.getElementById(this.elementName + "_tilt").textContent = (state.tilt).toFixed(2);
     this.batt = state.batt;
 
     this.stamp = state.stamp;
@@ -220,7 +224,7 @@ class Ispindel {
   }
 
   checkIspindelTimeout(ispindel) {
-    console.log("Checking iSpindel timeout " + ispindel.waitTime);
+    //console.log("Checking iSpindel timeout " + ispindel.waitTime);
 
     var elapsed = new Date() - new Date(ispindel.stamp);
     if (elapsed > ispindel.waitTime ) {
@@ -407,6 +411,7 @@ class Ispindel {
 window.onload = function () {
 
   var profilesLoadedEvent = new Event('profilesLoadedEvent');
+  var foundNewSensor = new Event('foundNewSensor');
 
   // Layout skeleton
   var main_content = document.createElement('DIV');
@@ -542,6 +547,9 @@ window.onload = function () {
   var jobSensorsHolder = document.createElement('DIV');
   jobSensorsHolder.id = 'jobSensorsHolder';
   jobSensorsHolder.className = 'jobDevicesHolder';
+  jobSensorsHolder.addEventListener('foundNewSensor', function () {
+    createSensorSelector();
+  });
   jobItemsHolder.appendChild(jobSensorsHolder);
 
   // Item 6: Relays
@@ -786,7 +794,8 @@ window.onload = function () {
         for (i=0;i<jmsg.data.length;i++) {
           availableSensors.push(jmsg.data[i]);
         }
-        createSensorSelector(availableSensors);
+        createSensorSelector();
+        //jobSensorsHolder.dispatchEvent(foundNewSensor);
       } else if (jmsg.type === 'relay_list' ) {
         console.log("RCVD relay_list " + message.data);
         availableRelays = [];
@@ -829,7 +838,7 @@ window.onload = function () {
     var sensor_state = data.sensor_state;
     var relay_state = data.relay_state;
     var i;
-    //console.log("Rcvd live_update");
+    //console.log("Rcvd live_update " + JSON.stringify(data));
 
     // Label for Sensors
     var elementName = 'sensor_update_title';
@@ -874,7 +883,7 @@ window.onload = function () {
         asensor.oncontextmenu = function() { return false; };
         existingIspNames = [];
         if (sensor_state[i].tilt) {
-          //console.log("We have an iSpindel!");
+          console.log("We have an iSpindel!");
           asensor.className = 'isp_sensor_update';
           for (var ispi=0;ispi<iSpindelDevices.length;ispi++) {
             console.log("checking: " + sensor_state[i].name + " vs. " + iSpindelDevices[ispi].name);
@@ -888,12 +897,15 @@ window.onload = function () {
             isp = new Ispindel(sensor_state[i], asensor);
             iSpindelDevices.push(isp);
             addIspindelConfigData({data:{"name":isp.name,"timeout":parseInt(isp.waitTime/1000)}});
+            var selector = document.getElementById("jobSensorsHolder");
+            selector.dispatchEvent(foundNewSensor);
           }
           console.log("iSpindelDevices now: " + JSON.stringify(iSpindelDevices));
           asensor.onmouseover = function(e) {
             isp.showOverlay(e);
           };
         } else {
+          // Not an iSpindel
           asensor.className = 'sensor_update';
           asensor.title = sensor_state[i].sensorId;
           asensor.onmousedown = function(e) {
@@ -911,7 +923,9 @@ window.onload = function () {
             break;
           }
         }
-        if(isp) isp.set_contents(sensor_state[i], tempScale);
+        if (isp) {
+          isp.set_contents(sensor_state[i], tempScale);
+        }
       } else {
         if (tempScale == 'F') {
           document.getElementById(elementName).textContent = ((parseFloat(sensor_state[i].temperature) * 9 / 5 ) + 32).toFixed(2);
@@ -3172,7 +3186,8 @@ window.onload = function () {
       var cell = document.getElementById("as_" + ii);
       //console.log("checking " + document.getElementById("label_as_" + ii).textContent);
       if ( cell.checked ) {
-        useSensors.push(document.getElementById("label_as_" + ii).textContent);
+        //useSensors.push(document.getElementById("label_as_" + ii).textContent);
+        useSensors.push(document.getElementById("label_as_" + ii).textContent.toString().split(" ").pop());
       }
     }
     //console.log("Sensors checked: " + useSensors);
@@ -3222,9 +3237,10 @@ window.onload = function () {
   };
 
   // Create a sensor selector based on data from server (availableSensors)
-  function createSensorSelector(sensors) {
-    console.log("Reached createSensorSelector() " + sensors);
+  function createSensorSelector() {
+    console.log("Reached createSensorSelector() " + availableSensors);
 
+    var i, selectorItem, check, checkLabel;
     var selector = document.getElementById("jobSensorsHolder");
 
     // First remove existing list elements
@@ -3237,23 +3253,47 @@ window.onload = function () {
     sensorSelectorLabel.id = 'sensorSelectorLabel';
     sensorSelectorLabel.className = 'selectorLabel unselectable';
 
-    selector.appendChild(sensorSelectorLabel);
+    for(i=0;i<availableSensors.length;i++) {
+      console.log("Adding sensor: " + availableSensors[i]);
 
-    for(var i=0;i<sensors.length;i++) {
-      console.log("Adding sensor: " + sensors[i]);
-
-      var selectorItem = document.createElement("DIV");
+      selectorItem = document.createElement("DIV");
       selectorItem.id = 'sensorSelectorItem_' + i;
       selectorItem.className = 'sensorSelectorItem';
 
-      var check = document.createElement("INPUT");
+      check = document.createElement("INPUT");
       check.type = "checkbox";
       check.id = "as_" + i;
 
-      var checkLabel = document.createElement("LABEL");
+      checkLabel = document.createElement("LABEL");
       checkLabel.setAttribute("for", "as_" + i);
-      checkLabel.textContent = sensors[i];
+      checkLabel.textContent = availableSensors[i];
       checkLabel.id = "label_as_" + i;
+      checkLabel.className = "unselectable";
+
+      selectorItem.appendChild(check);
+      selectorItem.appendChild(checkLabel);
+
+      selector.appendChild(selectorItem);
+    }
+    var base = i;
+    // Add iSpindels
+    console.log("Have " + iSpindelDevices.length + " iSpindels to add");
+    for(i=0;i<iSpindelDevices.length;i++) {
+      console.log("Adding iSpindel sensor: " + iSpindelDevices[i].chipId);
+
+      selectorItem = document.createElement("DIV");
+      selectorItem.id = 'sensorSelectorItem_' + (i + base);
+      selectorItem.className = 'sensorSelectorItem';
+
+      check = document.createElement("INPUT");
+      check.type = "checkbox";
+      check.id = "as_" + (i+base);
+
+      checkLabel = document.createElement("LABEL");
+      checkLabel.setAttribute("for", "as_" + (i+base));
+      checkLabel.textContent = "iSpindel " + iSpindelDevices[i].chipId;
+      checkLabel.title = iSpindelDevices[i].name;
+      checkLabel.id = "label_as_" + (i+base);
       checkLabel.className = "unselectable";
 
       selectorItem.appendChild(check);

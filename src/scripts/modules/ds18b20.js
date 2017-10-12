@@ -3,6 +3,7 @@ import Sensor from './sensor';
 
 //const NAME = Symbol();
 const FUDGE = Symbol();
+const CHIPID = Symbol();
 
 // ds18b20Device object
 class ds18b20Device extends Sensor {
@@ -10,6 +11,7 @@ class ds18b20Device extends Sensor {
     super(val);
     //this[NAME] = val;
     this[FUDGE] = parseFloat(0.0);
+    this[CHIPID] = val;
 
     console.log('New ds18b20Device with id = ' + this.id + ', fudge = ' + this.fudge);
   }
@@ -65,6 +67,13 @@ class ds18b20Device extends Sensor {
 
   get temp () {
     return this.getTemp();
+  }
+
+  set chipId (val) {
+    this[CHIPID] = val;
+  }
+  get chipId () {
+    return this[CHIPID];
   }
 
 }

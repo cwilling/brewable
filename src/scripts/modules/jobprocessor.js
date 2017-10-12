@@ -64,16 +64,16 @@ function JobProcessor(options) {
   this.jobSensorIds = jsIds;
 
   var jSensors = {};
-  //options.parent.sensorDevices().forEach( function (sensor, index) {
   options.parent.sensorDevices().forEach( function (sensor) {
-    //console.log("ID = " + sensor.id);
-    //console.log("jobSensorIds (jsIds): " + JSON.stringify(jsIds));
-    if (jsIds.indexOf(sensor.id) > -1 ) {
-      jSensors[sensor.id] = sensor;
+    console.log("ID = " + sensor.chipId);
+    console.log("jobSensorIds (jsIds): " + JSON.stringify(jsIds));
+    if (jsIds.indexOf(sensor.chipId.toString()) > -1 ) {
+      console.log("Matched: " + sensor.chipId.toString());
+      jSensors[sensor.chipId] = sensor;
     }
   });
   this.jobSensors = jSensors;
-  console.log("jobSensors: " + JSON.stringify(this.jobSensors));
+  //console.log("jobSensors: " + JSON.stringify(this.jobSensors));
 
   var jRelays;
   if ( (isNewJob) )
@@ -148,7 +148,9 @@ function JobProcessor(options) {
   // Apply fudges to job configuration
   var fudges = options.parent.configObj.getConfiguration()['sensorFudgeFactors'];
   var keys = Object.keys(fudges);
+  console.log("YYYYY");
   this.jobSensorIds.forEach( function (sensor) {
+    console.log("type: " + typeof(jSensors[sensor]));
     for (var sensorKey in keys) {
       if (keys[sensorKey] == jSensors[sensor].name) {
         console.log("Setting fudge of " + keys[sensorKey] + " to " + fudges[keys[sensorKey]]);
@@ -182,7 +184,8 @@ function JobProcessor(options) {
   // Interpolation choices are "linear" or "step-after"
   this.target_interpolation = 'linear';
 
-//  if ( (!isNewJob) ) return;
+  //if ( (!isNewJob) ) return;
+
 }
 export default JobProcessor;
 
@@ -213,7 +216,6 @@ JobProcessor.prototype.jobStatus = function (nowTime, obj) {
     'elapsed'    : Math.floor((nowTime - obj.startTime)/1000),
     'sensors'    : []
   };
-  //obj.jobSensorIds.forEach( function (sensor, index) {
   obj.jobSensorIds.forEach( function (sensor) {
     job_status['sensors'].push(sensor);
     job_status[sensor] = obj.jobSensors[sensor].temp;
@@ -257,18 +259,20 @@ JobProcessor.prototype.convertProfileTimes = function (profile) {
   return profile;
 };
 
-/* Confirm specififed sensors exist in the system */
+/* Confirm specified sensors exist in the system */
 JobProcessor.prototype.validateSensors = function (sensorIds) {
   var valid_ids = [];
   var valid_sensorIds = [];
   console.log("Validate " + sensorIds);
 
   //console.log("sensorDevices = " + JSON.stringify(this.sensorDevices()));
-  //this.sensorDevices().forEach( function (item, index) {
   this.sensorDevices().forEach( function (item) {
-    var sid = item.id;
+    console.log("Considering A sensor: " + item.chipId);
+    //var sid = item.chipId.toString().split(" ").pop();
+    var sid = item.chipId.toString();
+    console.log("Considering B sensor: " + sid + " (" + typeof(sid) + ")");
     valid_ids.push(sid);
-    //console.log("Found sensor: " + sid);
+    console.log("Found sensor: " + sid);
     if (sensorIds.indexOf(sid) > -1) {
       valid_sensorIds.push(sid);
     }

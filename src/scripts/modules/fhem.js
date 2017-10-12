@@ -47,6 +47,18 @@ var calcPlato = function (tilt, temp) {
 };
 
 var fhemDeviceList = [];
+var searchDeviceListByChipId = function (Id) {
+  var result;
+  for (var i=0;i<fhemDeviceList.length;i++) {
+    //console.log("Comparing " + Id + " with " + fhemDeviceList[i].chipId);
+    if (fhemDeviceList[i].raw.chipId == Id) {
+      return fhemDeviceList[i];
+    }
+  }
+  return result;
+};
+
+/*
 var searchDeviceListByName = function (name) {
   var result;
   for (var i=0;i<fhemDeviceList.length;i++) {
@@ -56,6 +68,7 @@ var searchDeviceListByName = function (name) {
   }
   return result;
 };
+*/
 
 class fhemDevice extends Sensor {
   constructor (raw) {
@@ -63,6 +76,7 @@ class fhemDevice extends Sensor {
     super(raw.name);
     this.raw = raw;
     //this.name = raw.name;
+    //this.chipId = raw.chipId;
     this.date = new Date();
 
     // Check for existing configuration
@@ -107,7 +121,7 @@ class fhemDevice extends Sensor {
       return;
     }
 
-    if (command.length != 6 ) {
+    if (command.length < 6 ) {
       console.log("newReading() Incorrect element count while parsing object: " + JSON.stringify(command));
       return;
     }
@@ -116,11 +130,13 @@ class fhemDevice extends Sensor {
     obj.temp = parseFloat(command[3]);
     obj.batt = parseFloat(command[4]);
     obj.grav = parseFloat(command[5]);
-    obj.plato = calcPlato(obj.tilt, obj.temp);
+    obj.chipId = parseFloat(command[6]);
+    console.log("chipId = " + obj.chipId);
+    //obj.plato = calcPlato(obj.tilt, obj.temp);
 
-    var device = searchDeviceListByName(obj.name);
+    var device = searchDeviceListByChipId(obj.chipId);
     if (device) {
-      console.log("Already have device: " + device.name + " at " + device.stamp);
+      console.log("Already have device: " + device.raw.chipId + " at " + device.stamp);
       device.update(obj);
     } else {
       console.log("Adding new device");
@@ -165,7 +181,7 @@ class fhemDevice extends Sensor {
     then fresh is true, otherwise false
   */
   get fresh () {
-    var device = searchDeviceListByName(this.name);
+    var device = searchDeviceListByChipId(this.raw.chipId);
     if (! device) return false;
 
     if ((new Date() - new Date(device.stamp)) < parseInt(device.timeout/5) ) {

@@ -7,6 +7,7 @@ var eventEmitter = new events.EventEmitter();
 
 import ds18b20Device from "./ds18b20";
 import fhemDevice from "./fhem";
+import iSpindelDevice from "./iSpindel";
 import Relay from "./sainsmartrelay";
 import Configuration from "./configuration";
 import JobProcessor from "./jobprocessor";
@@ -74,10 +75,18 @@ function gpioWorker (input_queue, output_queue) {
     console.log("No job templates available: " + err);
   }
 
-  // Running & stopped JobProcessor instances
+  /*
+    Running & stopped JobProcessor instances
+
+    Since iSpindel support, we have to deal with jobs for
+    which the required iSpindel isn't available yet. We'll
+    not start those jobs yet but put them into this.waitingJobs[] 
+    which can be checked whenever a new iSpindel device becomes available.
+  */
   this.runningJobs = [];
   this.stoppedJobs = [];
   this.recoveredJobs = [];
+  this.waitingJobs = [];        // Not real jobs, just jobData (headers & updates)
 
   this.runDir = this.configObj.dir('jobs');
   this.historyDir = this.configObj.dir('history');
@@ -110,12 +119,21 @@ function gpioWorker (input_queue, output_queue) {
             var jobName = header.jobName;
             console.log("job jobName: " + jobName + " has " + header.updates.length + " updates");
 
-            if ( (! this.setupJobRun({'jobData': header})) ) {
-              console.log("Couldn't start job " + jobName);
+            // Check that all sensor devices are available
+            console.log("Need devices: " + header.jobSensorIds + " for job: " + jobName);
+
+            var haveAllSensors = false;
+            if (haveAllSensors) {
+              if ( (! this.setupJobRun({'jobData': header})) ) {
+                console.log("Couldn't start job " + jobName);
+              } else {
+                console.log("Started job " + jobName);
+              }
+              //console.log(this.recoveredJobs.length + " jobs recovered");
             } else {
-              console.log("Started job " + jobName);
+              console.log("Can't start job " + jobName + " due to lack of required sensor device(s)");
+              this.waitingJobs.push({'jobData': header});
             }
-            //console.log(this.recoveredJobs.length + " jobs recovered");
           }
         }.bind(this));
       }.bind(this));
@@ -125,8 +143,47 @@ function gpioWorker (input_queue, output_queue) {
   eventEmitter.on('sensor_read', allSensorsRead);
   eventEmitter.on('msg_waiting', this.processMessage.bind(this));
 
+  /* This was just testing
   eventEmitter.on('fhem_reading', function(obj) {
     this.fhemReading(obj);
+  }.bind(this));
+  eventEmitter.on('iSpindel_reading', function(obj) {
+    this.iSpindelReading(obj);
+  }.bind(this));
+  */
+
+  /*
+    Any time a new device appears, we check if is needed by any job that
+    couldn't start due to missing sensor devices (this.waitingJobs[]).
+  */
+  eventEmitter.addListener('iSpindel_new_device', function () {
+    console.log("NEW NEW NEW NEW NEW NEW iSpindel device ");
+    var i = this.waitingJobs.length;
+    while (i--) {
+      var header = this.waitingJobs[i].jobData;
+      var devicesNeeded = header.jobSensorIds.length;
+      console.log("Checking: " + header.jobName + ". Needs: " + devicesNeeded + " devices. " + header.jobSensorIds);
+      var devices = this.sensorDevices();
+      devices.forEach( function (item) {
+        console.log("Have device: " + item.chipId + ", type: " + typeof(item.chipId));
+        if (header.jobSensorIds.indexOf(item.chipId.toString()) > -1) {
+          devicesNeeded -= 1;
+          console.log("Still need " + devicesNeeded + " devices");
+        }
+      });
+      console.log("(EOL) still need " + devicesNeeded + " devices");
+      if (devicesNeeded < 1) {
+        console.log("We could restart this job ...");
+        // We should actually check that ALL sensors are now available (not just this particular iSpindel).
+        if ( (! this.setupJobRun({'jobData': header})) ) {
+          console.log("Couldn't start job " + header.jobName);
+        } else {
+          console.log("Started job " + header.jobName);
+          this.waitingJobs.splice(i, 1);
+        }
+      }
+    }
+    console.log("waiting jobs = " + this.waitingJobs.length);
   }.bind(this));
 
 } 
@@ -140,6 +197,16 @@ export { gpioWorker, eventEmitter };
   any/all devices (including the one whose data report triggered the
   'fhem_reading' event which is probably what brought us here.
 */
+gpioWorker.prototype.iSpindelReading = function (reading) {
+  //console.log("iSpindelReading() " + JSON.stringify(reading));
+  var name = reading.name;
+  var tilt = reading.tilt;
+  var temp = reading.temp;
+  var batt = reading.batt;
+  var grav = reading.grav;
+  var chipId = reading.chipId;
+  console.log("iSpindelReading() " + chipId + ", " + name + ", " + tilt + ", " + temp + ", " + batt + ", " + grav);
+};
 gpioWorker.prototype.fhemReading = function (reading) {
   //console.log("fhemReading() " + JSON.stringify(reading));
   var name = reading.name;
@@ -147,16 +214,18 @@ gpioWorker.prototype.fhemReading = function (reading) {
   var temp = reading.temp;
   var batt = reading.batt;
   var grav = reading.grav;
-  console.log("fhemReading() " + name + ", " + tilt + ", " + temp + ", " + batt + ", " + grav);
+  var chipId = reading.chipId;
+  console.log("fhemReading() " + chipId + ", " + name + ", " + tilt + ", " + temp + ", " + batt + ", " + grav);
 };
 
 gpioWorker.prototype.sensorDevices = function () {
   var deviceList = [];
+  var z;
 
   // Obtain list of available sensor ids
   // & keep array (sensorDevices) of sensor objects
   var sensorList = ds18b20Device.sensors();
-  for (var z=0;z<sensorList.length;z++) {
+  for (z=0;z<sensorList.length;z++) {
     deviceList.push(new ds18b20Device(sensorList[z]));
   }
 
@@ -166,7 +235,17 @@ gpioWorker.prototype.sensorDevices = function () {
     var bval = parseInt(b.id.substr(0,b.id.search("-")),16) + parseInt(b.id.substr(b.id.search("-") + 1),16);
     return aval - bval;
   });
-  console.log("deviceList = " + JSON.stringify(deviceList));
+
+  // Add iSpindel devices
+  console.log("Adding iSpindel devices");
+  var iSpindelList = iSpindelDevice.sensors();
+  for (z=0;z<iSpindelList.length;z++) {
+    //deviceList.push(new iSpindelDevice(iSpindelList[z]));
+    console.log("Adding iSpindel " + iSpindelList[z].chipId);
+    deviceList.push(iSpindelList[z]);
+  }
+
+  //console.log("deviceList = " + JSON.stringify(deviceList));
   return deviceList;
 };
 
@@ -220,10 +299,17 @@ gpioWorker.prototype.liveUpdate = function () {
   });
   //console.log("liveUpdate(): " + JSON.stringify(sensor_state));
 
+  var iSpindelDevices = iSpindelDevice.devices();
+  iSpindelDevices.forEach( function (item) {
+    if (item.fresh) {
+      //console.log("iSpindel device: " + item.name + ", " + item.stamp);
+      sensor_state.push({'sensorId':item.name, 'chipId':item.chipId, 'temperature':item.temp, 'tilt':item.tilt, 'batt':item.batt, 'grav':item.grav, 'stamp':item.stamp});
+    }
+  });
   var fhemDevices = fhemDevice.devices();
   fhemDevices.forEach( function (item) {
     if (item.fresh) {
-      console.log("FHEM device: " + item.name + ", " + item.stamp);
+      //console.log("FHEM device: " + item.name + ", " + item.stamp);
       sensor_state.push({'sensorId':item.name, 'temperature':item.temp, 'tilt':item.tilt, 'batt':item.batt, 'grav':item.grav, 'stamp':item.stamp});
     }
   });
@@ -370,6 +456,14 @@ gpioWorker.prototype.config_change = function (msg) {
     this.configObj.setIspindelTimeout(msg.data['iSpindels'], msg.data['timeout']);
 
     // Now apply to the device itself
+    var iSpindelDevices = iSpindelDevice.devices();
+    iSpindelDevices.forEach( function (item) {
+      console.log("reconfig iSpindel device: " + item.name + ", " + item.stamp);
+      if (item.name == msg.data['iSpindels']) {
+        console.log("Found the right one:" + item.name);
+        item.setNewTimeout(msg.data['timeout']);
+      }
+    });
     var fhemDevices = fhemDevice.devices();
     fhemDevices.forEach( function (item) {
       console.log("reconfig FHEM device: " + item.name + ", " + item.stamp);

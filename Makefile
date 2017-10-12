@@ -6,6 +6,7 @@ SERVER_FILES = \
 	src/scripts/modules/cpuinfo.js \
 	src/scripts/modules/sensor.js \
 	src/scripts/modules/ds18b20.js \
+	src/scripts/modules/iSpindel.js \
 	src/scripts/modules/fhem.js \
 	src/scripts/modules/gpioworker.js \
 	src/scripts/modules/jobprocessor.js \

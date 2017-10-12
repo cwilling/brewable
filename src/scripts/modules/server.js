@@ -9,12 +9,32 @@ function start(route, handle, clients, msgQueue, opts) {
   var port = options.port || 8888;
 
   function onRequest(request, response) {
+    var query = '';
     var pathname = url.parse(request.url).pathname;
-    var query = url.parse(request.url).query;
-    console.log("Request for " + pathname + " received from " + request.connection.remoteAddress);
-    console.log("Request query = " + query);
+    //console.log("Request for " + pathname + " received from " + request.connection.remoteAddress + " at: " + (new Date()));
 
-    route(handle, pathname, query, response);
+    if (request.method == 'POST') {
+      //console.log("Process POST!");
+      request.addListener("data", function(postDataChunk) {
+        query += postDataChunk;
+        //console.log("Received POST data chunk '"+ postDataChunk + "'.");
+        if (query.length > 1e6) {
+          query = '';
+          response.writeHead(413, {'Content-Type': 'text/plain'}).end();
+          request.connection.destroy();
+        }
+      });
+      request.addListener("end", function() {
+        //console.log("Request query (POST) = " + query);
+        route(handle, pathname, query, response);
+      });
+    } else {
+      // Hopefully a GET
+      query = url.parse(request.url).query;
+      //console.log("Request query = " + query);
+      route(handle, pathname, query, response);
+    }
+
   }
 
   var server = http.createServer(onRequest).listen(port);

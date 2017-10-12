@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from 'path';
 import { newReading } from './fhem.js';
+import { newReading as newiSpindelReading } from './iSpindel.js';
 
 function index(response) {
   console.log("Request handler 'index' was called.");
@@ -39,6 +40,12 @@ function favicon(response) {
   });
 }
 
+function iSpindel(response, query) {
+  //console.log("Request handler 'iSpindel' was called with query: " + query);
+  newiSpindelReading(query);
+  response.writeHead(200, {"Content-Type": "text/plain"});
+  response.end();
+}
 function fhem(response, query) {
   console.log("Request handler 'fhem' was called with query: " + query);
   newReading(query);
@@ -88,6 +95,6 @@ function ws(response) {
   response.end();
 }
 
-export { status, css, index, favicon, ws, fhem };
+export { status, css, index, favicon, ws, fhem, iSpindel };
 
 /* ex:set ai shiftwidth=2 inputtab=spaces smarttab noautotab: */
