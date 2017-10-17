@@ -27,7 +27,11 @@ var profileData = [];
 var profileDisplayData = [];        // "processed" data for display
 var profileLinearScaleY = [];
 var profileLinearScaleX = [];
-var temperatureColours = ["blue", "green", "red", "orange"];
+var temperatureStrokeWidth = 2;
+var gravityStrokeWidth = 3;
+var temperatureColours = ["blue", "green", "red", "fuchsia"];
+//var gravityColours = ["blue", "green", "red", "fuchsia"];
+var gravityColours = ["navy", "teal", "maroon", "purple"];
 var profileLineColours = ["green", "red", "orange", "blue"];
 var pfCtrlKey = false;
 var pfCurrentDot = {"id":"none"};
@@ -149,6 +153,30 @@ function forHumans ( seconds ) {
   return returntext.trim();
 } 
 
+var searchDeviceListByChipId = function (Id) {
+  var duplicates = 0;
+  var i, duplicate, result;
+  do {
+    for (i=0;i<iSpindelDevices.length;i++) {
+      if (iSpindelDevices[i].raw.chipId == Id) {
+        if (result) {
+          duplicate = i;
+          duplicates += 1;
+        } else {
+          result = iSpindelDevices[i];
+        }
+      }
+    }
+    if (duplicates > 0) {
+      console.log("Removing duplicate device: " + iSpindelDevices[duplicate].raw.chipId);
+      iSpindelDevices.splice(duplicate, 1);
+      duplicates -= 1;
+    }
+  } while (duplicates > 0);
+
+  return result;
+};
+
 
 class Ispindel {
   constructor (report, parent) {
@@ -216,7 +244,7 @@ class Ispindel {
   }
 
   setNewWaitTime(val) {
-    console.log("Setting new timeout (" + val + ") for " + this.name);
+    console.log("Setting new timeout (" + val + ") for " + this.chipId);
 
     var newWaitTime = parseInt(val);
     if (newWaitTime < 10) return;
@@ -236,7 +264,8 @@ class Ispindel {
 
       var itemToRemove = -1;
       iSpindelDevices.forEach( function (item, index) {
-        if (item.name == ispindel.name) {
+        //if (item.name == ispindel.name) {
+        if (item.chipId == ispindel.chipId) {
           itemToRemove = index;
         }
       });
@@ -267,7 +296,8 @@ class Ispindel {
     var olTitle = document.createElement("DIV");
     olTitle.id = this.elementName + "_overlay_title";
     olTitle.className = "isp_sol_title unselectable";
-    olTitle.textContent = this.name;
+    //olTitle.textContent = this.name;
+    olTitle.textContent = this.chipId;
     this.overlay.appendChild(olTitle);
 
     var olTilt = document.createElement("DIV");
@@ -369,7 +399,7 @@ class Ispindel {
     }.bind(this));
 
     this.overlay.addEventListener("dblclick", function (e) {
-      console.log("Pressed button " + e.button + " at " + this.name);
+      console.log("Pressed button " + e.button + " at " + this.chipId);
       this.configureIspindel(this);
     }.bind(this));
 
@@ -872,7 +902,6 @@ window.onload = function () {
     el.textContent = 'Temp. (' + tempScale + '):';
 
     var isp;
-    var existingIspNames;
     for (i=0;i<sensor_state.length;i++) {
       //console.log("sensor_state: " + sensor_state[i].sensorId + " = " + sensor_state[i].temperature);
       elementName = 'sensor_update_' + sensor_state[i].sensorId;
@@ -881,25 +910,23 @@ window.onload = function () {
         asensor = document.createElement("DIV");
         asensor.id = elementName;
         asensor.oncontextmenu = function() { return false; };
-        existingIspNames = [];
         if (sensor_state[i].tilt) {
           console.log("We have an iSpindel!");
-          asensor.className = 'isp_sensor_update';
-          for (var ispi=0;ispi<iSpindelDevices.length;ispi++) {
-            console.log("checking: " + sensor_state[i].name + " vs. " + iSpindelDevices[ispi].name);
-            if (sensor_state[i].name == iSpindelDevices[ispi].name) {
-              existingIspNames.push(sensor_state[i].name);
-            }
-          }
-          console.log("Already have: " + JSON.stringify(existingIspNames));
           console.log("iSpindelDevices was: " + JSON.stringify(iSpindelDevices));
-          if (! (sensor_state[i].name in existingIspNames)) {
+          asensor.className = 'isp_sensor_update';
+
+          var device = searchDeviceListByChipId(sensor_state[i].chipId);
+          if (device) {
+            console.log("Already have device: " + device.chipId);
+          } else {
+            console.log("Adding new device");
             isp = new Ispindel(sensor_state[i], asensor);
             iSpindelDevices.push(isp);
-            addIspindelConfigData({data:{"name":isp.name,"timeout":parseInt(isp.waitTime/1000)}});
+            addIspindelConfigData({data:{"chipId":isp.chipId, "name":isp.name, "timeout":parseInt(isp.waitTime/1000)}});
             var selector = document.getElementById("jobSensorsHolder");
             selector.dispatchEvent(foundNewSensor);
           }
+
           console.log("iSpindelDevices now: " + JSON.stringify(iSpindelDevices));
           asensor.onmouseover = function(e) {
             isp.showOverlay(e);
@@ -918,7 +945,8 @@ window.onload = function () {
         isp = undefined;
         for (var j=0;j<iSpindelDevices.length;j++) {
           //console.log(iSpindelDevices[j].name + ", " + sensor_state[i].sensorId);
-          if (iSpindelDevices[j].name == sensor_state[i].sensorId) {
+          //if (iSpindelDevices[j].name == sensor_state[i].sensorId) {
+          if (iSpindelDevices[j].chipId == sensor_state[i].chipId) {
             isp = iSpindelDevices[j];
             break;
           }
@@ -1116,7 +1144,7 @@ window.onload = function () {
       runningData[longName] = saveData;
       //console.log("XXX " + JSON.stringify(runningData[longName]));
     });
-    //console.log("ZZZ");
+    console.log("ZZZ");
     updateJobsList(longJobNames, 'running_jobsHolder');
   }
 
@@ -1148,7 +1176,7 @@ window.onload = function () {
     var configItemData = passedArgs.branch || document.getElementById("configItemData_iSpindels");
     console.log("addIspindelConfigData() args: " + JSON.stringify(passedArgs));
 
-    iSpindelWaitTimes[isp_sensor.name] = parseInt(isp_sensor.timeout);
+    iSpindelWaitTimes[isp_sensor.chipId] = parseInt(isp_sensor.timeout);
 
     if (configItemData.querySelector("#configItemDataValue_" + isp_sensor.name)) {
       console.log("Already have #configItemDataValue_" + isp_sensor.name);
@@ -1173,6 +1201,7 @@ window.onload = function () {
       type:'config_change',
       data:{
         'iSpindels':isp_sensor.name,
+        'chipId':isp_sensor.chipId,
         'timeout':isp_sensor.timeout
       }
     };
@@ -1398,8 +1427,10 @@ window.onload = function () {
     console.log("updateJobHistoryData() jobName: " + header[0]['jobName'] + " " + header.length);
     console.log("updateJobHistoryData() updates: " + updates + " " + updates.length);
     for (var i=0;i<updates.length;i++) {
-      console.log("updateJobHistoryData() temp at " + parseFloat(updates[i]['elapsed']).toFixed(2) + " = " + updates[i][updates[i]['sensors'][0]]);
+      //console.log("updateJobHistoryData() temp at " + parseFloat(updates[i]['elapsed']).toFixed(2) + " = " + updates[i][updates[i]['sensors'][0]]);
+      console.log("updateJobHistoryData() temp at " + parseFloat(updates[i]['elapsed']).toFixed(2) + " = " + updates[i][updates[i]['sensors'][1]]['temp']);
     }
+    console.log("updateJobHistoryData() grav at " + parseFloat(updates[updates.length - 1]['elapsed']).toFixed(2) + " = " + updates[updates.length - 1][updates[updates.length - 1]['sensors'][1]]['grav']);
     */
 
     var holderNode = document.getElementById('jobElementGraph_' + longName);
@@ -1443,8 +1474,11 @@ window.onload = function () {
     var profileData = header[0]['jobProfile'];
     var profileLineData = [];
     var temperatureLineDataHolder = [];
+    var gravityLineDataHolder = [];
     var temperatureLineData = [];
+    var gravityLineData = [];
     var setpoint = {};
+    var gsetpoint = {};
     var nextStep = 0.0;
     for (var sp=0;sp<profileData.length;sp++) {
       setpoint = {"x":nextStep, "y":profileData[sp]["target"]};
@@ -1459,13 +1493,22 @@ window.onload = function () {
       //var sensorName = header[0]['jobSensorIds'][sensor_instance];
 
       temperatureLineData = [];
+      gravityLineData = [];
       for (var i=0;i<updates.length;i++) {
-        setpoint = {"x":parseFloat(updates[i]['elapsed']).toFixed(2), "y":updates[i][updates[i]['sensors'][sensor_instance]]};
-        // Now build a path for this sensor by going through all the history entries
-        temperatureLineData.push(setpoint);
-        //console.log("**** updateJobHistoryData() temperature: " + setpoint["x"] + " : " + setpoint["y"]);
+        if (updates[i][updates[i]['sensors'][sensor_instance]]['temp']) {
+          //setpoint = {"x":parseFloat(updates[i]['elapsed']).toFixed(2), "y":updates[i][updates[i]['sensors'][sensor_instance]]};
+          setpoint = {"x":parseFloat(updates[i]['elapsed']).toFixed(2), "y":updates[i][updates[i]['sensors'][sensor_instance]]['temp']};
+          // Now build a path for this sensor by going through all the history entries
+          temperatureLineData.push(setpoint);
+          //console.log("**** updateJobHistoryData() temperature: " + setpoint["x"] + " : " + setpoint["y"]);
+        }
+        if (updates[i][updates[i]['sensors'][sensor_instance]]['grav']) {
+          gsetpoint = {"x":parseFloat(updates[i]['elapsed']).toFixed(2), "y":updates[i][updates[i]['sensors'][sensor_instance]]['grav']};
+          gravityLineData.push(gsetpoint);
+        }
       }
       temperatureLineDataHolder[sensor_instance] = temperatureLineData;
+      gravityLineDataHolder[sensor_instance] = gravityLineData;
     }
 
     // Find extent of values in both profileLineData & all the temperatureLineData arrays (1 for each sensor)
@@ -1475,12 +1518,23 @@ window.onload = function () {
     var maxTime = max(profileLineData, function(d) {return parseFloat(d.x);});
 
     for (sensor_instance=0;sensor_instance<header[0]['jobSensorIds'].length;sensor_instance++) {
-      var temperature = min(temperatureLineDataHolder[sensor_instance], function(d) {return parseFloat(d.y);});
-      if (temperature < minDataPoint ) minDataPoint = temperature;
-      temperature = max(temperatureLineDataHolder[sensor_instance], function(d) {return parseFloat(d.y);});
-      if (temperature > maxDataPoint ) maxDataPoint = temperature;
-      temperature = max(temperatureLineDataHolder[sensor_instance], function(d) {return parseFloat(d.x);});
-      if ( temperature > maxTime ) maxTime = temperature;
+      if (temperatureLineDataHolder[sensor_instance].length > 0) {
+        var temperature = min(temperatureLineDataHolder[sensor_instance], function(d) {return parseFloat(d.y);});
+        if (temperature < minDataPoint ) minDataPoint = temperature;
+        temperature = max(temperatureLineDataHolder[sensor_instance], function(d) {return parseFloat(d.y);});
+        if (temperature > maxDataPoint ) maxDataPoint = temperature;
+        temperature = max(temperatureLineDataHolder[sensor_instance], function(d) {return parseFloat(d.x);});
+        if ( temperature > maxTime ) maxTime = temperature;
+      }
+
+      if (gravityLineDataHolder[sensor_instance].length > 0) {
+        var gravity = min(gravityLineDataHolder[sensor_instance], function(d) {return parseFloat(d.y);});
+        if (gravity < minDataPoint ) minDataPoint = gravity;
+        gravity = max(gravityLineDataHolder[sensor_instance], function(d) {return parseFloat(d.y);});
+        if (gravity > maxDataPoint ) maxDataPoint = gravity;
+        gravity = max(gravityLineDataHolder[sensor_instance], function(d) {return parseFloat(d.x);});
+        if ( gravity > maxTime ) maxTime = gravity;
+      }
     }
     // Add some clearance
     minDataPoint -= 5;
@@ -1535,28 +1589,56 @@ window.onload = function () {
 
     for (sensor_instance=0;sensor_instance<header[0]['jobSensorIds'].length;sensor_instance++) {
       //console.log("updateJobHistoryData() sensor data: " + sensor_instance);
+
       // Scale temperature data
-      var scaledTemperatureLineData = [];
-      temperatureLineData = temperatureLineDataHolder[sensor_instance];
-      for ( sp=0;sp<temperatureLineData.length;sp++) {
-        //console.log("scaled sp = " + temperatureLineData[sp].x + " : " + temperatureLineData[sp].y);
-        scaledTemperatureLineData.push({
-          "x":historyLinearScaleX(temperatureLineData[sp].x),
-          "y":historyLinearScaleY(temperatureLineData[sp].y)
-        });
+      if (temperatureLineDataHolder[sensor_instance].length > 0) {
+        var scaledTemperatureLineData = [];
+        temperatureLineData = temperatureLineDataHolder[sensor_instance];
+        for ( sp=0;sp<temperatureLineData.length;sp++) {
+          //console.log("scaled sp = " + temperatureLineData[sp].x + " : " + temperatureLineData[sp].y);
+          scaledTemperatureLineData.push({
+            "x":historyLinearScaleX(temperatureLineData[sp].x),
+            "y":historyLinearScaleY(temperatureLineData[sp].y)
+          });
+        }
+        // Draw temperature graph
+        var historyTemperatureLineFunction = line()
+          .x(function(d) { return d.x; })
+          .y(function(d) { return d.y; });
+        //var lineGraph = historyJobsGraphHolder.append("path")
+        historyJobsGraphHolder.append("path")
+          .attr("transform",
+            "translate(" + historyJobsGraphMargin.left + "," + historyJobsGraphMargin.top + ")")
+          .attr("d", historyTemperatureLineFunction(scaledTemperatureLineData))
+          .attr("stroke", temperatureColours[sensor_instance])
+          .attr("stroke-width", temperatureStrokeWidth)
+          .attr("fill", "none");
       }
-      // Draw temperature graph
-      var historyTemperatureLineFunction = line()
-        .x(function(d) { return d.x; })
-        .y(function(d) { return d.y; });
-      //var lineGraph = historyJobsGraphHolder.append("path")
-      historyJobsGraphHolder.append("path")
-        .attr("transform",
-          "translate(" + historyJobsGraphMargin.left + "," + historyJobsGraphMargin.top + ")")
-        .attr("d", historyTemperatureLineFunction(scaledTemperatureLineData))
-        .attr("stroke", temperatureColours[sensor_instance])
-        .attr("stroke-width", 2)
-        .attr("fill", "none");
+
+      // Scale gravity data
+      if (gravityLineDataHolder[sensor_instance].length > 0) {
+        var scaledGravityLineData = [];
+        gravityLineData = gravityLineDataHolder[sensor_instance];
+        for ( sp=0;sp<gravityLineData.length;sp++) {
+          //console.log("scaled sp = " + gravityLineData[sp].x + " : " + gravityLineData[sp].y);
+          scaledGravityLineData.push({
+            "x":historyLinearScaleX(gravityLineData[sp].x),
+            "y":historyLinearScaleY(gravityLineData[sp].y)
+          });
+        }
+        // Draw temperature graph
+        var historyGravityLineFunction = line()
+          .x(function(d) { return d.x; })
+          .y(function(d) { return d.y; });
+        //var lineGraph = historyJobsGraphHolder.append("path")
+        historyJobsGraphHolder.append("path")
+          .attr("transform",
+            "translate(" + historyJobsGraphMargin.left + "," + historyJobsGraphMargin.top + ")")
+          .attr("d", historyGravityLineFunction(scaledGravityLineData))
+          .attr("stroke", gravityColours[sensor_instance])
+          .attr("stroke-width", gravityStrokeWidth)
+          .attr("fill", "none");
+      }
     }
 
     // Only show this button if this job is stopped (the last update will have 'running' == 'stopped')
@@ -2051,6 +2133,7 @@ window.onload = function () {
         event.stopPropagation();
       });
 
+    console.log("End of updateJobsList()");
   }
 
 
@@ -3252,6 +3335,8 @@ window.onload = function () {
     sensorSelectorLabel.textContent = "Sensors";
     sensorSelectorLabel.id = 'sensorSelectorLabel';
     sensorSelectorLabel.className = 'selectorLabel unselectable';
+
+    selector.appendChild(sensorSelectorLabel);
 
     for(i=0;i<availableSensors.length;i++) {
       console.log("Adding sensor: " + availableSensors[i]);

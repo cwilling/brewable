@@ -1,6 +1,7 @@
 import os from 'os';
 import fs from 'fs';
 import path from 'path';
+import { iSpindelCount } from './iSpindel.js';
 
 
 function JobProcessor(options) {
@@ -218,7 +219,14 @@ JobProcessor.prototype.jobStatus = function (nowTime, obj) {
   };
   obj.jobSensorIds.forEach( function (sensor) {
     job_status['sensors'].push(sensor);
-    job_status[sensor] = obj.jobSensors[sensor].temp;
+    //job_status[sensor] = obj.jobSensors[sensor].temp;
+    job_status[sensor] = {};
+    job_status[sensor]['temp'] = obj.jobSensors[sensor].temp;
+    var grav = obj.jobSensors[sensor].grav;
+    console.log("job_status grav = " + grav);
+    if (grav) {
+      job_status[sensor]['grav'] = grav;
+    }
   });
   //console.log("job_status: " + JSON.stringify(job_status));
   obj.jobRelays.forEach( function (relay) {
@@ -297,6 +305,7 @@ JobProcessor.prototype.makeStamp = function (now) {
 
 JobProcessor.prototype.report = function () {
   console.log("REPORT time for job " + this.jobName + ": " + new Date().toString());
+  iSpindelCount();
   //console.log(JSON.stringify(this.history));
 };
 

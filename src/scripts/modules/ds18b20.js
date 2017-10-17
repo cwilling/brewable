@@ -69,6 +69,10 @@ class ds18b20Device extends Sensor {
     return this.getTemp();
   }
 
+  get grav () {
+    return void 0;
+  }
+
   set chipId (val) {
     this[CHIPID] = val;
   }
