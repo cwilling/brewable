@@ -48,13 +48,26 @@ var calcPlato = function (tilt, temp) {
 
 var fhemDeviceList = [];
 var searchDeviceListByChipId = function (Id) {
-  var result;
-  for (var i=0;i<fhemDeviceList.length;i++) {
-    //console.log("Comparing " + Id + " with " + fhemDeviceList[i].chipId);
-    if (fhemDeviceList[i].raw.chipId == Id) {
-      return fhemDeviceList[i];
+  var duplicates = 0;
+  var i, duplicate, result;
+  do {
+    for (i=0;i<fhemDeviceList.length;i++) {
+      if (fhemDeviceList[i].raw.chipId == Id) {
+        if (result) {
+          duplicate = i;
+          duplicates += 1;
+        } else {
+          result = fhemDeviceList[i];
+        }
+      }
     }
-  }
+    if (duplicates > 0) {
+      console.log("Removing duplicate device: " + fhemDeviceList[duplicate].raw.chipId);
+      fhemDeviceList.splice(duplicate, 1);
+      duplicates -= 1;
+    }
+  } while (duplicates > 0);
+
   return result;
 };
 
@@ -106,6 +119,10 @@ class fhemDevice extends Sensor {
     this.reaper = setInterval(this.deviceReaper,parseInt(this.timeout/10),this);
   }
 
+  static fhemDeviceCount () {
+    console.log("fhemDeviceCount(): " + fhemDeviceList.length); 
+  }
+
   static newReading (reading) {
     //console.log("New reading: " + reading);
     var obj = {};
@@ -136,20 +153,30 @@ class fhemDevice extends Sensor {
 
     var device = searchDeviceListByChipId(obj.chipId);
     if (device) {
-      console.log("Already have device: " + device.raw.chipId + " at " + device.stamp);
+      //console.log("Already have device: " + device.raw.chipId + " at " + device.stamp);
       device.update(obj);
     } else {
       console.log("Adding new device");
-      fhemDeviceList.push(new fhemDevice(obj));
+      //fhemDeviceList.push(new fhemDevice(obj));
     }
 
     eventEmitter.emit("fhem_reading", obj);
+  }
+
+  // Return a list of chip ids
+  static sensors () {
+    var returnList = [];
+    fhemDeviceList.forEach( function (sensor) {
+      returnList.push(sensor);
+    });
+    return returnList;
   }
 
   update (raw) {
     this.raw = raw;
     this.name = raw.name;
     this.date = new Date();
+    //console.log("update(raw) grav = " + this.raw.grav);
   }
 
   static devices () {
@@ -224,6 +251,10 @@ class fhemDevice extends Sensor {
       console.log("Reaping " + fhemDeviceList[i].name + ", caller = " + caller.name);
       clearInterval(caller.reaper);
       fhemDeviceList.splice(i, 1);
+      /*
+        Others (running jobs using this device) may be interested thath it's gone
+      */
+      eventEmitter.emit("iSpindel_reaped", caller);
     }
   }
 
@@ -231,6 +262,7 @@ class fhemDevice extends Sensor {
 
 export default fhemDevice;
 export const newReading = fhemDevice.newReading;
+export const fhemDeviceCount = fhemDevice.fhemDeviceCount;
 
 /* ex:set ai shiftwidth=2 inputtab=spaces smarttab noautotab: */
 

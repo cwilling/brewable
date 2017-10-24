@@ -1,7 +1,7 @@
 import os from 'os';
 import fs from 'fs';
 import path from 'path';
-import { iSpindelCount } from './iSpindel.js';
+//import { iSpindelCount } from './iSpindel.js';
 
 
 function JobProcessor(options) {
@@ -47,6 +47,12 @@ function JobProcessor(options) {
   this.stoppedJobs = options.parent.stoppedJobs;
   this.output_queue = options.parent.output_queue;
 
+  // A job could have been stopped by user interaction
+  // or by a sensor becoming unavailable e.g. iSpindel does down
+  // this.sensorMissing should be set when adding to this.stoppedJobs
+  // where it will be checked when sensors (re)appear.
+  this.sensorMissing = false;
+
   if (isNewJob) {
     this.jobName = options.job['name'];
     this.jobPreHeat = options.job['preheat'];
@@ -64,15 +70,7 @@ function JobProcessor(options) {
     jsIds = this.validateSensors(options.job['jobSensorIds']);
   this.jobSensorIds = jsIds;
 
-  var jSensors = {};
-  options.parent.sensorDevices().forEach( function (sensor) {
-    console.log("ID = " + sensor.chipId);
-    console.log("jobSensorIds (jsIds): " + JSON.stringify(jsIds));
-    if (jsIds.indexOf(sensor.chipId.toString()) > -1 ) {
-      console.log("Matched: " + sensor.chipId.toString());
-      jSensors[sensor.chipId] = sensor;
-    }
-  });
+  var jSensors = this.MatchSensorsToIds(options.parent.sensorDevices(), jsIds);
   this.jobSensors = jSensors;
   //console.log("jobSensors: " + JSON.stringify(this.jobSensors));
 
@@ -208,6 +206,21 @@ JobProcessor.prototype.name = function () {
   return this.jobName;
 };
 
+JobProcessor.prototype.MatchSensorsToIds = function (sensorDevices, jsIds) {
+  //console.log("MatchSensorsToIds(): " + sensorDevices + " " + jsIds);
+
+  var result = {};
+  sensorDevices.forEach( function (sensor) {
+    //console.log("ID = " + sensor.chipId);
+    //console.log("jobSensorIds (jsIds): " + JSON.stringify(jsIds));
+    if (jsIds.indexOf(sensor.chipId.toString()) > -1 ) {
+      //console.log("Matched: " + sensor.chipId.toString());
+      result[sensor.chipId] = sensor;
+    }
+  });
+  return result;
+};
+
 JobProcessor.prototype.jobStatus = function (nowTime, obj) {
   //console.log("At jobStatus(): name = " + obj.jobName);
   var job_status = {
@@ -223,7 +236,6 @@ JobProcessor.prototype.jobStatus = function (nowTime, obj) {
     job_status[sensor] = {};
     job_status[sensor]['temp'] = obj.jobSensors[sensor].temp;
     var grav = obj.jobSensors[sensor].grav;
-    console.log("job_status grav = " + grav);
     if (grav) {
       job_status[sensor]['grav'] = grav;
     }
@@ -304,9 +316,20 @@ JobProcessor.prototype.makeStamp = function (now) {
 };
 
 JobProcessor.prototype.report = function () {
-  console.log("REPORT time for job " + this.jobName + ": " + new Date().toString());
-  iSpindelCount();
+  console.log("REPORT time for job " + this.jobName + "-" + this.instanceId + ": " + new Date().toString());
+  //iSpindelCount();
   //console.log(JSON.stringify(this.history));
+
+  // Ensure sensor objects are fresh
+  // (in case an iSpindel has reappeared)
+  /*
+  console.log("report() jobSensorIds = " + this.jobSensorIds);
+  this.parent.sensorDevices().forEach( function (item) {
+    console.log("report() device: " + item.chipId);
+  });
+  */
+  this.jobSensors = this.MatchSensorsToIds(this.parent.sensorDevices(), this.jobSensorIds);
+
 };
 
 JobProcessor.prototype.resetFudges = function (data) {
@@ -387,8 +410,19 @@ JobProcessor.prototype.target_temperature = function (current_time) {
   }
 };
 
+/*
+  A job may be stopped due to user interaction
+  or because a necessary device (e.g. iSpindel) has become "lost".
+  The reason is given in options.stopStatus which can be:
+    'stop' (user interaction)
+    'suspend' (missing device)
+
+  In the latter case, we need to remove any reference to that device from this job
+  (also generate new reference if it becomes available again later).
+*/
 JobProcessor.prototype.stop = function (options) {
   var stopStatus = (typeof options.stopStatus !== 'undefined') ? options.stopStatus : 'stop';
+  var missingDevice = options.missingDevice;
   var longName = options.longName;
   console.log("stop() options: " + JSON.stringify(options));
   console.log("Stopping job: " + this.jobName + " with stopStatus = " + stopStatus);
@@ -424,12 +458,13 @@ JobProcessor.prototype.stop = function (options) {
       }
     }
     if (job_index > -1) {
-      console.log("FOUND job " + this.jobName + " to stop running");
+      console.log("FOUND job " + this.jobName + " to stop running. sensorMissing = " + (stopStatus == "suspend"));
+      this.runningJobs[job_index].sensorMissing = (stopStatus == "suspend");
       this.stoppedJobs.push((this.runningJobs.splice(job_index, 1)[0]));
 
       jdata = JSON.stringify({
         'type':'stopped_job',
-        'data':{'longName':longName, 'jobName':job.jobName}
+        'data':{'longName':longName, 'jobName':job.jobName, 'reason':{'stopStatus':stopStatus, 'missingDevice':missingDevice}}
       });
       console.log("stop() sending: " + jdata);
       this.output_queue.enqueue(jdata);
@@ -469,7 +504,7 @@ JobProcessor.prototype.resume = function () {
     console.log("FOUND job " + this.jobName + " to resume running");
     this.runningJobs.push((this.stoppedJobs.splice(i,1)[0]));
 
-    var jdata = JSON.stringify({'type':'resumed_job', 'data':{'jobName':this.jobName}});
+    var jdata = JSON.stringify({'type':'resumed_job', 'data':{'longName':this.jobName + "-" + this.instanceId}});
     this.output_queue.enqueue(jdata);
 
     // Resume the run file
@@ -497,6 +532,10 @@ JobProcessor.prototype.process = function () {
   }
   catch (err) {
     console.log("Couldn't find target_temp! " + err);
+    // Maybe reaching here implies a missing sensor so we should
+    // perhaps suspend the job?
+    this.stop({"stopStatus":"suspend", "longName":this.jobName + '-' + this.instanceId});
+
     return;
   }
 
@@ -541,7 +580,6 @@ JobProcessor.prototype.temperatureAdjust = function (target) {
   var relayIds = [];
   var temp = target;
 
-  //this.jobRelays.forEach( function (relay, index) {
   this.jobRelays.forEach( function (relay) {
     relayIds.push(parseInt(relay.split(' ')[1]));
   });
@@ -585,14 +623,14 @@ JobProcessor.prototype.temperatureAdjust = function (target) {
       if ( (! this.relay.isOn(coolerRelay)) ) {
         this.relay.ON(coolerRelay);
         this.parent.liveUpdate();
-        console.log("START COOLING");
+        console.log(this.jobName + '-' + this.instanceId + ": START COOLING");
       }
     } else if (parseFloat(temp) < parseFloat(target) ) {
       // Turn off the cooler relay
       if ( this.relay.isOn(coolerRelay) ) {
         this.relay.OFF(coolerRelay);
         this.parent.liveUpdate();
-        console.log("STOP COOLING");
+        console.log(this.jobName + '-' + this.instanceId + ": STOP COOLING");
       }
     } else {
       if ( this.relay.isOn(coolerRelay) ) {
@@ -616,7 +654,7 @@ JobProcessor.prototype.temperatureAdjust = function (target) {
         this.relay.OFF(heaterRelay);
         this.parent.liveUpdate();
       }
-      console.log("START COOLING");
+      console.log(this.jobName + '-' + this.instanceId + ": START COOLING");
     } else if (parseFloat(temp) < parseFloat(target) ) {
       // Turn off the cooler relay
       if ( this.relay.isOn(coolerRelay) ) {
@@ -628,7 +666,7 @@ JobProcessor.prototype.temperatureAdjust = function (target) {
         this.relay.ON(heaterRelay);
         this.parent.liveUpdate();
       }
-      console.log("START HEATING");
+      console.log(this.jobName + '-' + this.instanceId + ": START HEATING");
     } else {
       if ( this.relay.isOn(coolerRelay) ) {
         this.relay.OFF(coolerRelay);

@@ -155,6 +155,9 @@ function gpioWorker (input_queue, output_queue) {
   /*
     Any time a new device appears, we check if is needed by any job that
     couldn't start due to missing sensor devices (this.waitingJobs[]).
+
+    We also check this.stoppedJobs for jobs that were placed there
+    when a sensor became unavailable (have sensorMissing == true).
   */
   eventEmitter.addListener('iSpindel_new_device', function () {
     console.log("NEW NEW NEW NEW NEW NEW iSpindel device ");
@@ -184,6 +187,41 @@ function gpioWorker (input_queue, output_queue) {
       }
     }
     console.log("waiting jobs = " + this.waitingJobs.length);
+
+    i = this.stoppedJobs.length;
+    console.log("Checking stoppedJobs[] for sensorMissing");
+    while (i--) {
+      console.log("sensorMissing = " + (this.stoppedJobs[i].sensorMissing == true));
+
+      // Check that all sensors are available
+      // but assume that's true for now (while testing).
+      this.stoppedJobs[i].resume();
+    }
+    console.log("Finished checking stoppedJobs[] for sensorMissing. " + this.stoppedJobs.length + " stoppedJobs remain.");
+
+  }.bind(this));
+
+  /*
+    Anytime a device disappears, we need to suspend any running jobs using it.
+  */
+  eventEmitter.addListener('iSpindel_reaped', function (device) {
+    console.log("DISAPPEARED DISAPPEARED " + device.chipId + " has DISAPPEARED!");
+    var msg = {};
+
+    for (var i=0;i<this.runningJobs.length;i++ ) {
+      console.log("Suspend: " + Object.keys(this.runningJobs[i]));
+      console.log("         " + this.runningJobs[i].jobName);
+      console.log("         " + this.runningJobs[i].instanceId);
+      console.log("         " + this.runningJobs[i].jobSensorIds);
+      if (this.runningJobs[i].jobSensorIds.indexOf(device.chipId.toString()) > -1) {
+        console.log("Should suspend job " + this.runningJobs[i].jobName + "_" + this.runningJobs[i].instanceId);
+        console.log("(using: " + device.chipId + ")");
+        msg.jobName = this.runningJobs[i].jobName;
+        msg.longName = this.runningJobs[i].jobName + "-" + this.runningJobs[i].instanceId;
+        this.stop_running_job({'msg':{'data':msg}, 'stopStatus':'suspend', 'device':device.chipId.toString()});
+      }
+    }
+
   }.bind(this));
 
 } 
@@ -237,11 +275,10 @@ gpioWorker.prototype.sensorDevices = function () {
   });
 
   // Add iSpindel devices
-  console.log("Adding iSpindel devices");
+  //console.log("Adding iSpindel devices");
   var iSpindelList = iSpindelDevice.sensors();
   for (z=0;z<iSpindelList.length;z++) {
-    //deviceList.push(new iSpindelDevice(iSpindelList[z]));
-    console.log("Adding iSpindel " + iSpindelList[z].chipId);
+    //console.log("Adding iSpindel " + iSpindelList[z].chipId);
     deviceList.push(iSpindelList[z]);
   }
 
@@ -765,9 +802,12 @@ gpioWorker.prototype.load_running_jobs = function (msg) {
 };
 
 gpioWorker.prototype.stop_running_job = function (options) {
-  var i;
+  var i, missingDevice;
   var msg = options.msg;
   var stopStatus = options.stopStatus;
+  if (stopStatus == "suspend") {
+    missingDevice = options.device;
+  }
   //console.log("stop_running_job() options: " + JSON.stringify(options));
 
   var jobName = msg.data["jobName"];
@@ -786,7 +826,7 @@ gpioWorker.prototype.stop_running_job = function (options) {
   }
   if ( job_index > -1 ) {
     console.log("Job " + longName + " running - ready to stop");
-    this.runningJobs[job_index].stop({'longName':longName, 'stopStatus':stopStatus});
+    this.runningJobs[job_index].stop({'longName':longName, 'stopStatus':stopStatus, 'missingDevice':missingDevice});
   } else {
     // Perhaps the job was already stopped?
     // In which case, ensure it has correct stopStatus
@@ -794,12 +834,14 @@ gpioWorker.prototype.stop_running_job = function (options) {
       jobLongName = this.stoppedJobs[i].name() + '-' + this.stoppedJobs[i].instanceId;
       if (jobLongName == longName) {
         console.log("Job " + jobLongName + " already stopped");
-        this.stoppedJobs[i].stop({'longName':longName, 'stopStatus':stopStatus});
+        this.stoppedJobs[i].stop({'longName':longName, 'stopStatus':stopStatus, 'missingDevice':missingDevice});
         var jdata = JSON.stringify({
           'type':'stopped_job',
-          'data':{'longName':longName, 'jobName':jobName}
+          'data':{'longName':longName, 'jobName':jobName, 'reason':{'stopStatus':stopStatus, 'missingDevice':missingDevice}}
         });
         this.output_queue.enqueue(jdata);
+        // Reload list of running jobs (triggers display refresh in browser)
+        //this.load_running_jobs({"type":"show_running_jobs"});
       }
     }
   }

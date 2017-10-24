@@ -13,7 +13,7 @@ class ds18b20Device extends Sensor {
     this[FUDGE] = parseFloat(0.0);
     this[CHIPID] = val;
 
-    console.log('New ds18b20Device with id = ' + this.id + ', fudge = ' + this.fudge);
+    //console.log('New ds18b20Device with id = ' + this.id + ', fudge = ' + this.fudge);
   }
 
   // Return a list of sensor devices

@@ -41,6 +41,12 @@ var profileOwner;
 var historyData = {};
 var runningData = {};
 
+/*
+  Running, stopped, suspended etc.
+  Each jobStatus entry is a jobLongName:{item0:val0, item1:val1, ...}
+*/
+var jobStatus = {};
+
 var msgobj = {};
 
 function smallDevice () {
@@ -810,6 +816,9 @@ window.onload = function () {
         jobStopped(jmsg.data);
       } else if (jmsg.type === 'resumed_job') {
         console.log("RCVD resumed_job " + message.data);
+        console.log("RCVD resumed_job " + jmsg.data.longName);
+        jobStatus[jmsg.data.longName]["running"] = "running";
+        console.log("RCVD resumed_job done");
       } else if (jmsg.type === 'removed_job') {
         console.log("RCVD removed_job " + message.data);
         jobRemoved(jmsg.data);
@@ -1641,10 +1650,11 @@ window.onload = function () {
       }
     }
 
-    // Only show this button if this job is stopped (the last update will have 'running' == 'stopped')
+    // Group for Resume/Waiting button & text
     var lastUpdate = updates[updates.length - 1];
+    //console.log("lastUpdate = " + JSON.stringify(lastUpdate));
+    //console.log("jobStatus = " + JSON.stringify(jobStatus));
     historyJobsGraphHolder.append("g")
-      //.attr("id", "runningButtonGroup_" + longName.replace('%', '\%'))
       .attr("id", "runningButtonGroup_" + longName.replace('%', '\\%'))
       .attr("class", "runningButtonGroup")
       .attr("transform",
@@ -1652,52 +1662,83 @@ window.onload = function () {
         (smallDevice()?historyJobsGraphWidth-20:historyJobsGraphWidth-40) + "," + 40 + ")")
       .style('display', (lastUpdate.running=='stopped'?'block':'none'));
 
-    // Resume button
-    //select("#runningButtonGroup_" + longName.replace('%', '\%'))
+    // Only show this button if this job is stopped or waiting
     select("#runningButtonGroup_" + longName.replace('%', '\\%'))
       .append("rect")
-      //.attr('id', 'runningResumeButton_' + longName.replace('%', '\%'))
       .attr('id', 'runningResumeButton_' + longName.replace('%', '\\%'))
       .attr('class', 'runningResumeButton')
       .attr('x', 0) .attr('y', 0)
       .attr('width', 96).attr('height', 40)
       .attr('rx', 6).attr('ry', 6)
       .on("click", function() {
-        //console.log("RESUME running " + longName.replace('%', '\%'));
-        console.log("RESUME running " + longName.replace('%', '\\%'));
-        // Request job resume
-        var msgobj = {
-          'type':'resume_job',
-          //'data':{'jobName': longName.replace('%', '\%') }
-          'data':{'jobName': longName.replace('%', '\\%') }
-        };
-        sendMessage({data:JSON.stringify(msgobj)});
+        //console.log("RESUME running " + longName.replace('%', '\\%'));
+        //console.log("RESUME running jobStatus: " + jobStatus[longName.replace('%', '\\%')].running);
+        if (jobStatus[longName.replace('%', '\\%')].running == "stop") {
+          // Request job resume
+          var msgobj = {
+            'type':'resume_job',
+            'data':{'jobName': longName.replace('%', '\\%')}
+          };
+          sendMessage({data:JSON.stringify(msgobj)});
+        } else {
+          // Otherwise presume we're suspended so don't restart explicitly
+          // (rather wait until "lost" sensor device is rediscovered)
+          alert("Job " + longName.replace('%', '\\%') + " waiting for missing sensor device");
+        }
       });
 
-    //select("#runningButtonGroup_" + longName.replace('%', '\%'))
-    select("#runningButtonGroup_" + longName.replace('%', '\\%'))
-      .append("text")
-      .attr('class', 'runningResumeButtonText')
-      .attr('dx', '1.5em')
-      .attr('dy', '1.7em')
-      .text("Resume");
+    if (jobStatus[longName.replace('%', '\\%')]) {
+      console.log("END of running_job_status jobStatus: " + jobStatus[longName.replace('%', '\\%')].running);
+      if (jobStatus[longName.replace('%', '\\%')].running == "stop") {
+        select("#runningButtonGroup_" + longName.replace('%', '\\%'))
+          .append("text")
+          .attr('class', 'runningResumeButtonText')
+          .attr('dx', '1.5em')
+          .attr('dy', '1.7em')
+          .text("Resume");
+      } else {
+        select("#runningButtonGroup_" + longName.replace('%', '\\%'))
+          .append("text")
+          .attr('class', 'runningResumeButtonText')
+          .attr('dx', '1.5em')
+          .attr('dy', '1.7em')
+          .text("Waiting");
+      }
+    } else {
+      select("#runningButtonGroup_" + longName.replace('%', '\\%'))
+        .append("text")
+        .attr('class', 'runningResumeButtonText')
+        .attr('dx', '1.5em')
+        .attr('dy', '1.7em')
+        .text("Resume");
+    }
   }
 
   function jobStopped(data) {
-    /*
-    var jobName = data['jobName']
-    //console.log("Received stopped_job message " + jobName);
-    select('#title_text_' + jobName).text("Job: " + jobName + " (stopped)");
-    */
-    jobFinishedWith(data, 'stopped');
+    console.log("jobStopped() data: " + JSON.stringify(data));
+    if (data.reason ) {
+      jobStatus[data.longName] = {'running':data.reason.stopStatus};
+    } else {
+      jobStatus[data.longName] = {'running':'stop'};
+    }
+    console.log("jobStopped() jobStatus: " + JSON.stringify(jobStatus));
+    jobFinishedWith(data);
   }
 
   function jobRemoved(data) {
-    jobFinishedWith(data, 'removed');
+    console.log("jobRemoved() data: " + JSON.stringify(data));
+    jobStatus[data.longName] = {'running':'remove'};
+    jobFinishedWith(data, 'remove');
   }
 
   function jobSaved(data) {
-    jobFinishedWith(data, 'saved');
+    console.log("jobSaved() data: " + JSON.stringify(data));
+    jobStatus[data.longName] = {'running':'save'};
+    // Ensure data contains a reason
+    if (! data.reason) {
+      data["reason"] = {"stopStatus":"save"};
+    }
+    jobFinishedWith(data);
   }
 
   /*
@@ -1705,23 +1746,28 @@ window.onload = function () {
     Show the No Jobs running notice, if that is the case.
     Move data associated with jobName from runningData to historyData
   */
-  function jobFinishedWith(data, endStatus) {
-    if (endStatus === undefined) endStatus='removed';
+  function jobFinishedWith(data) {
+    var endStatus;
+    if (data.reason) {
+      console.log("jobFinishedWith() reason: " + data.reason.stopStatus);
+      endStatus = data.reason.stopStatus;
+    } else {
+      console.log("jobFinishedWith() No reason => plain stop");
+      endStatus = "stop";
+    }
 
     var jobName = data['jobName'];
     var longName = data['longName'];
-    //var jobInstance = longName.replace(jobName + '-', '');
-    //console.log("Received " + endStatus + "_job message " + jobName + " : " + longName + " : " + jobInstance);
-    //var instancePattern = /-[0-9]{8}_[0-9]{6}/;
+    //console.log("Received " + endStatus + "_job message " + jobName + " : " + longName);
 
     // Remove graph from status (running jobs) page
     var running_jobsHolder = document.getElementById('running_jobsHolder');
     var children = document.getElementById("running_jobsHolder").children;
     for (var i=0;i<children.length;i++) {
-      console.log("Child: " + children[i].id);
+      //console.log("Child: " + children[i].id);
       if (children[i].id.endsWith(longName) ) {
-        console.log("jobFinishedWith() ready to remove " + longName);
-        if ( endStatus !== 'stopped' ) {
+        console.log("jobFinishedWith() ready to " + endStatus + " " + longName);
+        if (!(endStatus == 'stop' || endStatus == 'suspend')) {
           var rem = document.getElementById('jobElement_' + longName);
           rem.parentNode.removeChild(rem);
 
@@ -1729,7 +1775,7 @@ window.onload = function () {
           rem.parentNode.removeChild(rem);
         }
 
-        if ( endStatus === 'saved' ) {
+        if ( endStatus === 'save' ) {
           // Move associated data
           historyData[longName] = runningData[longName];
           //Not sure how to effectively remove old version - maybe just leave it?
@@ -1745,13 +1791,12 @@ window.onload = function () {
             no_running_jobs.style.display = '-webkit-flex';
           }
 
-        } else if ( endStatus === 'stopped' ) {
+        } else if ( endStatus === 'suspend' ) {
+          console.log('job suspended ' + longName);
+        } else if ( endStatus === 'stop' ) {
           console.log('job stopped ' + longName);
-          // Find the stopped job's graph and add a "Resume" button to it
-          var resumeButton = document.getElementById('runningButtonGroup_' + longName);
-          resumeButton.style.display = 'block';
 
-        } else if ( endStatus === 'removed' ) {
+        } else if ( endStatus === 'remove' ) {
           //Not sure how to effectively remove old version - maybe just leave it?
           //del(historyData[longName]);
 
@@ -1770,7 +1815,7 @@ window.onload = function () {
   function jobHistoryItemRemoved (jmsg) {
     var jobName = jmsg.data['jobName'];
     var jobInstance = jmsg.data['instance'];
-    console.log("Received " + jmsg.type + " message for: " + jobName + '-' + jobInstance);
+    //console.log("Received " + jmsg.type + " message for: " + jobName + '-' + jobInstance);
 
     // Remove the jobElement_<jobName>-<jobInstance> element
     // Also (if it has been displayed) jobElementGraph_<jobName>-<jobInstance>
@@ -2008,6 +2053,13 @@ window.onload = function () {
           var longJobName = elm.id.replace('jobItemInstance_', '');
           var jobInstance = instancePattern.exec(longJobName);
           var nodeName = longJobName.slice(0,(longJobName.indexOf(jobInstance)-1));
+          if (jobStatus[longJobName]) {
+            console.log("At STOP menu: " + jobStatus[longJobName].running);
+            if (jobStatus[longJobName].running == "suspend") {
+              alert("Already Waiting");
+              return;
+            }
+          }
           var confirmStop = confirm("Stop job " + nodeName + "?");
           if ( confirmStop == true ) {
             var msgobj = {
@@ -2969,11 +3021,9 @@ window.onload = function () {
       var loadedProfile = [];
       for (var k=0;k<thisJob['profile'].length;k++) {
         //console.log('profile step for ' + name + ': ' + thisJob['profile'][k].target + ' . ' + thisJob['profile'][k].duration);
-        //loadedProfile.push({'target':parseFloat(thisJob['profile'][k].target),'duration':parseFloat(thisJob['profile'][k].duration)});
         loadedProfile.push({'target':thisJob['profile'][k].target,'duration':thisJob['profile'][k].duration});
       }
-      //templateItemProfile.setAttribute('profile', loadedProfile);
-      console.log("Proposed pdata = " + JSON.stringify(loadedProfile));
+      //console.log("Proposed pdata = " + JSON.stringify(loadedProfile));
       templateItemProfile.setAttribute('pdata', JSON.stringify(loadedProfile));
 
 
