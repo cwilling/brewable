@@ -1621,7 +1621,37 @@ window.onload = function () {
           .attr("d", historyTemperatureLineFunction(scaledTemperatureLineData))
           .attr("stroke", temperatureColours[sensor_instance])
           .attr("stroke-width", temperatureStrokeWidth)
-          .attr("fill", "none");
+          .attr("fill", "none")
+          .on("mouseover", function() {
+            console.log("in " + mouse(this)[0] + "," + mouse(this)[1]);
+            console.log("in container is: " + longName);
+
+            var detail= select("#detailTooltipGroup_" + longName.replace('%', '\\%'));
+            detail.transition()
+              .duration(200)
+              .style("opacity", 0.9)
+              .style("left", mouse(this)[0] + "px")
+              .style("top", mouse(this)[1] + "px");
+
+            select("#detailTooltipBox_" + longName.replace('%', '\\%'))
+              .attr("x", mouse(this)[0]) .attr("y", mouse(this)[1])
+              .transition().duration(200).style("opacity", 0.9);
+
+            select("#detailTooltipText_" + longName.replace('%', '\\%'))
+              .attr("x", mouse(this)[0]) .attr("y", mouse(this)[1])
+              .text(mouse(this)[0] + "," + mouse(this)[1])
+              .transition().duration(200).style("opacity", 0.9);
+
+          })
+          .on("mouseout", function() {
+            console.log("out");
+
+            //var detail= select("#detailTooltipText_" + longName.replace('%', '\\%'));
+            var detail= select("#detailTooltipGroup_" + longName.replace('%', '\\%'));
+            detail.transition()
+              .duration(200)
+              .style("opacity", 0.0);
+          });
       }
 
       // Scale gravity data
@@ -1635,7 +1665,7 @@ window.onload = function () {
             "y":historyLinearScaleY(gravityLineData[sp].y)
           });
         }
-        // Draw temperature graph
+        // Draw gravity graph
         var historyGravityLineFunction = line()
           .x(function(d) { return d.x; })
           .y(function(d) { return d.y; });
@@ -1646,9 +1676,37 @@ window.onload = function () {
           .attr("d", historyGravityLineFunction(scaledGravityLineData))
           .attr("stroke", gravityColours[sensor_instance])
           .attr("stroke-width", gravityStrokeWidth)
-          .attr("fill", "none");
+          .attr("fill", "none")
+          .on("mouseover", function() {
+            console.log("gravity in");
+          })
+          .on("mouseout", function() {
+            console.log("gravity out");
+          });
       }
     }
+
+    historyJobsGraphHolder.append("g")
+      .attr("id", "detailTooltipGroup_" + longName.replace('%', '\\%'))
+      .attr("class", "detailtooltipgroup")
+      .attr("transform",
+        "translate(" + historyJobsGraphMargin.left + "," + historyJobsGraphMargin.top + ")")
+      .style("opacity", 0.0);
+
+    select("#detailTooltipGroup_" + longName.replace('%', '\\%')).append("rect")
+      .attr('id', 'detailTooltipBox_' + longName.replace('%', '\\%'))
+      .attr('class', 'detailtooltipbox')
+      .attr('x', 0) .attr('y', 0)
+      .attr('width', 96).attr('height', 40)
+      .style("fill", "lightsteelblue")
+      .style("border", "1px solid white");
+
+    select("#detailTooltipGroup_" + longName.replace('%', '\\%')).append("text")
+      .attr('id', 'detailTooltipText_' + longName.replace('%', '\\%'))
+      .attr('class', 'detailtooltip')
+      .attr('dx', '1.5em')
+      .attr('dy', '1.7em');
+
 
     // Group for Resume/Waiting button & text
     var lastUpdate = updates[updates.length - 1];
@@ -1669,7 +1727,6 @@ window.onload = function () {
       .attr('class', 'runningResumeButton')
       .attr('x', 0) .attr('y', 0)
       .attr('width', 96).attr('height', 40)
-      .attr('rx', 6).attr('ry', 6)
       .on("click", function() {
         //console.log("RESUME running " + longName.replace('%', '\\%'));
         //console.log("RESUME running jobStatus: " + jobStatus[longName.replace('%', '\\%')].running);
@@ -2539,7 +2596,6 @@ window.onload = function () {
       .attr('class', 'profileSaveCancelButton')
       .attr('x', 0) .attr('y', 0)
       .attr('width', 96).attr('height', 40)
-      .attr('rx', 6).attr('ry', 6)
       .on("click", function() {
         //console.log("SAVE & RETURN to " + profileOwner);
         select("#profilesGraphHolder").selectAll("*").remove();
@@ -2569,7 +2625,6 @@ window.onload = function () {
       .attr('class', 'profileSaveCancelButton')
       .attr('x', 0) .attr('y', '3.6em')
       .attr('width', 96).attr('height', 40)
-      .attr('rx', 6).attr('ry', 6)
       .on("click", function() {
         //console.log("CANCEL to " + profileOwner);
         select("#profilesGraphHolder").selectAll("*").remove();
