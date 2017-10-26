@@ -1631,8 +1631,8 @@ window.onload = function () {
             /* Set the tooltip text, then move it into position and display it.
             */
             select("#detailTooltipText_" + longName.replace('%', '\\%'))
-              .append("tspan").attr("x",0).attr("y",0).attr('dx', '0.9em').attr('dy', '1.1em').text("At: " + tickText(historyLinearScaleX.invert(mouse(this)[0])))
-              .append("tspan").attr("x",0).attr("y",18).attr('dx','0.9em').attr('dy', '1.1em').text("T = " + (historyLinearScaleY.invert(mouse(this)[1])).toFixed(2));
+              .append("tspan").attr("x",0).attr("y",0).attr('dx', '0.3em').attr('dy', '1.1em').text("Time: " + tickText(historyLinearScaleX.invert(mouse(this)[0])))
+              .append("tspan").attr("x",0).attr("y",18).attr('dx','0.3em').attr('dy', '1.1em').text("Temp:" + (historyLinearScaleY.invert(mouse(this)[1])).toFixed(2));
 
             select("#detailTooltipGroup_" + longName.replace('%', '\\%'))
               .attr("transform",
@@ -1683,8 +1683,8 @@ window.onload = function () {
             /* Set the tooltip text, then move it into position and display it.
             */
             select("#detailTooltipText_" + longName.replace('%', '\\%'))
-              .append("tspan").attr("x",0).attr("y",0).attr('dx', '0.9em').attr('dy', '1.1em').text(" At: " + tickText(historyLinearScaleX.invert(mouse(this)[0])))
-              .append("tspan").attr("x",0).attr("y",18).attr('dx','0.9em').attr('dy', '1.1em').text("SG = " + (historyLinearScaleY.invert(mouse(this)[1])).toFixed(2));
+              .append("tspan").attr("x",0).attr("y",0).attr('dx', '0.3em').attr('dy', '1.1em').text("Time: " + tickText(historyLinearScaleX.invert(mouse(this)[0])))
+              .append("tspan").attr("x",0).attr("y",18).attr('dx','0.3em').attr('dy', '1.1em').text("Grav: " + (historyLinearScaleY.invert(mouse(this)[1])).toFixed(2));
 
             select("#detailTooltipGroup_" + longName.replace('%', '\\%'))
               .attr("transform",
