@@ -1623,34 +1623,26 @@ window.onload = function () {
           .attr("stroke-width", temperatureStrokeWidth)
           .attr("fill", "none")
           .on("mouseover", function() {
-            console.log("in " + mouse(this)[0] + "," + mouse(this)[1]);
-            console.log("in container is: " + longName);
+            //console.log("in conatiner: " + longName + " at: " + mouse(this)[0] + "," + mouse(this)[1]);
 
-            var detail= select("#detailTooltipGroup_" + longName.replace('%', '\\%'));
-            detail.transition()
-              .duration(200)
-              .style("opacity", 0.9)
-              .style("left", mouse(this)[0] + "px")
-              .style("top", mouse(this)[1] + "px");
-
-            select("#detailTooltipBox_" + longName.replace('%', '\\%'))
-              .attr("x", mouse(this)[0]) .attr("y", mouse(this)[1])
-              .transition().duration(200).style("opacity", 0.9);
-
+            /* Set the tooltip text, then move it into position and display it.
+            */
             select("#detailTooltipText_" + longName.replace('%', '\\%'))
-              .attr("x", mouse(this)[0]) .attr("y", mouse(this)[1])
-              .text(mouse(this)[0] + "," + mouse(this)[1])
-              .transition().duration(200).style("opacity", 0.9);
+              .text(mouse(this)[0] + "," + mouse(this)[1]);
+
+            select("#detailTooltipGroup_" + longName.replace('%', '\\%'))
+              .attr("transform",
+                "translate(" + (historyJobsGraphMargin.left + mouse(this)[0]) + "," + (historyJobsGraphMargin.top + mouse(this)[1]) + ")")
+              .style("opacity", 0.9);
 
           })
           .on("mouseout", function() {
-            console.log("out");
+            //console.log("out");
 
-            //var detail= select("#detailTooltipText_" + longName.replace('%', '\\%'));
-            var detail= select("#detailTooltipGroup_" + longName.replace('%', '\\%'));
-            detail.transition()
+            select("#detailTooltipGroup_" + longName.replace('%', '\\%')).transition()
               .duration(200)
               .style("opacity", 0.0);
+
           });
       }
 
@@ -1678,10 +1670,24 @@ window.onload = function () {
           .attr("stroke-width", gravityStrokeWidth)
           .attr("fill", "none")
           .on("mouseover", function() {
-            console.log("gravity in");
+            //console.log("gravity in");
+
+            /* Set the tooltip text, then move it into position and display it.
+            */
+            select("#detailTooltipText_" + longName.replace('%', '\\%'))
+              .text(mouse(this)[0] + "," + mouse(this)[1]);
+
+            select("#detailTooltipGroup_" + longName.replace('%', '\\%'))
+              .attr("transform",
+                "translate(" + (historyJobsGraphMargin.left + mouse(this)[0]) + "," + (historyJobsGraphMargin.top + mouse(this)[1]) + ")")
+              .style("opacity", 0.9);
           })
           .on("mouseout", function() {
-            console.log("gravity out");
+            //console.log("gravity out");
+
+            select("#detailTooltipGroup_" + longName.replace('%', '\\%')).transition()
+              .duration(200)
+              .style("opacity", 0.0);
           });
       }
     }
@@ -1693,15 +1699,15 @@ window.onload = function () {
         "translate(" + historyJobsGraphMargin.left + "," + historyJobsGraphMargin.top + ")")
       .style("opacity", 0.0);
 
-    select("#detailTooltipGroup_" + longName.replace('%', '\\%')).append("rect")
+    select("#detailTooltipGroup_" + longName.replace('%', '\\%'))
+      .append("rect")
       .attr('id', 'detailTooltipBox_' + longName.replace('%', '\\%'))
       .attr('class', 'detailtooltipbox')
-      .attr('x', 0) .attr('y', 0)
       .attr('width', 96).attr('height', 40)
-      .style("fill", "lightsteelblue")
-      .style("border", "1px solid white");
+      .attr('rx', 6).attr('ry', 4);
 
-    select("#detailTooltipGroup_" + longName.replace('%', '\\%')).append("text")
+    select("#detailTooltipGroup_" + longName.replace('%', '\\%'))
+      .append("text")
       .attr('id', 'detailTooltipText_' + longName.replace('%', '\\%'))
       .attr('class', 'detailtooltip')
       .attr('dx', '1.5em')

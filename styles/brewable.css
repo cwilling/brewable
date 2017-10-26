@@ -199,14 +199,12 @@ div.tooltip {
     font:       12px sans-serif;
 }
 .detailtooltipbox {
-    position:   absolute;
     text-align: center;
-    width:      71px;
-    height:     14px;
     padding:    2px;
     font:       12px sans-serif;
-    background: lightsteelblue;
-    border:	1px solid white;
+    fill: lightsteelblue;
+    stroke:     white;
+    stroke-width: 1;
     border-radius: 8px;
     pointer-events: none;
 }

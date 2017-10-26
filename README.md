@@ -8,6 +8,7 @@ Basic feature list:
 * supports multiple [iSpindel](https://github.com/universam1/iSpindel) temperature/hydrometer devices
 * supports multiple DS18B20 temperature sensors
 * supports multiple [SainSmart](http://www.sainsmart.com/sainsmart-relay-module-for-arduino-raspberry-pi.html) 5V relay modules for total of up to 20x relays
+* supports multiple simultaneous jobs, limited only by numbers of attached input sensors and relay outputs
 
 This is a complete javascript rewrite of the original (pre 0.3) python version.
 
