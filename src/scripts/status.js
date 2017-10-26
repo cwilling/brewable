@@ -1623,12 +1623,16 @@ window.onload = function () {
           .attr("stroke-width", temperatureStrokeWidth)
           .attr("fill", "none")
           .on("mouseover", function() {
-            //console.log("in conatiner: " + longName + " at: " + mouse(this)[0] + "," + mouse(this)[1]);
+            //console.log("in container: " + longName + " at: " + mouse(this)[0] + "," + mouse(this)[1]);
+            //console.log("X: " + tickText(historyLinearScaleX.invert(mouse(this)[0])));
+            //console.log("Y: " + historyLinearScaleY.invert(mouse(this)[1]));
+
 
             /* Set the tooltip text, then move it into position and display it.
             */
             select("#detailTooltipText_" + longName.replace('%', '\\%'))
-              .text(mouse(this)[0] + "," + mouse(this)[1]);
+              .append("tspan").attr("x",0).attr("y",0).attr('dx', '0.9em').attr('dy', '1.1em').text("At: " + tickText(historyLinearScaleX.invert(mouse(this)[0])))
+              .append("tspan").attr("x",0).attr("y",18).attr('dx','0.9em').attr('dy', '1.1em').text("T = " + (historyLinearScaleY.invert(mouse(this)[1])).toFixed(2));
 
             select("#detailTooltipGroup_" + longName.replace('%', '\\%'))
               .attr("transform",
@@ -1639,18 +1643,22 @@ window.onload = function () {
           .on("mouseout", function() {
             //console.log("out");
 
-            select("#detailTooltipGroup_" + longName.replace('%', '\\%')).transition()
+            select("#detailTooltipGroup_" + longName.replace('%', '\\%'))
+              .transition()
               .duration(200)
               .style("opacity", 0.0);
 
+            // Remove previous entry
+            select("#detailTooltipGroup_" + longName.replace('%', '\\%'))
+              .selectAll("tspan").remove();
+
           });
       }
-
       // Scale gravity data
       if (gravityLineDataHolder[sensor_instance].length > 0) {
         var scaledGravityLineData = [];
         gravityLineData = gravityLineDataHolder[sensor_instance];
-        for ( sp=0;sp<gravityLineData.length;sp++) {
+        for (sp=0;sp<gravityLineData.length;sp++) {
           //console.log("scaled sp = " + gravityLineData[sp].x + " : " + gravityLineData[sp].y);
           scaledGravityLineData.push({
             "x":historyLinearScaleX(gravityLineData[sp].x),
@@ -1675,12 +1683,14 @@ window.onload = function () {
             /* Set the tooltip text, then move it into position and display it.
             */
             select("#detailTooltipText_" + longName.replace('%', '\\%'))
-              .text(mouse(this)[0] + "," + mouse(this)[1]);
+              .append("tspan").attr("x",0).attr("y",0).attr('dx', '0.9em').attr('dy', '1.1em').text(" At: " + tickText(historyLinearScaleX.invert(mouse(this)[0])))
+              .append("tspan").attr("x",0).attr("y",18).attr('dx','0.9em').attr('dy', '1.1em').text("SG = " + (historyLinearScaleY.invert(mouse(this)[1])).toFixed(2));
 
             select("#detailTooltipGroup_" + longName.replace('%', '\\%'))
               .attr("transform",
                 "translate(" + (historyJobsGraphMargin.left + mouse(this)[0]) + "," + (historyJobsGraphMargin.top + mouse(this)[1]) + ")")
               .style("opacity", 0.9);
+
           })
           .on("mouseout", function() {
             //console.log("gravity out");
@@ -1688,10 +1698,18 @@ window.onload = function () {
             select("#detailTooltipGroup_" + longName.replace('%', '\\%')).transition()
               .duration(200)
               .style("opacity", 0.0);
+
+            // Remove previous entry
+            select("#detailTooltipGroup_" + longName.replace('%', '\\%'))
+              .selectAll("tspan").remove();
+
           });
       }
     }
 
+    /* Show time & value as a tooltip
+      at any particular point of the graph
+    */
     historyJobsGraphHolder.append("g")
       .attr("id", "detailTooltipGroup_" + longName.replace('%', '\\%'))
       .attr("class", "detailtooltipgroup")
@@ -1703,15 +1721,13 @@ window.onload = function () {
       .append("rect")
       .attr('id', 'detailTooltipBox_' + longName.replace('%', '\\%'))
       .attr('class', 'detailtooltipbox')
-      .attr('width', 96).attr('height', 40)
+      .attr('width', 96) .attr('height', 40)
       .attr('rx', 6).attr('ry', 4);
 
     select("#detailTooltipGroup_" + longName.replace('%', '\\%'))
       .append("text")
       .attr('id', 'detailTooltipText_' + longName.replace('%', '\\%'))
-      .attr('class', 'detailtooltip')
-      .attr('dx', '1.5em')
-      .attr('dy', '1.7em');
+      .attr('class', 'detailtooltip');
 
 
     // Group for Resume/Waiting button & text
