@@ -183,6 +183,17 @@ function gpioWorker (input_queue, output_queue) {
         } else {
           console.log("Started job " + header.jobName);
           this.waitingJobs.splice(i, 1);
+
+          // Update job list for clients
+          this.load_running_jobs({"type":"run_job"});
+
+          // Process the new job
+          for (var j=0;j<this.runningJobs.length;j++) {
+            console.log("runningJobs: " + this.runningJobs[j].name());
+            if (this.runningJobs[j].name() == header.jobName) {
+              this.runningJobs[j].process();
+            }
+          }
         }
       }
     }
