@@ -164,7 +164,7 @@ var searchDeviceListByChipId = function (Id) {
   var i, duplicate, result;
   do {
     for (i=0;i<iSpindelDevices.length;i++) {
-      if (iSpindelDevices[i].raw.chipId == Id) {
+      if (iSpindelDevices[i].chipId == Id) {
         if (result) {
           duplicate = i;
           duplicates += 1;
@@ -232,20 +232,40 @@ class Ispindel {
   }
 
   set_contents (state, tempScale) {
+    //console.log("set_contents() state: " + JSON.stringify(state));
 
     this.temp = state.temperature;
-    if (tempScale == 'F') {
-      document.getElementById(this.elementName + "_temp").textContent = ((state.temperature * 9 / 5 ) + 32).toFixed(2);
-    } else {
-      document.getElementById(this.elementName + "_temp").textContent = (state.temperature).toFixed(2);
-    }
     this.grav = state.grav;
-    document.getElementById(this.elementName + "_grav").textContent = (state.grav).toFixed(2);
     this.tilt = state.tilt;
-    //document.getElementById(this.elementName + "_tilt").textContent = (state.tilt).toFixed(2);
     this.batt = state.batt;
-
     this.stamp = state.stamp;
+
+    //console.log("set_contents() elementName: " + this.elementName);
+    var have_isp_temp = document.getElementById(this.elementName + "_temp");
+    if (! have_isp_temp) {
+      var isp_temp, isp_grav;
+
+      isp_temp = document.createElement("DIV");
+      isp_temp.id = this.elementName + "_temp";
+      isp_temp.className = "isp_entry";
+      document.getElementById(this.elementName).appendChild(isp_temp);
+
+      isp_grav = document.createElement("DIV");
+      isp_grav.id = this.elementName + "_grav";
+      isp_grav.className = "isp_entry";
+      document.getElementById(this.elementName).appendChild(isp_grav);
+    }
+    try {
+      if (tempScale == 'F') {
+        document.getElementById(this.elementName + "_temp").textContent = ((state.temperature * 9 / 5 ) + 32).toFixed(2);
+      } else {
+        document.getElementById(this.elementName + "_temp").textContent = (state.temperature).toFixed(2);
+      }
+      document.getElementById(this.elementName + "_grav").textContent = (state.grav).toFixed(2);
+    }
+    catch (err) {
+      console.log("set_contents() caught " + err);
+    }
 
   }
 
@@ -924,7 +944,13 @@ window.onload = function () {
           console.log("iSpindelDevices was: " + JSON.stringify(iSpindelDevices));
           asensor.className = 'isp_sensor_update';
 
-          var device = searchDeviceListByChipId(sensor_state[i].chipId);
+          var device;
+          try {
+            device = searchDeviceListByChipId(sensor_state[i].chipId);
+          }
+          catch (err) {
+            console.log("Couldn't searchDeviceListByChipId() for some reason; " + err);
+          }
           if (device) {
             console.log("Already have device: " + device.chipId);
           } else {

@@ -99,8 +99,6 @@ function gpioWorker (input_queue, output_queue) {
       console.log("Failed to read running jobs directory " + this.runDir);
     } else {
       console.log("job files: " + files);
-      //files.forEach( function (file) {
-      //files.forEach( function (file, index) {
       files.forEach( function (file) {
         var filePath = path.join(this.runDir, file);
         fs.readFile(filePath, 'utf8', function (err, data) {
@@ -120,10 +118,18 @@ function gpioWorker (input_queue, output_queue) {
             console.log("job jobName: " + jobName + " has " + header.updates.length + " updates");
 
             // Check that all sensor devices are available
-            console.log("Need devices: " + header.jobSensorIds + " for job: " + jobName);
-
-            var haveAllSensors = false;
-            if (haveAllSensors) {
+            var devicesNeeded = header.jobSensorIds.length;
+            console.log("checking haveAllSensors: " + jobName + ". Needs: " + devicesNeeded + " devices. " + header.jobSensorIds);
+            var devices = this.sensorDevices();
+            devices.forEach( function (item) {
+              console.log("Have device: " + item.chipId + ", type: " + typeof(item.chipId));
+              if (header.jobSensorIds.indexOf(item.chipId.toString()) > -1) {
+                devicesNeeded -= 1;
+                console.log("Still need " + devicesNeeded + " devices");
+              }
+            });
+            console.log("Still need " + devicesNeeded + " devices for " + jobName);
+            if (devicesNeeded < 1) {
               if ( (! this.setupJobRun({'jobData': header})) ) {
                 console.log("Couldn't start job " + jobName);
               } else {
@@ -183,6 +189,17 @@ function gpioWorker (input_queue, output_queue) {
         } else {
           console.log("Started job " + header.jobName);
           this.waitingJobs.splice(i, 1);
+
+          // Update job list for clients
+          this.load_running_jobs({"type":"run_job"});
+
+          // Process the new job
+          for (var j=0;j<this.runningJobs.length;j++) {
+            console.log("runningJobs: " + this.runningJobs[j].name());
+            if (this.runningJobs[j].name() == header.jobName) {
+              this.runningJobs[j].process();
+            }
+          }
         }
       }
     }
