@@ -828,7 +828,7 @@ gpioWorker.prototype.load_running_jobs = function (msg) {
     });
   }
   var jdata = JSON.stringify({'type':'running_jobs','data':running_jobs});
-  console.log("load_running_jobs() returning: " + jdata);
+  //console.log("load_running_jobs() returning: " + jdata);
   this.output_queue.enqueue(jdata);
 };
 
