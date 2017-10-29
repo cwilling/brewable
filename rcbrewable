@@ -58,8 +58,8 @@ brewable_start () {
         -- \
         port=$BREWABLE_PORT \
         interval=$BREWABLE_JOBCHECKINTERVAL \
-            1>/var/log/brewable/brewable_stdout.log \
-            2>/var/log/brewable/brewable_stderr.log \
+            1>>/var/log/brewable/brewable_stdout.log \
+            2>>/var/log/brewable/brewable_stderr.log \
             &
 }
 

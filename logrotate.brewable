@@ -1,0 +1,9 @@
+
+/var/log/brewable/brewable_std* {
+   rotate 5
+   weekly
+   size 1M
+   copytruncate
+   shred
+   missingok
+}

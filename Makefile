@@ -28,7 +28,7 @@ TEST_FILES = test-status.js rectangle.js \
 
 DESTDIR ?=
 
-PKGVERSION ?= 0.4.1
+PKGVERSION ?= 0.4.2
 
 # Where any app files are installed
 RUNDIR = /usr/share/brewable
@@ -95,20 +95,23 @@ install:
 	install -m 0755 brewable $(DESTDIR)/usr/bin
 	install -m 0644 default.conf $(DESTDIR)/etc/default/brewable
 	install -m 0755 rcbrewable $(DESTDIR)/etc/init.d/brewable
+	install -m 0644 logrotate.brewable $(DESTDIR)/etc/logrotate.d/brewable
 	bash -c './postinst configure'
 
 uninstall:
 	rm $(DESTDIR)/etc/default/brewable
 	rm $(DESTDIR)/etc/init.d/brewable
+	rm $(DESTDIR)/etc/logrotate.d/brewable
 	rm $(DESTDIR)/usr/bin/brewable
 
-pkg:	brewable default.conf postinst rcbrewable
+pkg:	brewable default.conf postinst rcbrewable logrotate.brewable
 	rm -rf brewable-$(PKGVERSION); mkdir -p brewable-$(PKGVERSION);
 	install -m 0755 brewable brewable-$(PKGVERSION)
 	install -m 0755 default.conf brewable-$(PKGVERSION)
 	install -m 0755 rcbrewable brewable-$(PKGVERSION)
 	install -m 0755 Makefile brewable-$(PKGVERSION)
 	install -m 0755 postinst brewable-$(PKGVERSION)
+	install -m 0644 logrotate.brewable brewable-$(PKGVERSION)
 	tar cvf brewable-$(PKGVERSION)-armv61-1.tar.gz brewable-$(PKGVERSION)
 	
 
