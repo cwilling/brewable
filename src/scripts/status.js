@@ -1163,24 +1163,33 @@ window.onload = function () {
 
     var longJobNames = [];
     data.forEach( function (job, index) {
-      var header = job['header'];
-      var updates = job['updates'];
-      var longName = header['jobName'] + '-' + header['jobInstance'];
-      var saveData = {};
 
-      console.log("Creating listing for job: " + index + " (" + longName + ")");
-      longJobNames.push(longName);
+      console.log("createRunningJobsList() handling job: " + index);
+      if (job['waiting']) {
+        console.log("Job waiting: " + JSON.stringify(job));
+        console.log("Job waiting: " + Object.keys(job));
+        console.log(job['jobData'].jobName + "-" + job['jobData'].jobInstance + " is waiting.");
+        console.log(job['jobData'].jobName + "-" + job['jobData'].jobInstance + " is waiting. Needs " + JSON.stringify(job['jobData'].jobSensorIds));
+      } else {
+        var header = job['header'];
+        var updates = job['updates'];
+        var longName = header['jobName'] + '-' + header['jobInstance'];
+        var saveData = {};
 
-      // Save the data for later use. It should consist of two arrays,
-      // 1st with just the job header and 2nd with an array of status updates
-      // (for a running job, updates will periodically be added to
-      saveData['header'] = [header];
-      saveData['updates'] = updates;
-      runningData[longName] = saveData;
-      //console.log("XXX " + JSON.stringify(runningData[longName]));
+        console.log("Creating listing for job: " + index + " (" + longName + ")");
+        longJobNames.push(longName);
+
+        // Save the data for later use. It should consist of two arrays,
+        // 1st with just the job header and 2nd with an array of status updates
+        // (for a running job, updates will periodically be added to
+        saveData['header'] = [header];
+        saveData['updates'] = updates;
+        runningData[longName] = saveData;
+        //console.log("XXX " + JSON.stringify(runningData[longName]));
+        console.log("ZZZ");
+        updateJobsList(longJobNames, 'running_jobsHolder');
+      }
     });
-    console.log("ZZZ");
-    updateJobsList(longJobNames, 'running_jobsHolder');
   }
 
   function updateRunningJob(data) {

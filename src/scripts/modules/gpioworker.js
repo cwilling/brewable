@@ -805,6 +805,7 @@ gpioWorker.prototype.load_running_jobs = function (msg) {
       }
       //console.log("runningJobs history 2: " + JSON.stringify(job.history));
       var job_info = {};
+      job_info['waiting'] = false;
       job_info['header'] = job.jobInfo();
       job_info['updates'] = job.history.slice(1);
       running_jobs.push(job_info);
@@ -812,6 +813,19 @@ gpioWorker.prototype.load_running_jobs = function (msg) {
     //console.log("running_jobs list: " + JSON.stringify(running_jobs));
   } else {
     console.log("No jobs running");
+  }
+  if (this.waitingJobs.length > 0 ) {
+    console.log("Including waiting jobs in jobs list");
+    this.waitingJobs.forEach( function (job) {
+      console.log("waitingJobs job: " + JSON.stringify(job.jobData));
+      var job_info = {};
+      job_info['waiting'] = true;
+      job_info['jobData'] = job.jobData;
+      /*
+      job_info['updates'] = job.history.slice(1);
+      */
+      running_jobs.push(job_info);
+    });
   }
   var jdata = JSON.stringify({'type':'running_jobs','data':running_jobs});
   console.log("load_running_jobs() returning: " + jdata);
