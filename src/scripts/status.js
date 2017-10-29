@@ -40,6 +40,7 @@ var profileOwner;
 /* Save JobHistory data here */
 var historyData = {};
 var runningData = {};
+var unStartedJobs = [];
 
 /*
   Running, stopped, suspended etc.
@@ -1163,24 +1164,43 @@ window.onload = function () {
 
     var longJobNames = [];
     data.forEach( function (job, index) {
-      var header = job['header'];
-      var updates = job['updates'];
-      var longName = header['jobName'] + '-' + header['jobInstance'];
-      var saveData = {};
+      console.log("createRunningJobsList() handling job: " + index);
 
-      console.log("Creating listing for job: " + index + " (" + longName + ")");
-      longJobNames.push(longName);
+      var longName;
+      if (job['waiting']) {
+        longName = job['jobData'].jobName + "-" + job['jobData'].jobInstance;
 
-      // Save the data for later use. It should consist of two arrays,
-      // 1st with just the job header and 2nd with an array of status updates
-      // (for a running job, updates will periodically be added to
-      saveData['header'] = [header];
-      saveData['updates'] = updates;
-      runningData[longName] = saveData;
-      //console.log("XXX " + JSON.stringify(runningData[longName]));
+        //console.log("Job waiting: " + JSON.stringify(job));
+        //console.log("Job waiting: " + Object.keys(job));
+        //console.log(job['jobData'].jobName + "-" + job['jobData'].jobInstance + " is waiting.");
+        //console.log(job['jobData'].jobName + "-" + job['jobData'].jobInstance + " is waiting. Needs " + JSON.stringify(job['jobData'].jobSensorIds));
+
+        // Add this job to unStartedJobs list
+        unStartedJobs[longName] = job;
+
+      } else {
+        var header = job['header'];
+        var updates = job['updates'];
+        var saveData = {};
+
+        longName = header['jobName'] + '-' + header['jobInstance'];
+
+        // If previously unstarted, remove it from list
+        if (unStartedJobs[longName]) delete unStartedJobs[longName];
+
+        console.log("Creating listing for running job: " + index + " (" + longName + ")");
+        longJobNames.push(longName);
+
+        // Save the data for later use. It should consist of two arrays,
+        // 1st with just the job header and 2nd with an array of status updates
+        // (for a running job, updates will periodically be added to
+        saveData['header'] = [header];
+        saveData['updates'] = updates;
+        runningData[longName] = saveData;
+      }
+      //console.log("ZZZ");
+      updateJobsList(longJobNames, 'running_jobsHolder');
     });
-    console.log("ZZZ");
-    updateJobsList(longJobNames, 'running_jobsHolder');
   }
 
   function updateRunningJob(data) {
@@ -1966,6 +1986,35 @@ window.onload = function () {
       }
     });
 
+    /*
+      Before drawing the running jobs, look for any non starters 
+      (perhaps due to unavailability of a required sensor)
+      and set up a notification.
+    */
+    var unStartedJobsKeys = Object.keys(unStartedJobs);
+    //console.log("unstarted job(s): " + unStartedJobsKeys);
+
+    unStartedJobsKeys.forEach( function (key) {
+      //console.log("Advising of unstarted job: " + key + " --- " + JSON.stringify(unStartedJobs[key]));
+
+      var sensorIds = unStartedJobs[key]['jobData'].jobSensorIds;
+      //console.log("Needs sensor" + (sensorIds.length>1?"s":"") + ": " + sensorIds);
+
+      var jobElement = document.createElement('DIV');
+      jobElement.id = 'jobElement_' + key;
+      jobElement.className = 'jobCantStart';
+
+      var jobItemName = document.createElement('DIV');
+      jobItemName.id = 'jobItemName_' + i;
+      jobItemName.className = 'jobCantStartName';
+      jobItemName.innerHTML = "<html>Job " + key + " can't start yet. Needs sensor" + (sensorIds.length>1?"s":"") + ": " + sensorIds + "</html>";
+
+      jobElement.appendChild(jobItemName);
+      jobsListHolder.appendChild(jobElement);
+    });
+
+    /* Now the jobs running normally
+    */
     for (var i=0;i<jobFiles.length;i++) {
       //console.log("              " + jobFiles[i]);
       // Extract some identifiers from the filename

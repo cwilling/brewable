@@ -270,7 +270,7 @@ div#sensor_updateHolder {
 .isp_sensor_update {
     display:    flex;
     flex-direction: column;
-    alilgn-items: center;
+    align-items: center;
     justify-content: center;
 
     display:    -webkit-flex;
@@ -300,7 +300,7 @@ div#sensor_updateHolder {
 /* isp_sensor_overlay_title */
 .isp_sol_title {
     display:    flex;
-    alilgn-items: center;
+    align-items: center;
     justify-content: center;
 
     display:    -webkit-flex;
@@ -314,7 +314,7 @@ div#sensor_updateHolder {
 /* isp_sensor_overlay_detail */
 .isp_sol_detail {
     display:    flex;
-    alilgn-items: center;
+    align-items: center;
     justify-content: center;
 
     display:    -webkit-flex;
@@ -997,6 +997,35 @@ div#jobComposer {
     border:	1px solid #000;
     border-radius: 4px;
     direction:  ltr;
+}
+.jobCantStart {
+    display:    flex;
+    align-items: center;
+    justify-content: center;
+
+    display:            -webkit-flex;
+    -webkit-align-items: center;
+    -webkit-justify-content: center;
+
+    height:     40px;
+    margin:     3px;
+    border:	1px solid #000;
+    border-radius: 4px;
+    direction:  ltr;
+    background:	#dc7676;
+}
+.jobCantStartName {
+    display:    flex;
+    align-items: center;
+    justify-content: center;
+
+    display:    -webkit-flex;
+    -webkit-align-items: center;
+    -webkit-justify-content: center;
+
+    margin-left: 2px;
+    padding:    0 1em;
+    height:     36px;
 }
 .jobElementGraph {
     direction:  ltr;
