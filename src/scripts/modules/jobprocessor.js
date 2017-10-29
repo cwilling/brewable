@@ -157,7 +157,12 @@ function JobProcessor(options) {
       }
     }
     job_status['sensors'].push(sensor);
-    job_status[sensor] = jSensors[sensor].temp;
+    var sensorValue = {};
+    sensorValue["temp"] = jSensors[sensor].temp;
+    if (jSensors[sensor].grav) {
+      sensorValue["grav"] = jSensors[sensor].grav;
+    }
+    job_status[sensor] = sensorValue;
   });
   console.log("job_status: " + JSON.stringify(job_status));
   //console.log("jobRelays: " + JSON.stringify(this.jobRelays));
