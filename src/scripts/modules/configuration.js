@@ -12,7 +12,7 @@ var defaultConfigValues = function() {
     'relayDelayPostON'      : parseInt(180),
     'relayDelayPostOFF'     : parseInt(480),
     'iSpindels'             : [
-      { "name":"iSpindel", "timeout":60 }
+      { "name":"iSpindel", "timeout":120 }
     ]
   };
 };
@@ -187,14 +187,21 @@ Configuration.prototype.setIspindelTimeout = function (key, val) {
 
   var config = this._configuration;
   var found = false;
-  config.iSpindels.forEach( function(item) {
-    if (item.name == key ) {
-      found = true;
-      item.timeout = val;
-    }
-  });
+  if (config.iSpindels) {
+    config.iSpindels.forEach( function(item) {
+      if (item.name == key ) {
+        found = true;
+        item.timeout = val;
+      }
+    });
+  }
   if (!found) {
-    config.iSpindels.push({"name":key, "timeout":val});
+    if (config.iSpindels) {
+      config.iSpindels.push({"name":key, "timeout":val});
+    } else {
+      config.iSpindels = [];
+      config.iSpindels.push({"name":key, "timeout":val});
+    }
   }
   fs.writeFileSync(this._configFileName, JSON.stringify(config));
 };
@@ -202,7 +209,12 @@ Configuration.prototype.setIspindelTimeout = function (key, val) {
 Configuration.prototype.newIspindel = function (name) {
   var config = this._configuration;
   var defaultTimeout = defaultConfigValues().iSpindels[0].timeout;
-  config.iSpindels.push({"name":name, "timeout":defaultTimeout});
+  if (config.iSpindels) {
+    config.iSpindels.push({"name":name, "timeout":defaultTimeout});
+  } else {
+    config.iSpindels = [];
+    config.iSpindels.push({"name":name, "timeout":defaultTimeout});
+  }
   fs.writeFileSync(this._configFileName, JSON.stringify(config));
   this.loadConfigFromFile();
 };
