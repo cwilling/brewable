@@ -1324,12 +1324,16 @@ window.onload = function () {
           configItemSensorFudge.setAttribute('type', 'text');
           configItemSensorFudge.value = configItems[key][sensor];
           configItemSensorFudge.onblur = function () {
-            console.log("key: " + this.id + "  " + this.id.replace(/.+_/,''));
-            var idata = {};
-            idata['sensorFudgeFactors'] = this.id.replace(/.+_/,'');
-            idata['fudge'] = this.value;
-            msgobj = {type:'config_change', data:idata};
-            sendMessage({data:JSON.stringify(msgobj)});
+            if (isNaN(this.value)) {
+              console.log("Bad value: " + this.value);
+            } else {
+              console.log("key: " + this.id + "  " + this.id.replace(/.+_/,''));
+              var idata = {};
+              idata['sensorFudgeFactors'] = this.id.replace(/.+_/,'');
+              idata['fudge'] = this.value;
+              msgobj = {type:'config_change', data:idata};
+              sendMessage({data:JSON.stringify(msgobj)});
+            }
           };
 
           configItemDataValue.appendChild(configItemSensorName);
