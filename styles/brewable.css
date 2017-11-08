@@ -337,6 +337,16 @@ div#sensor_updateHolder {
 
     width:      68%;
 }
+.chartInspectorOverlay {
+    position:   fixed;
+    left:       0px;
+    right:      0px;
+    top:        0px;
+    bottom:     0px;
+}
+.chartInspectorGraph {
+    background-color: bisque;
+}
 #relay_updateHolder {
     display:    flex;
     align-items: center;
@@ -452,7 +462,8 @@ div#content_4 {
     font-size:  120%;
     font-weight: bold;
     background:	#555;
-    height:      60px;
+    color:      white;
+    height:     60px;
     width:      100%;
 
 }

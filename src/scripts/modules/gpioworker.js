@@ -1081,10 +1081,23 @@ gpioWorker.prototype.load_saved_job_data = function (msg) {
         updates.push(JSON.parse(lines[i]));
         //console.log("-> " + JSON.stringify(updates[updates.length-1]));
       }
+      var returnData;
+      if (msg.data['who']) {
+        console.log("LOAD SAVED JOB DATA for: " + msg.data['who']);
+        returnData = {'header':[header], 'updates':updates, 'who':msg.data['who']};
+      } else {
+        returnData = {'header':[header], 'updates':updates};
+      }
+      var jdata = JSON.stringify({
+        'type':'saved_job_data',
+        'data':returnData
+      });
+      /*
       var jdata = JSON.stringify({
         'type':'saved_job_data',
         'data':{'header':[header], 'updates':updates}
       });
+      */
       this.output_queue.enqueue(jdata);
     }
   }.bind(this) );

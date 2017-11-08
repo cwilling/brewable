@@ -23,6 +23,8 @@ var availableRelays  = [];
 var iSpindelDevices = [];
 var iSpindelWaitTimes = {};
 
+var jobHistoryInspectors = {};
+
 var profileData = [];
 var profileDisplayData = [];        // "processed" data for display
 var profileLinearScaleY = [];
@@ -462,6 +464,139 @@ class Ispindel {
   }
 }
 
+const CHARTINSPECTORNAME = Symbol();
+const CHARTINSPECTORHEADER = Symbol();
+const CHARTINSPECTORUPDATES = Symbol();
+const CHARTINSPECTORIDBASE = Symbol();
+class ChartInspector {
+  constructor (data) {
+    this[CHARTINSPECTORHEADER] = data['header'];
+    this[CHARTINSPECTORUPDATES] = data['updates'];
+
+    this[CHARTINSPECTORIDBASE] = data.who;
+    this[CHARTINSPECTORNAME] = data.header[0]['jobName'] + '-' + data.header[0]['jobInstance'].replace('%', '\\%');
+    this.elementName = this[CHARTINSPECTORIDBASE] + this[CHARTINSPECTORNAME];
+
+    // Keep a copy in historyData{} to avoid unnecessar retrieval;
+    historyData[this[CHARTINSPECTORNAME]] = data;
+
+    // Enable addEventListener to use .bind(this)
+    this.bindListener;
+
+    // Nominate where to draw the chart
+    switch(this[CHARTINSPECTORIDBASE]) {
+    case "inspect_history_":
+    default:
+      this.parentName = document.getElementsByTagName("body")[0];
+      break;
+    }
+
+    console.log("Hello World from new ChartInspector: " + this[CHARTINSPECTORNAME] + ", prefix: " + data.who);
+    this.showInspectorOverlay();
+  }
+
+  get name () { return this[CHARTINSPECTORNAME]; }
+  get header () { return this[CHARTINSPECTORHEADER]; }
+  get updates () { return this[CHARTINSPECTORUPDATES]; }
+
+  report () {
+    console.log("Inspector for " + this[CHARTINSPECTORNAME] + " reporting");
+  }
+
+  addInspectorKeyboardHandler (e) {
+    console.log("Pressed key " + e.key + " from: " + this.name);
+    if (this.overlay.style.display == "none") {
+      console.log("Inspector is not visible");
+    } else {
+      console.log("Inspector is alive");
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }
+
+  showInspectorOverlay () {
+    console.log("showInspectorOverlay() for " + this.elementName);
+    var inspectorExists = document.getElementById(this.elementName);
+
+    if (inspectorExists) {
+      this.overlay.style.display = "block";
+    } else {
+      this.overlay = document.createElement("DIV");
+      this.overlay.id = this.elementName;
+      this.overlay.className = "chartInspectorOverlay";
+      this.overlay.style.display = "block";
+
+      var jobInspectorTitle = document.createElement('DIV');
+      jobInspectorTitle.id = this[CHARTINSPECTORIDBASE] + 'Title';
+      jobInspectorTitle.className = 'page_title unselectable';
+      jobInspectorTitle.textContent = 'Job Inspector';
+
+      this.overlay.appendChild(jobInspectorTitle);
+
+      jobInspectorTitle.onclick = function() {
+        console.log("Removing addInspectorKeyboardHandler()");
+        document.body.removeEventListener("keydown", this.bindListener);
+        this.overlay.style.display = "none";
+      }.bind(this);
+
+      //document.body.appendChild(this.overlay);
+      this.parentName.appendChild(this.overlay);
+    }
+
+    /* Examples (from updateJobHistoryData()) of extracting various fields
+    console.log("updateJobHistoryData() jobProfile: " + header[0]['jobProfile'] + " " + header[0]['jobProfile'].length);
+    console.log("updateJobHistoryData() jobName: " + header[0]['jobName'] + " " + header.length);
+    console.log("updateJobHistoryData() updates: " + updates + " " + updates.length);
+    for (var i=0;i<updates.length;i++) {
+      //console.log("updateJobHistoryData() temp at " + parseFloat(updates[i]['elapsed']).toFixed(2) + " = " + updates[i][updates[i]['sensors'][0]]);
+      console.log("updateJobHistoryData() temp at " + parseFloat(updates[i]['elapsed']).toFixed(2) + " = " + updates[i][updates[i]['sensors'][1]]['temp']);
+    }
+    console.log("updateJobHistoryData() grav at " + parseFloat(updates[updates.length - 1]['elapsed']).toFixed(2) + " = " + updates[updates.length - 1][updates[updates.length - 1]['sensors'][1]]['grav']);
+    */
+
+    // Now (re)draw graph
+    var graphWidthScale = 1;
+
+    //select("#inspector_" + this[CHARTINSPECTORNAME].remove());
+    //select("#" + this[CHARTINSPECTORIDBASE] + "chart_" + this[CHARTINSPECTORNAME].replace('%', '\\%')).remove();
+    select("#" + this[CHARTINSPECTORIDBASE] + "chart_" + this[CHARTINSPECTORNAME]).remove();
+    var jobElementGraphInspector = document.getElementById(this.elementName);
+    //this.overlay.focus();
+
+    console.log("AAAAA");
+    var svg = select(jobElementGraphInspector).append("svg");
+
+    console.log("BBBBB");
+    var width = jobElementGraphInspector.clientWidth;
+    var height = jobElementGraphInspector.clientHeight;
+
+    var graphMargin;
+    var graphHeight;
+    if ( smallDevice() ) {
+      //console.log("smallDevice is TRUE");
+      graphMargin = {top: 24, right: 40, bottom: 60, left: 40};
+      graphHeight = height - (graphMargin.top + graphMargin.bottom);
+    } else {
+      //console.log("smallDevice is FALSE");
+      graphMargin = {top: 32, right: 40, bottom: 60, left: 80};
+      graphHeight = height - (graphMargin.top + graphMargin.bottom);
+    }
+    var graphWidth = width - (graphMargin.left + graphMargin.right) - 20;
+
+    console.log("CCCCC " + width + "," + height);
+    svg
+      .attr("id", this[CHARTINSPECTORIDBASE] + "chart_" + this[CHARTINSPECTORNAME].replace('%', '\\%'))
+      .attr("class", "chartInspectorGraph")
+      .attr("width", width) .attr("height", height);
+    console.log("DDDDD");
+
+
+    this.bindListener = this.addInspectorKeyboardHandler.bind(this);
+    document.body.addEventListener("keydown", this.bindListener);
+  }
+
+}
+
 // main()
 //domReady( function(){
 //$(document).ready( function()
@@ -822,7 +957,11 @@ window.onload = function () {
       } else if (jmsg.type === 'saved_job_data') {
         // Data for a particular saved job
         console.log("RCVD saved_job_data ");
-        updateJobHistoryData(jmsg.data);
+        if (jmsg.data.who) {
+          showJobHistoryDataInspector(jmsg.data);
+        } else {
+          updateJobHistoryData(jmsg.data);
+        }
       } else if (jmsg.type === 'archived_job') {
         console.log("RCVD archived_job " + message.data);
         jobHistoryItemRemoved(jmsg);
@@ -1326,6 +1465,8 @@ window.onload = function () {
           configItemSensorFudge.onblur = function () {
             if (isNaN(this.value)) {
               console.log("Bad value: " + this.value);
+              // Should also try recalling last good value?
+
             } else {
               console.log("key: " + this.id + "  " + this.id.replace(/.+_/,''));
               var idata = {};
@@ -1430,11 +1571,33 @@ window.onload = function () {
     }
   }
 
+  /* START HISTORY INSPECTOR */
+
+  function showJobHistoryDataInspector (data) {
+    console.log("Have saved_job_data for job: " + data.who);
+    var header, longName;
+
+    console.log("showJobHistoryDataInspector() New job");
+    header = data['header'];
+    longName = header[0]['jobName'] + '-' + header[0]['jobInstance'];
+    historyData[longName] = data;
+    console.log("showJobHistoryDataInspector() longName: " + longName);
+
+    if (jobHistoryInspectors.hasOwnProperty(longName)) {
+      // An Inspector already exists
+      console.log("showJobHistoryDataInspector() already have an Inspector for " + longName);
+    } else {
+      // Need to create a new Inspector
+      console.log("showJobHistoryDataInspector() need to create new Inspector for " + longName);
+      jobHistoryInspectors[longName] = new ChartInspector(data);
+    }
+  }
+
   /* START RUNNING/HISTORY */
 
   /* This is where a graph is (re)drawn.
     We can arrive here for a number of reasons:
-      - a graph needs to ber drawn for the first time
+      - a graph needs to be drawn for the first time
       - a graph needs to be redrawn because something has changed
         e.g. additional data e.g. zoomed view requested
     In any case, its cheap enough to just (re)draw everything,
@@ -1492,6 +1655,7 @@ window.onload = function () {
     console.log("updateJobHistoryData() grav at " + parseFloat(updates[updates.length - 1]['elapsed']).toFixed(2) + " = " + updates[updates.length - 1][updates[updates.length - 1]['sensors'][1]]['grav']);
     */
 
+    // We need holderName just to identify the correct zoom box to access scale factor
     var holderNode = document.getElementById('jobElementGraph_' + longName);
     if (holderNode == null) {
       console.log('updateJobHistoryData(): jobElementGraph_' + longName + ' does not exist');
@@ -1522,7 +1686,6 @@ window.onload = function () {
     select("#history_" + longName.replace('%', '\\%')).remove();
     var historyJobsGraphHolder = select("#jobElementGraph_" + longName.replace('%', '\\%'))
       .append("svg")
-      //.attr("id", "history_" + longName.replace('%', '\%'))
       .attr("id", "history_" + longName.replace('%', '\\%'))
       .attr("class", "history_job")
       .attr("width", historyJobsGraphWidth + historyJobsGraphMargin.right + historyJobsGraphMargin.left)
@@ -2150,11 +2313,35 @@ window.onload = function () {
           }
         }
       }, {
+        title: 'Inspect',
+        action: function(elm, data, index) {
+          console.log('menu item #2 from ' + elm.id + " " + data.title + " " + index);
+          var jobElementGraphName = 'jobElementGraph_' + elm.id.slice('jobItemInstance_'.length);
+          var jobLongName = elm.id.slice('jobItemInstance_'.length);
+          console.log("Inspect jobLongName " + jobLongName);
+
+          if (jobHistoryInspectors[jobLongName]) {
+            console.log("Already have an Inspector for " + jobLongName);
+            jobHistoryInspectors[jobLongName].showInspectorOverlay();
+          } else if (historyData[jobLongName]) {
+            console.log("Don't have an Inspector for " + jobLongName + " yet but already have the data");
+            var hdata = historyData[jobLongName];
+            hdata["who"] = "inspect_history_";
+            showJobHistoryDataInspector(hdata);
+          } else {
+            msgobj = {       
+              type:'load_saved_job_data',
+              data:{'fileName':jobElementGraphName.slice('jobElementGraph_'.length), 'who':'inspect_history_'}
+            };
+            sendMessage({data:JSON.stringify(msgobj)});
+          }
+        }
+      }, {
         // At the server, move from history to archive directory
         // In the browser, remove item from list
         title: 'Archive',
         action: function(elm, data, index) {
-          console.log('menu item #2 from ' + elm.id + " " + data.title + " " + index);
+          console.log('menu item #3 from ' + elm.id + " " + data.title + " " + index);
           var longName = elm.id.replace('jobItemInstance_', '');
           var jobName = longName.slice(0, (longName.length - 16)); // e.g. '-20160504_103213'
           var jobInstance = longName.replace(jobName + '-', '');
@@ -2170,7 +2357,7 @@ window.onload = function () {
       }, {
         title: 'Delete',
         action: function(elm, data, index) {
-          console.log('menu item #3 from ' + elm.id + " " + data.title + " " + index);
+          console.log('menu item #4 from ' + elm.id + " " + data.title + " " + index);
           var longName = elm.id.replace('jobItemInstance_', '');
           var jobName = longName.slice(0, (longName.length - 16)); // e.g. '-20160504_103213'
           var jobInstance = longName.replace(jobName + '-', '');
@@ -2890,13 +3077,22 @@ window.onload = function () {
     // Redraw profile editor
     updateProfileGraph({data:profileData, owner:profileOwner});
 
-    //Redraw running jobs
+    // Redraw running jobs
     var runningJobs = document.getElementsByClassName("jobElementGraph");
     for (var i=0;i<runningJobs.length;i++) {
       var jobLongName = runningJobs[i].id.replace("jobElementGraph_", "");
       //console.log("Redraw " + jobLongName);
       updateJobHistoryData(0, jobLongName);
     }
+
+    // Redraw chart inspection overlays
+    Object.keys(jobHistoryInspectors).forEach( function (item) {
+      if (jobHistoryInspectors[item].overlay.style.display == "none") {
+        console.log("Not redrawing: " + jobHistoryInspectors[item].name);
+      } else {
+        jobHistoryInspectors[item].showInspectorOverlay();
+      }
+    });
 
   };
 
@@ -2911,8 +3107,8 @@ window.onload = function () {
       selectAll('.profileSetPoint').each( function() {
         if (this.id == pfCurrentDot.id) { pfCtrlKey = true; }
       });
-
     }
+
   });
   select("body").on("keyup", function () {
     //console.log("KEY UP");
@@ -3083,7 +3279,6 @@ window.onload = function () {
   /***************** START JOBS Templates/Composer/History  *******************/
   console.log("START JOBS");
 
-  //document.addEventListener('profilesLoadedEvent', function (e) {
   document.addEventListener('profilesLoadedEvent', function () {
     //Clear the job name
     //document.getElementById("jobName").value = "";
