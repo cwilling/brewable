@@ -1669,7 +1669,7 @@ window.onload = function () {
     var holderName = holderNode.getAttribute('holderName');
     //console.log('Scale widget has holderName: ' + holderName);
     var graphWidthScale = parseInt(document.getElementById('jobItemHZBInput_' + holderName + '_' + longName).value);
-    if (graphWidthScale < 1 ) {
+    if (graphWidthScale < 1 || isNaN(graphWidthScale)) {
       graphWidthScale = 1;
       document.getElementById('jobItemHZBInput_' + holderName + '_' + longName).value = 1;
     }
