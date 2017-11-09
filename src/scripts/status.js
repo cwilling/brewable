@@ -612,6 +612,7 @@ window.onload = function () {
   var content_1 = document.createElement('DIV');
   content_1.id = 'content_1';
   content_1.className = 'content';
+  content_1.tabIndex = 0;
   main_content.appendChild(content_1);
   var statusTitle = document.createElement('DIV');
   statusTitle.id = 'statusTitle';
@@ -647,6 +648,7 @@ window.onload = function () {
   var content_2 = document.createElement('DIV');
   content_2.id = 'content_2';
   content_2.className = 'content';
+  content_2.tabIndex = 0;
   main_content.appendChild(content_2);
   var jobTemplatesTitle = document.createElement('DIV');
   jobTemplatesTitle.id = 'jobTemplatesTitle';
@@ -784,6 +786,7 @@ window.onload = function () {
   var content_3 = document.createElement('DIV');
   content_3.id = 'content_3';
   content_3.className = 'content';
+  content_3.tabIndex = 0;
   main_content.appendChild(content_3);
   var profilesTitle = document.createElement('DIV');
   profilesTitle.id = 'profilesTitle';
@@ -799,7 +802,9 @@ window.onload = function () {
   var content_4 = document.createElement('DIV');
   content_4.id = 'content_4';
   content_4.className = 'content';
+  content_4.tabIndex = 0;
   main_content.appendChild(content_4);
+
   var configTitle = document.createElement('DIV');
   configTitle.id = 'configTitle';
   configTitle.className = 'page_title unselectable';
