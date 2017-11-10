@@ -31,6 +31,8 @@ Since version 0.4.0, Brewable has supported the iSpindel sensor device to track 
 The internal DS18B20 temperature sensor is identical to the device already supported by Brewable,
 hence an iSpindel, once configured, can already be used for job control like any other temperature sensor.
 In addition the SG is displayed along with the reported temperature readings from the iSpindel.
+<p/>
+
 <p>
 When configuring the iSpindel, the important entries for operation with Brewable are Service Type, Server Address, Server Port and Server URL.
 <ul>
@@ -48,6 +50,35 @@ When configuring the iSpindel, the important entries for operation with Brewable
     Service URL should be set to /iSpindel
     </li>
 </ul>
+</p>
+
+<p/>
+<p/>
+<p>
+<h3><a id="Firmware" class="anchor" href="#Firmware" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Firmware</h3>
+In general, firmware updates (if needed) are most easily performed by setting the iSpindel to Access Point mode and uploading the new firmware release in the Management section.
+<p/>
+<p>
+An alternative method is to connect the iSpindel by cable to a computer's serial port and using software such as
+<a href="https://github.com/igrr/esptool-ck">esptool</a> to perform the upload.
+There may be other software tools to do the same job but I prefer this one since it is the tool used behind the scenes
+by both the Arduino IDE as well as the PlatformIO plugin (as used by iSpindel upstream) for the Atom editor.
+</p>
+<p>
+Having downloaded or built the <em>esptool</em> application, connect the iSpindel to the computer by
+plugging a cable with a microUSB connector into the WemOS board of the iSpindel (<em>not</em> the battery charging board).
+The computer end of that cable should plug into a standard USB port. You'll next need to ascertain which serial port
+has been allocated when the iSpindel was connected. On a Linux machine it will be /dev/ttyUSB0 if the iSpindel is the
+only device connected to the serial port. Otherwise it may /dev/ttyUSB1, /dev/ttyUSB2 etc., depending on how many devices
+are already attached in this way. However, having multiple serial devices attached is unlikely; it will most likely be /dev/ttyUSB0.
+</p>
+<p>
+Now download the firmware to install. The official firmware should always be available at
+<a href="https://github.com/universam1/iSpindel/releases/">https://github.com/universam1/iSpindel/</a>. Save the downloaded
+<em>firmware.bin</em> file anywhere convenient, say /tmp. Now to upload the firmware to the iSpindel, run the command:
+<br>&nbsp;&nbsp;&nbsp;&nbsp;<code>esptool -vv -cd nodemcu -cb 921600 -cp /dev/ttyUSB0 -ca 0x00000 -cf /tmp/firmware.bin</code>
+</p>
+
 </p>
 
 
