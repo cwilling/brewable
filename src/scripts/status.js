@@ -531,13 +531,24 @@ class ChartInspector {
       jobInspectorTitle.className = 'page_title unselectable';
       jobInspectorTitle.textContent = 'Job Inspector';
 
+      var jobInspectorChartHolder = document.createElement('DIV');
+      jobInspectorChartHolder.id = this[CHARTINSPECTORIDBASE] + "chartHolder_" + this[CHARTINSPECTORNAME];
+      jobInspectorChartHolder.className = 'inspector_chart_holder unselectable';
+
       this.overlay.appendChild(jobInspectorTitle);
+      //this.overlay.appendChild(jobInspectorChartHolder);
 
       jobInspectorTitle.onclick = function() {
         console.log("Removing addInspectorKeyboardHandler()");
         document.body.removeEventListener("keydown", this.bindListener);
         this.overlay.style.display = "none";
       }.bind(this);
+
+      // test
+      //jobInspectorChartHolder.onclick = function (event) {
+      //  console.log("click " + event.offsetX + "," + event.offsetY);
+      //}.bind(this);
+      //this.overlay.onmousedown = this.showChartDetailOverlay.bind(this);
 
       //document.body.appendChild(this.overlay);
       this.parentName.appendChild(this.overlay);
@@ -557,11 +568,9 @@ class ChartInspector {
     // Now (re)draw graph
     var graphWidthScale = 1;
 
-    //select("#inspector_" + this[CHARTINSPECTORNAME].remove());
-    //select("#" + this[CHARTINSPECTORIDBASE] + "chart_" + this[CHARTINSPECTORNAME].replace('%', '\\%')).remove();
     select("#" + this[CHARTINSPECTORIDBASE] + "chart_" + this[CHARTINSPECTORNAME]).remove();
     var jobElementGraphInspector = document.getElementById(this.elementName);
-    //this.overlay.focus();
+    //var jobElementGraphInspector = document.getElementById(this[CHARTINSPECTORIDBASE] + "chartHolder_" + this[CHARTINSPECTORNAME]);
 
     console.log("AAAAA");
     var svg = select(jobElementGraphInspector).append("svg");
@@ -585,14 +594,90 @@ class ChartInspector {
 
     console.log("CCCCC " + width + "," + height);
     svg
-      .attr("id", this[CHARTINSPECTORIDBASE] + "chart_" + this[CHARTINSPECTORNAME].replace('%', '\\%'))
+      .attr("id", this[CHARTINSPECTORIDBASE] + "chart_" + this[CHARTINSPECTORNAME])
       .attr("class", "chartInspectorGraph")
       .attr("width", width) .attr("height", height);
     console.log("DDDDD");
 
+    var a = this[CHARTINSPECTORIDBASE];
+    var b = this[CHARTINSPECTORNAME];
+    svg
+      .on("click", function() {
+        console.log(jobElementGraphInspector.id + " at: " + mouse(this)[0] + "," + mouse(this)[1]);
+
+        //select("#detailTooltipText_" + longName.replace('%', '\\%'))
+        //  .append("tspan").attr("x",0).attr("y",0).attr('dx', '0.3em').attr('dy', '1.1em').text("Time: " + tickText(historyLinearScaleX.invert(mouse(this)[0])))
+        //  .append("tspan").attr("x",0).attr("y",18).attr('dx','0.3em').attr('dy', '1.1em').text("Temp:" + (historyLinearScaleY.invert(mouse(this)[1])).toFixed(2));
+        select("#" + a + "TooltipText_" + b)
+          .append("tspan").attr("x",0).attr("y",0).attr('dx', '0.3em').attr('dy', '1.1em').text("Time: ")
+          .append("tspan").attr("x",0).attr("y",18).attr('dx','0.3em').attr('dy', '1.1em').text("Temp:");
+
+        // Hide current tooltip
+        select("#" + a + "TooltipGroupHolder_" + b)
+          .style("opacity", 0.0);
+        // Reposition & show tooltip
+        select("#" + a + "TooltipGroupHolder_" + b)
+          .attr("transform",
+            //"translate(" + (graphMargin.left + mouse(this)[0]) + "," + (graphMargin.top + mouse(this)[1]) + ")")
+            "translate(" + mouse(this)[0] + "," + mouse(this)[1] + ")")
+          .style("opacity", 0.9);
+        console.log("#" + a + "TooltipGroupHolder_" + b);
+      });
+
+    /* Show time & value as a tooltip
+      at any particular point of the graph
+    */
+    //historyJobsGraphHolder.append("g")
+    //  .attr("id", "detailTooltipGroup_" + longName.replace('%', '\\%'))
+    //  .attr("class", "detailtooltipgroup")
+    //  .attr("transform",
+    //    "translate(" + historyJobsGraphMargin.left + "," + historyJobsGraphMargin.top + ")")
+    //  .style("opacity", 0.0);
+    //select("#detailTooltipGroup_" + longName.replace('%', '\\%'))
+    //  .append("rect")
+    //  .attr('id', 'detailTooltipBox_' + longName.replace('%', '\\%'))
+    //  .attr('class', 'detailtooltipbox')
+    //  .attr('width', 96) .attr('height', 40)
+    //  .attr('rx', 6).attr('ry', 4);
+    svg.append("g")
+      .attr("id", this[CHARTINSPECTORIDBASE] + "TooltipGroupHolder_" + this[CHARTINSPECTORNAME])
+      .attr("class", this[CHARTINSPECTORIDBASE] + "TooltipGroupHolder")
+      .attr("transform",
+        "translate(" + graphMargin.left + "," + graphMargin.top + ")")
+      .style("opacity", 0.0);
+    select("#" + this[CHARTINSPECTORIDBASE] + "TooltipGroupHolder_" + this[CHARTINSPECTORNAME])
+      .append("rect")
+      .attr('id', this[CHARTINSPECTORIDBASE] + "TooltipBox_" + this[CHARTINSPECTORNAME])
+      .attr("class", this[CHARTINSPECTORIDBASE] + "TooltipBox")
+      .attr('width', 96) .attr('height', 40)
+      .attr('rx', 6).attr('ry', 4);
+    select("#" + this[CHARTINSPECTORIDBASE] + "TooltipGroupHolder_" + this[CHARTINSPECTORNAME])
+      .append("text")
+      .attr('id', this[CHARTINSPECTORIDBASE] + 'TooltipText_' + this[CHARTINSPECTORNAME])
+      .attr('class', this[CHARTINSPECTORIDBASE] + "Tooltip");
+
 
     this.bindListener = this.addInspectorKeyboardHandler.bind(this);
     document.body.addEventListener("keydown", this.bindListener);
+  }
+
+  // Inspector detail overlay - an overlay over the overlay
+  showChartDetailOverlay () {
+    console.log("showChartDetailOverlay() click");
+    var el = document.getElementById(this.elementName);
+
+    // Size of enclosing DIV (css isp_sensor_update)
+    var els = {"w":128, "h":64};
+    // Size of overlay (css .isp_sol)
+    var ols = {"w":168, "h":152};
+
+    this.detailOverlay = document.createElement("DIV");
+    this.detailOverlay.id = this.elementName + "detail_overlay";
+    this.detailOverlay.className = "inspector_dol unselectable";
+    this.detailOverlay.style.position = "fixed";
+    this.detailOverlay.style.top = getOffsetRect(el).top - (ols.h - els.h)/2 + 'px';
+    this.detailOverlay.style.left = getOffsetRect(el).left - (ols.w - els.w)/2 + 'px';
+    document.body.appendChild(this.detailOverlay);
   }
 
 }
@@ -2833,7 +2918,6 @@ window.onload = function () {
         .attr('r', 3.5)
         .attr('cx', function(d) { return d.x; })
         .attr('cy', function(d) { return d.y; })
-        //.on("mouseover", function(d) {
         .on("mouseover", function() {
           // event.ctrlKey is masked from pfDrag
           // so set our own pfCtrlKey instead
@@ -2844,7 +2928,6 @@ window.onload = function () {
           }
           pfCurrentDot = this;
         })
-        //.on("mouseout", function(d) {
         .on("mouseout", function() {
           if ( !(select(this).classed("dragging")) ) {
             profileTooltip.transition()

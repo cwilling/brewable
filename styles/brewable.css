@@ -290,7 +290,7 @@ div#sensor_updateHolder {
     opacity:    .8;
     /* filter: alpha(opacity=70); */
     width:      168px;
-    height:	152;
+    height:	152px;
     z-index:    10;
 
     border:	1px solid white;
@@ -346,6 +346,23 @@ div#sensor_updateHolder {
 }
 .chartInspectorGraph {
     background-color: bisque;
+}
+// Inspector detail overlay
+.inspector_dol {
+    width:      200px;
+    height:     100px;
+    background-color: lightsteelblue;
+    border:	2px solid black;
+}
+.inspect_history_TooltipBox {
+    text-align: center;
+    padding:    2px;
+    font:       12px sans-serif;
+    fill: lightsteelblue;
+    stroke:     white;
+    stroke-width: 1;
+    border-radius: 8px;
+    pointer-events: none;
 }
 #relay_updateHolder {
     display:    flex;
