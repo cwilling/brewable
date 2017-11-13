@@ -468,6 +468,7 @@ const CHARTINSPECTORNAME = Symbol();
 const CHARTINSPECTORHEADER = Symbol();
 const CHARTINSPECTORUPDATES = Symbol();
 const CHARTINSPECTORIDBASE = Symbol();
+const CHARTHSCALE = Symbol();
 class ChartInspector {
   constructor (data) {
     this[CHARTINSPECTORHEADER] = data['header'];
@@ -480,8 +481,12 @@ class ChartInspector {
     // Keep a copy in historyData{} to avoid unnecessar retrieval;
     historyData[this[CHARTINSPECTORNAME]] = data;
 
+    // Horizontal scale factor;
+    this[CHARTHSCALE] = 1;
+
     // Enable addEventListener to use .bind(this)
     this.bindListener;
+    this.hasBindListener = false;
 
     // Nominate where to draw the chart
     switch(this[CHARTINSPECTORIDBASE]) {
@@ -498,6 +503,8 @@ class ChartInspector {
   get name () { return this[CHARTINSPECTORNAME]; }
   get header () { return this[CHARTINSPECTORHEADER]; }
   get updates () { return this[CHARTINSPECTORUPDATES]; }
+  set hScale (val) { this[CHARTHSCALE] = val; }
+  get hScale () { return this[CHARTHSCALE]; }
 
   report () {
     console.log("Inspector for " + this[CHARTINSPECTORNAME] + " reporting");
@@ -508,15 +515,40 @@ class ChartInspector {
     if (this.overlay.style.display == "none") {
       console.log("Inspector is not visible");
     } else {
-      console.log("Inspector is alive");
       e.preventDefault();
       e.stopPropagation();
+      if (e.key == "ArrowLeft") {
+        if (e.shiftKey) {
+          this.hScale -= 10;
+        } else {
+          this.hScale -= 1;
+        }
+        if (this.hScale < 1) this.hScale = 1;
+        console.log("hScale now = " + this.hScale);
+        this.showInspectorOverlay();
+      } else if (e.key == "ArrowRight") {
+        if (e.shiftKey) {
+          this.hScale += 10;
+        } else {
+          this.hScale += 1;
+        }
+        console.log("hScale now = " + this.hScale);
+        this.showInspectorOverlay();
+      }
     }
   }
 
   showInspectorOverlay () {
     console.log("showInspectorOverlay() for " + this.elementName);
     var inspectorExists = document.getElementById(this.elementName);
+    var svgWidth, svgHeight;
+    var renderArgs = {};
+
+    if (! this.hasBindListener ) {
+      this.bindListener = this.addInspectorKeyboardHandler.bind(this);
+      document.body.addEventListener("keydown", this.bindListener);
+      this.hasBindListener = true;
+    }
 
     if (inspectorExists) {
       this.overlay.style.display = "block";
@@ -536,129 +568,32 @@ class ChartInspector {
       jobInspectorChartHolder.className = 'inspector_chart_holder unselectable';
 
       this.overlay.appendChild(jobInspectorTitle);
-      //this.overlay.appendChild(jobInspectorChartHolder);
+      this.overlay.appendChild(jobInspectorChartHolder);
 
       jobInspectorTitle.onclick = function() {
         console.log("Removing addInspectorKeyboardHandler()");
         document.body.removeEventListener("keydown", this.bindListener);
+        this.hasBindListener = false;
         this.overlay.style.display = "none";
       }.bind(this);
-
-      // test
-      //jobInspectorChartHolder.onclick = function (event) {
-      //  console.log("click " + event.offsetX + "," + event.offsetY);
-      //}.bind(this);
-      //this.overlay.onmousedown = this.showChartDetailOverlay.bind(this);
 
       //document.body.appendChild(this.overlay);
       this.parentName.appendChild(this.overlay);
     }
 
-    /* Examples (from updateJobHistoryData()) of extracting various fields
-    console.log("updateJobHistoryData() jobProfile: " + header[0]['jobProfile'] + " " + header[0]['jobProfile'].length);
-    console.log("updateJobHistoryData() jobName: " + header[0]['jobName'] + " " + header.length);
-    console.log("updateJobHistoryData() updates: " + updates + " " + updates.length);
-    for (var i=0;i<updates.length;i++) {
-      //console.log("updateJobHistoryData() temp at " + parseFloat(updates[i]['elapsed']).toFixed(2) + " = " + updates[i][updates[i]['sensors'][0]]);
-      console.log("updateJobHistoryData() temp at " + parseFloat(updates[i]['elapsed']).toFixed(2) + " = " + updates[i][updates[i]['sensors'][1]]['temp']);
-    }
-    console.log("updateJobHistoryData() grav at " + parseFloat(updates[updates.length - 1]['elapsed']).toFixed(2) + " = " + updates[updates.length - 1][updates[updates.length - 1]['sensors'][1]]['grav']);
-    */
+    svgWidth = window.innerWidth;
+    svgHeight = window.innerHeight - document.getElementsByClassName("page_title")[0].clientHeight;
 
-    // Now (re)draw graph
-    var graphWidthScale = 1;
+    renderArgs.chartType = "chartInspectorGraph";
+    renderArgs.hScale = this.hScale;
+    renderArgs.svgWidth = svgWidth;
+    renderArgs.svgHeight = svgHeight;
+    renderArgs.svgParentName = this[CHARTINSPECTORIDBASE] + "chartHolder_" + this[CHARTINSPECTORNAME];
+    renderArgs.nameBase = this[CHARTINSPECTORIDBASE];
+    renderArgs.longName = this[CHARTINSPECTORNAME];
+    renderArgs.data = historyData[this[CHARTINSPECTORNAME]];
 
-    select("#" + this[CHARTINSPECTORIDBASE] + "chart_" + this[CHARTINSPECTORNAME]).remove();
-    var jobElementGraphInspector = document.getElementById(this.elementName);
-    //var jobElementGraphInspector = document.getElementById(this[CHARTINSPECTORIDBASE] + "chartHolder_" + this[CHARTINSPECTORNAME]);
-
-    console.log("AAAAA");
-    var svg = select(jobElementGraphInspector).append("svg");
-
-    console.log("BBBBB");
-    var width = jobElementGraphInspector.clientWidth;
-    var height = jobElementGraphInspector.clientHeight;
-
-    var graphMargin;
-    var graphHeight;
-    if ( smallDevice() ) {
-      //console.log("smallDevice is TRUE");
-      graphMargin = {top: 24, right: 40, bottom: 60, left: 40};
-      graphHeight = height - (graphMargin.top + graphMargin.bottom);
-    } else {
-      //console.log("smallDevice is FALSE");
-      graphMargin = {top: 32, right: 40, bottom: 60, left: 80};
-      graphHeight = height - (graphMargin.top + graphMargin.bottom);
-    }
-    var graphWidth = width - (graphMargin.left + graphMargin.right) - 20;
-
-    console.log("CCCCC " + width + "," + height);
-    svg
-      .attr("id", this[CHARTINSPECTORIDBASE] + "chart_" + this[CHARTINSPECTORNAME])
-      .attr("class", "chartInspectorGraph")
-      .attr("width", width) .attr("height", height);
-    console.log("DDDDD");
-
-    var a = this[CHARTINSPECTORIDBASE];
-    var b = this[CHARTINSPECTORNAME];
-    svg
-      .on("click", function() {
-        console.log(jobElementGraphInspector.id + " at: " + mouse(this)[0] + "," + mouse(this)[1]);
-
-        //select("#detailTooltipText_" + longName.replace('%', '\\%'))
-        //  .append("tspan").attr("x",0).attr("y",0).attr('dx', '0.3em').attr('dy', '1.1em').text("Time: " + tickText(historyLinearScaleX.invert(mouse(this)[0])))
-        //  .append("tspan").attr("x",0).attr("y",18).attr('dx','0.3em').attr('dy', '1.1em').text("Temp:" + (historyLinearScaleY.invert(mouse(this)[1])).toFixed(2));
-        select("#" + a + "TooltipText_" + b)
-          .append("tspan").attr("x",0).attr("y",0).attr('dx', '0.3em').attr('dy', '1.1em').text("Time: ")
-          .append("tspan").attr("x",0).attr("y",18).attr('dx','0.3em').attr('dy', '1.1em').text("Temp:");
-
-        // Hide current tooltip
-        select("#" + a + "TooltipGroupHolder_" + b)
-          .style("opacity", 0.0);
-        // Reposition & show tooltip
-        select("#" + a + "TooltipGroupHolder_" + b)
-          .attr("transform",
-            //"translate(" + (graphMargin.left + mouse(this)[0]) + "," + (graphMargin.top + mouse(this)[1]) + ")")
-            "translate(" + mouse(this)[0] + "," + mouse(this)[1] + ")")
-          .style("opacity", 0.9);
-        console.log("#" + a + "TooltipGroupHolder_" + b);
-      });
-
-    /* Show time & value as a tooltip
-      at any particular point of the graph
-    */
-    //historyJobsGraphHolder.append("g")
-    //  .attr("id", "detailTooltipGroup_" + longName.replace('%', '\\%'))
-    //  .attr("class", "detailtooltipgroup")
-    //  .attr("transform",
-    //    "translate(" + historyJobsGraphMargin.left + "," + historyJobsGraphMargin.top + ")")
-    //  .style("opacity", 0.0);
-    //select("#detailTooltipGroup_" + longName.replace('%', '\\%'))
-    //  .append("rect")
-    //  .attr('id', 'detailTooltipBox_' + longName.replace('%', '\\%'))
-    //  .attr('class', 'detailtooltipbox')
-    //  .attr('width', 96) .attr('height', 40)
-    //  .attr('rx', 6).attr('ry', 4);
-    svg.append("g")
-      .attr("id", this[CHARTINSPECTORIDBASE] + "TooltipGroupHolder_" + this[CHARTINSPECTORNAME])
-      .attr("class", this[CHARTINSPECTORIDBASE] + "TooltipGroupHolder")
-      .attr("transform",
-        "translate(" + graphMargin.left + "," + graphMargin.top + ")")
-      .style("opacity", 0.0);
-    select("#" + this[CHARTINSPECTORIDBASE] + "TooltipGroupHolder_" + this[CHARTINSPECTORNAME])
-      .append("rect")
-      .attr('id', this[CHARTINSPECTORIDBASE] + "TooltipBox_" + this[CHARTINSPECTORNAME])
-      .attr("class", this[CHARTINSPECTORIDBASE] + "TooltipBox")
-      .attr('width', 96) .attr('height', 40)
-      .attr('rx', 6).attr('ry', 4);
-    select("#" + this[CHARTINSPECTORIDBASE] + "TooltipGroupHolder_" + this[CHARTINSPECTORNAME])
-      .append("text")
-      .attr('id', this[CHARTINSPECTORIDBASE] + 'TooltipText_' + this[CHARTINSPECTORNAME])
-      .attr('class', this[CHARTINSPECTORIDBASE] + "Tooltip");
-
-
-    this.bindListener = this.addInspectorKeyboardHandler.bind(this);
-    document.body.addEventListener("keydown", this.bindListener);
+    renderChart(renderArgs);
   }
 
   // Inspector detail overlay - an overlay over the overlay
@@ -680,6 +615,136 @@ class ChartInspector {
     document.body.appendChild(this.detailOverlay);
   }
 
+}
+
+/*
+  renderChart()
+  This is the new place to draw graphs.
+  Initially it applies only to Inspector graphs, which are really
+  just a variant of jobHistory graphs. Hopefully, its usage can
+  be expanded to other graphs too (with just minor changes around
+  calling it).
+*/
+function renderChart(options) {
+  var chartType = options.chartType;
+  var svgWidth = options.svgWidth;
+  var svgHeight = options.svgHeight;
+  var svgParentName = options.svgParentName;
+  var nameBase = options.nameBase;
+  var longName = options.longName;
+  var data = options.data;
+  var hScale = options.hScale;
+
+  /*
+  header = historyData[jobLongName]['header'];
+  updates = historyData[jobLongName]['updates'];
+  longName = header[0]['jobName'] + '-' + header[0]['jobInstance'];
+  */
+  var header = data['header'];
+  var updates = data['updates'];
+  var headerLongName = header[0]['jobName'] + '-' + header[0]['jobInstance'];
+  console.log("renderChart() headerLongName says: " + headerLongName);
+  console.log("renderChart() hscale = " + hScale);
+
+  /* Examples (from updateJobHistoryData()) of extracting various fields
+  console.log("updateJobHistoryData() jobProfile: " + header[0]['jobProfile'] + " " + header[0]['jobProfile'].length);
+  console.log("updateJobHistoryData() jobName: " + header[0]['jobName'] + " " + header.length);
+  console.log("updateJobHistoryData() updates: " + updates + " " + updates.length);
+  for (var i=0;i<updates.length;i++) {
+    //console.log("updateJobHistoryData() temp at " + parseFloat(updates[i]['elapsed']).toFixed(2) + " = " + updates[i][updates[i]['sensors'][0]]);
+    console.log("updateJobHistoryData() temp at " + parseFloat(updates[i]['elapsed']).toFixed(2) + " = " + updates[i][updates[i]['sensors'][1]]['temp']);
+  }
+  console.log("updateJobHistoryData() grav at " + parseFloat(updates[updates.length - 1]['elapsed']).toFixed(2) + " = " + updates[updates.length - 1][updates[updates.length - 1]['sensors'][1]]['grav']);
+  */
+
+  // Now (re)draw graph
+  var graphWidthScale = 1;
+
+  //select("#" + this[CHARTINSPECTORIDBASE] + "svg_" + this[CHARTINSPECTORNAME]).remove();
+  select("#" + nameBase + "svg_" + longName).remove();
+  //var jobElementGraphInspector = document.getElementById(this.elementName);
+  //var jobElementGraphInspector = document.getElementById(this[CHARTINSPECTORIDBASE] + "chartHolder_" + this[CHARTINSPECTORNAME]);
+  var jobElementGraphInspector = document.getElementById(svgParentName);
+
+  console.log("AAAAA");
+  var svg = select(jobElementGraphInspector).append("svg");
+
+  console.log("BBBBB");
+
+  var graphMargin;
+  var graphHeight;
+  if ( smallDevice() ) {
+    //console.log("smallDevice is TRUE");
+    graphMargin = {top: 24, right: 40, bottom: 60, left: 40};
+    graphHeight = svgHeight - (graphMargin.top + graphMargin.bottom);
+  } else {
+    //console.log("smallDevice is FALSE");
+    graphMargin = {top: 32, right: 40, bottom: 60, left: 80};
+    graphHeight = svgHeight - (graphMargin.top + graphMargin.bottom);
+  }
+  var graphWidth = svgWidth - (graphMargin.left + graphMargin.right) - 20;
+
+  console.log("CCCCC " + svgWidth + "," + svgHeight);
+  svg
+    .attr("id", nameBase + "svg_" + longName)
+    .attr("class", chartType)
+    .attr("width", svgWidth) .attr("height", svgHeight);
+  console.log("DDDDD");
+
+  svg
+    .on("click", function() {
+      console.log(jobElementGraphInspector.id + " at: " + mouse(this)[0] + "," + mouse(this)[1]);
+
+      //select("#detailTooltipText_" + longName.replace('%', '\\%'))
+      //  .append("tspan").attr("x",0).attr("y",0).attr('dx', '0.3em').attr('dy', '1.1em').text("Time: " + tickText(historyLinearScaleX.invert(mouse(this)[0])))
+      //  .append("tspan").attr("x",0).attr("y",18).attr('dx','0.3em').attr('dy', '1.1em').text("Temp:" + (historyLinearScaleY.invert(mouse(this)[1])).toFixed(2));
+      select("#" + nameBase + "TooltipText_" + longName)
+        .append("tspan").attr("x",0).attr("y",0).attr('dx', '0.3em').attr('dy', '1.1em').text("Time: ")
+        .append("tspan").attr("x",0).attr("y",18).attr('dx','0.3em').attr('dy', '1.1em').text("Temp:");
+
+      // Hide current tooltip
+      select("#" + nameBase + "TooltipGroupHolder_" + longName)
+        .style("opacity", 0.0);
+      // Reposition & show tooltip
+      select("#" + nameBase + "TooltipGroupHolder_" + longName)
+        .attr("transform",
+          //"translate(" + (graphMargin.left + mouse(this)[0]) + "," + (graphMargin.top + mouse(this)[1]) + ")")
+          "translate(" + mouse(this)[0] + "," + mouse(this)[1] + ")")
+        .style("opacity", 0.9);
+      console.log("#" + nameBase + "TooltipGroupHolder_" + longName);
+    });
+
+  /* Show time & value as a tooltip
+    at any particular point of the graph
+  */
+  //historyJobsGraphHolder.append("g")
+  //  .attr("id", "detailTooltipGroup_" + longName.replace('%', '\\%'))
+  //  .attr("class", "detailtooltipgroup")
+  //  .attr("transform",
+  //    "translate(" + historyJobsGraphMargin.left + "," + historyJobsGraphMargin.top + ")")
+  //  .style("opacity", 0.0);
+  //select("#detailTooltipGroup_" + longName.replace('%', '\\%'))
+  //  .append("rect")
+  //  .attr('id', 'detailTooltipBox_' + longName.replace('%', '\\%'))
+  //  .attr('class', 'detailtooltipbox')
+  //  .attr('width', 96) .attr('height', 40)
+  //  .attr('rx', 6).attr('ry', 4);
+  svg.append("g")
+    .attr("id", nameBase + "TooltipGroupHolder_" + longName)
+    .attr("class", nameBase + "TooltipGroupHolder")
+    .attr("transform",
+      "translate(" + graphMargin.left + "," + graphMargin.top + ")")
+    .style("opacity", 0.0);
+  select("#" + nameBase + "TooltipGroupHolder_" + longName)
+    .append("rect")
+    .attr('id', nameBase + "TooltipBox_" + longName)
+    .attr("class", nameBase + "TooltipBox")
+    .attr('width', 96) .attr('height', 40)
+    .attr('rx', 6).attr('ry', 4);
+  select("#" + nameBase + "TooltipGroupHolder_" + longName)
+    .append("text")
+    .attr('id', nameBase + 'TooltipText_' + longName)
+    .attr('class', nameBase + "Tooltip");
 }
 
 // main()
