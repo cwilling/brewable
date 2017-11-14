@@ -633,7 +633,7 @@ function renderChart(options) {
   var nameBase = options.nameBase;
   var longName = options.longName;
   var data = options.data;
-  var hScale = options.hScale;
+  var graphWidthScale = options.hScale;
 
   /*
   header = historyData[jobLongName]['header'];
@@ -643,8 +643,8 @@ function renderChart(options) {
   var header = data['header'];
   var updates = data['updates'];
   var headerLongName = header[0]['jobName'] + '-' + header[0]['jobInstance'];
-  console.log("renderChart() headerLongName says: " + headerLongName);
-  console.log("renderChart() hscale = " + hScale);
+  //console.log("renderChart() headerLongName says: " + headerLongName);
+  //console.log("renderChart() graphWidthScale = " + graphWidthScale);
 
   /* Examples (from updateJobHistoryData()) of extracting various fields
   console.log("updateJobHistoryData() jobProfile: " + header[0]['jobProfile'] + " " + header[0]['jobProfile'].length);
@@ -658,7 +658,6 @@ function renderChart(options) {
   */
 
   // Now (re)draw graph
-  var graphWidthScale = 1;
 
   //select("#" + this[CHARTINSPECTORIDBASE] + "svg_" + this[CHARTINSPECTORNAME]).remove();
   select("#" + nameBase + "svg_" + longName).remove();
@@ -688,28 +687,83 @@ function renderChart(options) {
   svg
     .attr("id", nameBase + "svg_" + longName)
     .attr("class", chartType)
-    .attr("width", svgWidth) .attr("height", svgHeight);
+    .attr("width", svgWidth) .attr("height", svgHeight)
+    .style("border", "1px solid black");
   console.log("DDDDD");
+
+  // Extract profile & temperature data into local arrays
+  var profileData = header[0]['jobProfile'];
+  var profileLineData = [];
+  var temperatureLineDataHolder = [];
+  var gravityLineDataHolder = [];
+  var temperatureLineData = [];
+  var gravityLineData = [];
+  var setpoint = {};
+  var gsetpoint = {};
+  var nextStep = 0.0;
+  for (var sp=0;sp<profileData.length;sp++) {
+    setpoint = {"x":nextStep, "y":profileData[sp]["target"]};
+    profileLineData.push(setpoint);
+    nextStep += parseFloat(profileData[sp]["duration"]);
+    //console.log("**** renderChart() profile: " + setpoint["x"] + " : " + setpoint["y"]);
+  }
+
+
+
+
 
   svg
     .on("click", function() {
       console.log(jobElementGraphInspector.id + " at: " + mouse(this)[0] + "," + mouse(this)[1]);
+      var padding = 6;
+      var viewport = select("#" + nameBase + "chartHolder_" + longName).node().getBoundingClientRect();
 
-      //select("#detailTooltipText_" + longName.replace('%', '\\%'))
-      //  .append("tspan").attr("x",0).attr("y",0).attr('dx', '0.3em').attr('dy', '1.1em').text("Time: " + tickText(historyLinearScaleX.invert(mouse(this)[0])))
-      //  .append("tspan").attr("x",0).attr("y",18).attr('dx','0.3em').attr('dy', '1.1em').text("Temp:" + (historyLinearScaleY.invert(mouse(this)[1])).toFixed(2));
-      select("#" + nameBase + "TooltipText_" + longName)
-        .append("tspan").attr("x",0).attr("y",0).attr('dx', '0.3em').attr('dy', '1.1em').text("Time: ")
-        .append("tspan").attr("x",0).attr("y",18).attr('dx','0.3em').attr('dy', '1.1em').text("Temp:");
+      // Remove old text box
+      select("#" + nameBase + "TooltipText_" + longName).remove();
+      // Add new text box
+      var text = select("#" + nameBase + "TooltipGroupHolder_" + longName)
+        .append("text")
+        .attr('id', nameBase + 'TooltipText_' + longName)
+        .attr('class', nameBase + "Tooltip");
 
-      // Hide current tooltip
-      select("#" + nameBase + "TooltipGroupHolder_" + longName)
-        .style("opacity", 0.0);
+      text
+        .append("tspan").attr("x",52 + padding/2).attr("y",0 + padding/2)
+        //.attr('dx', '0.3em')
+        .attr('dy', '1em')
+        .attr("text-anchor", "end")
+        .text("Time:");
+      text
+        .append("tspan").attr("x",52 + padding/2).attr("y",18 + padding/2)
+        //.attr('dx','0.3em')
+        .attr('dy', '1em')
+        .attr("text-anchor", "end")
+        .text("Temp:");
+      text
+        .append("tspan").attr("x",52 + padding/2).attr("y",36 + padding/2)
+        //.attr('dx','0.3em')
+        .attr('dy', '1em')
+        .attr("text-anchor", "end")
+        .text("Mouse:");
+      text
+        .append("tspan").attr("x",64 + padding/2).attr("y",36 + padding/2)
+        //.attr('dx','0.3em')
+        .attr('dy', '1em')
+        .attr("text-anchor", "start")
+        .text(mouse(this)[0] + "," + mouse(this)[1]);
+
+      // Find size of new text box
+      var bbox = select("#" + nameBase + "TooltipText_" + longName).node().getBBox();
+
+      // Add background
+      select("#" + nameBase + "TooltipBox_" + longName)
+        .attr('width', bbox.width + padding) .attr('height', bbox.height + padding);
+
       // Reposition & show tooltip
       select("#" + nameBase + "TooltipGroupHolder_" + longName)
         .attr("transform",
           //"translate(" + (graphMargin.left + mouse(this)[0]) + "," + (graphMargin.top + mouse(this)[1]) + ")")
-          "translate(" + mouse(this)[0] + "," + mouse(this)[1] + ")")
+          //"translate(" + mouse(this)[0] + "," + mouse(this)[1] + ")")
+          "translate(" + Math.min(mouse(this)[0],viewport.width-(bbox.width+padding+1)) + "," + Math.min(mouse(this)[1],viewport.height-(bbox.height+padding+10)) + ")")
         .style("opacity", 0.9);
       console.log("#" + nameBase + "TooltipGroupHolder_" + longName);
     });
@@ -717,18 +771,6 @@ function renderChart(options) {
   /* Show time & value as a tooltip
     at any particular point of the graph
   */
-  //historyJobsGraphHolder.append("g")
-  //  .attr("id", "detailTooltipGroup_" + longName.replace('%', '\\%'))
-  //  .attr("class", "detailtooltipgroup")
-  //  .attr("transform",
-  //    "translate(" + historyJobsGraphMargin.left + "," + historyJobsGraphMargin.top + ")")
-  //  .style("opacity", 0.0);
-  //select("#detailTooltipGroup_" + longName.replace('%', '\\%'))
-  //  .append("rect")
-  //  .attr('id', 'detailTooltipBox_' + longName.replace('%', '\\%'))
-  //  .attr('class', 'detailtooltipbox')
-  //  .attr('width', 96) .attr('height', 40)
-  //  .attr('rx', 6).attr('ry', 4);
   svg.append("g")
     .attr("id", nameBase + "TooltipGroupHolder_" + longName)
     .attr("class", nameBase + "TooltipGroupHolder")
@@ -736,15 +778,24 @@ function renderChart(options) {
       "translate(" + graphMargin.left + "," + graphMargin.top + ")")
     .style("opacity", 0.0);
   select("#" + nameBase + "TooltipGroupHolder_" + longName)
-    .append("rect")
+    .insert("rect")
     .attr('id', nameBase + "TooltipBox_" + longName)
     .attr("class", nameBase + "TooltipBox")
-    .attr('width', 96) .attr('height', 40)
-    .attr('rx', 6).attr('ry', 4);
+    .attr('rx', 5).attr('ry', 3);
   select("#" + nameBase + "TooltipGroupHolder_" + longName)
     .append("text")
     .attr('id', nameBase + 'TooltipText_' + longName)
     .attr('class', nameBase + "Tooltip");
+  /*
+    .append("tspan").attr("x",0).attr("y",0).attr('dx', '0.3em').attr('dy', '1.1em').text("XXXXXXXXXXXX: ")
+    .append("tspan").attr("x",0).attr("y",18).attr('dx', '0.3em').attr('dy', '1.1em').text("YYYYYYYYYYYY: ");
+
+  var bbox = select("#" + nameBase + "TooltipText_" + longName).node().getBBox();
+  select("#" + nameBase + "TooltipBox_" + longName)
+    //.attr('width', 96) .attr('height', 40)
+    .attr('width', bbox.width) .attr('height', bbox.height)
+    .attr('rx', 6).attr('ry', 4);
+  */
 }
 
 // main()
