@@ -354,6 +354,9 @@ div#sensor_updateHolder {
     background-color: lightsteelblue;
     border:	2px solid black;
 }
+.inspect_history_TooltipGroupHolder {
+    pointer-events: none;
+}
 .inspect_history_TooltipBox {
     font:       12px sans-serif;
     fill:	lightsteelblue;
@@ -991,6 +994,11 @@ div#jobComposer {
 }
 
 
+.inspect_history_Axis path {
+    stroke:	#000;
+    stroke-width: 2px;
+    fill:       none;
+}
 .historyAxis path {
     stroke:	#000;
     stroke-width: 2px;

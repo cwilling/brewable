@@ -642,9 +642,9 @@ function renderChart(options) {
   */
   var header = data['header'];
   var updates = data['updates'];
-  var headerLongName = header[0]['jobName'] + '-' + header[0]['jobInstance'];
+  //var headerLongName = header[0]['jobName'] + '-' + header[0]['jobInstance'];
   //console.log("renderChart() headerLongName says: " + headerLongName);
-  //console.log("renderChart() graphWidthScale = " + graphWidthScale);
+  console.log("renderChart() graphWidthScale = " + graphWidthScale);
 
   /* Examples (from updateJobHistoryData()) of extracting various fields
   console.log("updateJobHistoryData() jobProfile: " + header[0]['jobProfile'] + " " + header[0]['jobProfile'].length);
@@ -707,69 +707,309 @@ function renderChart(options) {
     nextStep += parseFloat(profileData[sp]["duration"]);
     //console.log("**** renderChart() profile: " + setpoint["x"] + " : " + setpoint["y"]);
   }
+  // Extract temperature data for all sensors
+  var sensor_instance;
+  for (sensor_instance=0;sensor_instance<header[0]['jobSensorIds'].length;sensor_instance++) {
+    //console.log("renderChart() sensor name: " + header[0]['jobSensorIds'][sensor_instance]);
+    //var sensorName = header[0]['jobSensorIds'][sensor_instance];
 
+    temperatureLineData = [];
+    gravityLineData = [];
+    for (var i=0;i<updates.length;i++) {
+      if (updates[i][updates[i]['sensors'][sensor_instance]]['temp']) {
+        setpoint = {"x":parseFloat(updates[i]['elapsed']).toFixed(2), "y":updates[i][updates[i]['sensors'][sensor_instance]]['temp']};
+        // Now build a path for this sensor by going through all the entries
+        temperatureLineData.push(setpoint);
+        //console.log("**** updateJobHistoryData() temperature: " + setpoint["x"] + " : " + setpoint["y"]);
+      }
+      if (updates[i][updates[i]['sensors'][sensor_instance]]['grav']) {
+        gsetpoint = {"x":parseFloat(updates[i]['elapsed']).toFixed(2), "y":updates[i][updates[i]['sensors'][sensor_instance]]['grav']};
+        gravityLineData.push(gsetpoint);
+      }
+    }
+    temperatureLineDataHolder[sensor_instance] = temperatureLineData;
+    gravityLineDataHolder[sensor_instance] = gravityLineData;
+  }
 
+  // Find extent of values in both profileLineData & all the temperatureLineData arrays (1 for each sensor)
+  // N.B. could maybe do this while populating the *LineData arrays
+  var minDataPoint = min(profileLineData, function(d) {return parseFloat(d.y);});
+  var maxDataPoint = max(profileLineData, function(d) {return parseFloat(d.y);});
+  var maxTime = max(profileLineData, function(d) {return parseFloat(d.x);});
 
+  for (sensor_instance=0;sensor_instance<header[0]['jobSensorIds'].length;sensor_instance++) {
+    if (temperatureLineDataHolder[sensor_instance].length > 0) {
+      var temperature = min(temperatureLineDataHolder[sensor_instance], function(d) {return parseFloat(d.y);});
+      if (temperature < minDataPoint ) minDataPoint = temperature;
+      temperature = max(temperatureLineDataHolder[sensor_instance], function(d) {return parseFloat(d.y);});
+      if (temperature > maxDataPoint ) maxDataPoint = temperature;
+      temperature = max(temperatureLineDataHolder[sensor_instance], function(d) {return parseFloat(d.x);});
+      if ( temperature > maxTime ) maxTime = temperature;
+    }
 
+    if (gravityLineDataHolder[sensor_instance].length > 0) {
+      var gravity = min(gravityLineDataHolder[sensor_instance], function(d) {return parseFloat(d.y);});
+      if (gravity < minDataPoint ) minDataPoint = gravity;
+      gravity = max(gravityLineDataHolder[sensor_instance], function(d) {return parseFloat(d.y);});
+      if (gravity > maxDataPoint ) maxDataPoint = gravity;
+      gravity = max(gravityLineDataHolder[sensor_instance], function(d) {return parseFloat(d.x);});
+      if ( gravity > maxTime ) maxTime = gravity;
+    }
+  }
+  // Add some clearance
+  minDataPoint -= 5;
+  maxDataPoint += 5;
+  maxTime += 60;
 
-  svg
-    .on("click", function() {
-      console.log(jobElementGraphInspector.id + " at: " + mouse(this)[0] + "," + mouse(this)[1]);
-      var padding = 6;
-      var viewport = select("#" + nameBase + "chartHolder_" + longName).node().getBoundingClientRect();
+  //console.log("Min = " + minDataPoint + " Max = " + maxDataPoint);
+  var linearScaleY = scaleLinear()
+    .domain([minDataPoint, maxDataPoint])
+    .range([graphHeight,0]);
+  var yAxis = axisLeft(linearScaleY).ticks(5);
+  svg.append("g")
+    .attr('class', 'y ' + nameBase + 'Axis unselectable')
+    .attr("transform", "translate(" + graphMargin.left + "," + graphMargin.top + ")")
+    .call(yAxis);
+  var linearScaleX = scaleTime()
+    .domain([0,maxTime])
+    .range([0,graphWidth]);
+  var xAxis = axisBottom(linearScaleX).tickValues(makeTickValues(maxTime,18*graphWidthScale));
+  //.ticks(20);
+  svg.append("g")
+    .attr('class', 'x ' + nameBase + 'Axis unselectable')
+    .attr("transform", "translate(" + graphMargin.left + "," + (graphHeight + graphMargin.top) + ")")
+    .call(xAxis);
 
-      // Remove old text box
-      select("#" + nameBase + "TooltipText_" + longName).remove();
-      // Add new text box
-      var text = select("#" + nameBase + "TooltipGroupHolder_" + longName)
-        .append("text")
-        .attr('id', nameBase + 'TooltipText_' + longName)
-        .attr('class', nameBase + "Tooltip");
+  // Custom tick format
+  svg.selectAll('.x.' + nameBase + 'Axis text')
+    .text(function(d) { return tickText(d); });
 
-      text
-        .append("tspan").attr("x",52 + padding/2).attr("y",0 + padding/2)
-        //.attr('dx', '0.3em')
-        .attr('dy', '1em')
-        .attr("text-anchor", "end")
-        .text("Time:");
-      text
-        .append("tspan").attr("x",52 + padding/2).attr("y",18 + padding/2)
-        //.attr('dx','0.3em')
-        .attr('dy', '1em')
-        .attr("text-anchor", "end")
-        .text("Temp:");
-      text
-        .append("tspan").attr("x",52 + padding/2).attr("y",36 + padding/2)
-        //.attr('dx','0.3em')
-        .attr('dy', '1em')
-        .attr("text-anchor", "end")
-        .text("Mouse:");
-      text
-        .append("tspan").attr("x",64 + padding/2).attr("y",36 + padding/2)
-        //.attr('dx','0.3em')
-        .attr('dy', '1em')
-        .attr("text-anchor", "start")
-        .text(mouse(this)[0] + "," + mouse(this)[1]);
-
-      // Find size of new text box
-      var bbox = select("#" + nameBase + "TooltipText_" + longName).node().getBBox();
-
-      // Add background
-      select("#" + nameBase + "TooltipBox_" + longName)
-        .attr('width', bbox.width + padding) .attr('height', bbox.height + padding);
-
-      // Reposition & show tooltip
-      select("#" + nameBase + "TooltipGroupHolder_" + longName)
-        .attr("transform",
-          //"translate(" + (graphMargin.left + mouse(this)[0]) + "," + (graphMargin.top + mouse(this)[1]) + ")")
-          //"translate(" + mouse(this)[0] + "," + mouse(this)[1] + ")")
-          "translate(" + Math.min(mouse(this)[0],viewport.width-(bbox.width+padding+1)) + "," + Math.min(mouse(this)[1],viewport.height-(bbox.height+padding+10)) + ")")
-        .style("opacity", 0.9);
-      console.log("#" + nameBase + "TooltipGroupHolder_" + longName);
+  // Scale profile data
+  var scaledProfileLineData = [];
+  for ( sp=0;sp<profileLineData.length;sp++) {
+    //console.log("scaled sp = " + profileLineData[sp].x + " : " + profileLineData[sp].y);
+    scaledProfileLineData.push({
+      "x":linearScaleX(profileLineData[sp].x),
+      "y":linearScaleY(profileLineData[sp].y)
     });
+  }
+  // Draw profile graph
+  var profileLineFunction = line()
+    .x(function(d) { return d.x; })
+    .y(function(d) { return d.y; });
+  //var lineGraph = historyJobsGraphHolder.append("path")
+  svg.append("path")
+    .attr("transform", "translate(" + graphMargin.left + "," + graphMargin.top + ")")
+    .attr("d", profileLineFunction(scaledProfileLineData))
+    .attr("stroke", "gray")
+    .attr("stroke-width", 2)
+    .attr("fill", "none");
 
-  /* Show time & value as a tooltip
-    at any particular point of the graph
+  for (sensor_instance=0;sensor_instance<header[0]['jobSensorIds'].length;sensor_instance++) {
+    //console.log("renderChart() sensor data: " + sensor_instance);
+    console.log("renderChart() sensor name: " + header[0]['jobSensorIds'][sensor_instance]);
+    var sensorId = header[0]['jobSensorIds'][sensor_instance];
+
+    // Scale temperature data
+    if (temperatureLineDataHolder[sensor_instance].length > 0) {
+      var scaledTemperatureLineData = [];
+      temperatureLineData = temperatureLineDataHolder[sensor_instance];
+      for ( sp=0;sp<temperatureLineData.length;sp++) {
+        //console.log("scaled sp = " + temperatureLineData[sp].x + " : " + temperatureLineData[sp].y);
+        scaledTemperatureLineData.push({
+          "x":linearScaleX(temperatureLineData[sp].x),
+          "y":linearScaleY(temperatureLineData[sp].y)
+        });
+      }
+      // Draw temperature graph
+      var temperatureLineFunction = line()
+        .x(function(d) { return d.x; })
+        .y(function(d) { return d.y; });
+      svg.append("path")
+        .attr("transform",
+          "translate(" + graphMargin.left + "," + graphMargin.top + ")")
+        .attr("d", temperatureLineFunction(scaledTemperatureLineData))
+        .attr("stroke", temperatureColours[sensor_instance])
+        .attr("stroke-width", temperatureStrokeWidth)
+        .attr("fill", "none")
+        .attr("id", sensorId)
+        .on("mouseover", function() {
+          //console.log("in container: " + longName + " at: " + mouse(this)[0] + "," + mouse(this)[1]);
+          var padding = 6;
+          var sensorId = select(this).attr("id");
+          //console.log("sensor name: " + sensorId);
+
+          /*
+            We don't know what the values to be shown  in the popup are.
+            Therefore make a dummy version first that's close enough to measure a bounding box.
+            Finally delete the dummy, then fill & position the real popup.
+          */
+
+          var viewport = select("#" + nameBase + "chartHolder_" + longName).node().getBoundingClientRect();
+          //console.log("viewport size = " + viewport.width + "," + viewport.height);
+
+          // First make a dummy text
+          select("#" + nameBase + "TooltipText_" + longName)
+            .append("tspan").attr("x",0).attr("y",0).attr('dy', '1.1em').attr("text-anchor","start").text(sensorId)
+
+            .append("tspan").attr("x",50).attr("y",18).attr('dy', '1.1em').attr("text-anchor", "end").text("Time:")
+            .append("tspan").attr("x",60).attr("y",18).attr('dy', '1.1em').attr("text-anchor", "start").text(tickText(linearScaleX.invert(mouse(this)[0])))
+
+            .append("tspan").attr("x",50).attr("y",36).attr('dy', '1.1em').attr("text-anchor", "end").text("Temp:")
+            .append("tspan").attr("x",60).attr("y",36).attr('dy', '1.1em').attr("text-anchor", "start").text((linearScaleY.invert(mouse(this)[1])).toFixed(2) + "\u00B0");
+
+          // Measure dummy text
+          var bbox = select("#" + nameBase + "TooltipText_" + longName).node().getBBox();
+
+          // Remove dummy text
+          select("#" + nameBase + "TooltipGroupHolder_" + longName)
+            .selectAll("tspan").remove();
+
+          // Now the real text (with first line centred)
+          select("#" + nameBase + "TooltipText_" + longName)
+            .append("tspan").attr("x",bbox.width/2 + padding).attr("y",0).attr('dy', '1.1em').attr("text-anchor","middle").text(sensorId)
+
+            .append("tspan").attr("x",50).attr("y",18).attr('dy', '1.1em').attr("text-anchor", "end").text("Time:")
+            .append("tspan").attr("x",60).attr("y",18).attr('dy', '1.1em').attr("text-anchor", "start").text(tickText(linearScaleX.invert(mouse(this)[0])))
+
+            .append("tspan").attr("x",50).attr("y",36).attr('dy', '1.1em').attr("text-anchor", "end").text("Temp:")
+            .append("tspan").attr("x",60).attr("y",36).attr('dy', '1.1em').attr("text-anchor", "start").text((linearScaleY.invert(mouse(this)[1])).toFixed(2) + "\u00B0");
+
+          // Find size of new text box
+          bbox = select("#" + nameBase + "TooltipText_" + longName).node().getBBox();
+          console.log("bbox size = " + bbox.width + "," + bbox.height);
+
+          // Add background
+          select("#" + nameBase + "TooltipBox_" + longName)
+            .attr('width', bbox.width + padding*2) .attr('height', bbox.height + padding);
+
+          // Reposition & show tooltip
+          select("#" + nameBase + "TooltipGroupHolder_" + longName)
+            .attr("transform",
+              //"translate(" + (graphMargin.left + mouse(this)[0]) + "," + (graphMargin.top + mouse(this)[1]) + ")")
+              //"translate(" + mouse(this)[0] + "," + mouse(this)[1] + ")")
+              "translate(" + Math.min(graphMargin.left+mouse(this)[0],viewport.width-(bbox.width+padding+1)) + "," + Math.min(graphMargin.top+mouse(this)[1],viewport.height-(bbox.height+padding+10)) + ")")
+            .style("opacity", 0.9);
+
+        })
+        .on("mouseout", function() {
+          console.log("out");
+
+          select("#" + nameBase + "TooltipGroupHolder_" + longName)
+            .transition()
+            .duration(200)
+            .style("opacity", 0.0);
+
+          // Remove previous entry
+          select("#" + nameBase + "TooltipGroupHolder_" + longName)
+            .selectAll("tspan").remove();
+
+        });
+    }
+    // Scale gravity data
+    if (gravityLineDataHolder[sensor_instance].length > 0) {
+      var scaledGravityLineData = [];
+      gravityLineData = gravityLineDataHolder[sensor_instance];
+      for (sp=0;sp<gravityLineData.length;sp++) {
+        //console.log("scaled sp = " + gravityLineData[sp].x + " : " + gravityLineData[sp].y);
+        scaledGravityLineData.push({
+          "x":linearScaleX(gravityLineData[sp].x),
+          "y":linearScaleY(gravityLineData[sp].y)
+        });
+      }
+      // Draw gravity graph
+      var gravityLineFunction = line()
+        .x(function(d) { return d.x; })
+        .y(function(d) { return d.y; });
+      svg.append("path")
+        .attr("transform",
+          "translate(" + graphMargin.left + "," + graphMargin.top + ")")
+        .attr("d", gravityLineFunction(scaledGravityLineData))
+        .attr("stroke", gravityColours[sensor_instance])
+        .attr("stroke-width", gravityStrokeWidth)
+        .attr("fill", "none")
+        .attr("id", sensorId)
+        .on("mouseover", function() {
+          //console.log("in container: " + longName + " at: " + mouse(this)[0] + "," + mouse(this)[1]);
+          var padding = 6;
+          var sensorId = select(this).attr("id");
+          console.log("sensor name: " + sensorId);
+
+          /*
+            We don't know what the values to be shown  in the popup are.
+            In particular we don't know how wide the text box will be,
+            so we can't centre the first line (identifying the sensor).
+            Therefore make a dummy version first that's close enough to measure a bounding box.
+            Finally delete the dummy, then fill & position the real popup.
+          */
+
+          var viewport = select("#" + nameBase + "chartHolder_" + longName).node().getBoundingClientRect();
+          //console.log("viewport size = " + viewport.width + "," + viewport.height);
+
+          // First make a dummy text
+          select("#" + nameBase + "TooltipText_" + longName)
+            .append("tspan").attr("x",0).attr("y",0).attr('dy', '1.1em').attr("text-anchor","start").text(sensorId)
+
+            .append("tspan").attr("x",50).attr("y",18).attr('dy', '1.1em').attr("text-anchor", "end").text("Time:")
+            .append("tspan").attr("x",60).attr("y",18).attr('dy', '1.1em').attr("text-anchor", "start").text(tickText(linearScaleX.invert(mouse(this)[0])))
+
+            .append("tspan").attr("x",50).attr("y",36).attr('dy', '1.1em').attr("text-anchor", "end").text("Grav:")
+            .append("tspan").attr("x",60).attr("y",36).attr('dy', '1.1em').attr("text-anchor", "start").text((linearScaleY.invert(mouse(this)[1])).toFixed(2) + "\u00B0");
+
+          // Measure dummy text
+          var bbox = select("#" + nameBase + "TooltipText_" + longName).node().getBBox();
+
+          // Remove dummy text
+          select("#" + nameBase + "TooltipGroupHolder_" + longName)
+            .selectAll("tspan").remove();
+
+          // Now the real text (with first line centred)
+          select("#" + nameBase + "TooltipText_" + longName)
+            .append("tspan").attr("x",bbox.width/2 + padding).attr("y",0).attr('dy', '1.1em').attr("text-anchor","middle").text(sensorId)
+
+            .append("tspan").attr("x",50).attr("y",18).attr('dy', '1.1em').attr("text-anchor", "end").text("Time:")
+            .append("tspan").attr("x",60).attr("y",18).attr('dy', '1.1em').attr("text-anchor", "start").text(tickText(linearScaleX.invert(mouse(this)[0])))
+
+            .append("tspan").attr("x",50).attr("y",36).attr('dy', '1.1em').attr("text-anchor", "end").text("Grav:")
+            .append("tspan").attr("x",60).attr("y",36).attr('dy', '1.1em').attr("text-anchor", "start").text((linearScaleY.invert(mouse(this)[1])).toFixed(2));
+
+          // Find size of new text box
+          bbox = select("#" + nameBase + "TooltipText_" + longName).node().getBBox();
+          console.log("bbox size = " + bbox.width + "," + bbox.height);
+
+          // Add background
+          select("#" + nameBase + "TooltipBox_" + longName)
+            .attr('width', bbox.width + padding*2) .attr('height', bbox.height + padding);
+
+          // Reposition & show tooltip
+          select("#" + nameBase + "TooltipGroupHolder_" + longName)
+            .attr("transform",
+              //"translate(" + (graphMargin.left + mouse(this)[0]) + "," + (graphMargin.top + mouse(this)[1]) + ")")
+              //"translate(" + mouse(this)[0] + "," + mouse(this)[1] + ")")
+              "translate(" + Math.min(graphMargin.left+mouse(this)[0],viewport.width-(bbox.width+padding+1)) + "," + Math.min(graphMargin.top+mouse(this)[1],viewport.height-(bbox.height+padding+10)) + ")")
+            .style("opacity", 0.9);
+
+        })
+        .on("mouseout", function() {
+          console.log("out");
+
+          select("#" + nameBase + "TooltipGroupHolder_" + longName)
+            .transition()
+            .duration(200)
+            .style("opacity", 0.0);
+
+          // Remove previous entry
+          select("#" + nameBase + "TooltipGroupHolder_" + longName)
+            .selectAll("tspan").remove();
+
+        });
+    }
+  }
+
+
+  /*
+    Show time & value as a tooltip at any particular point of the graph.
+    A mouseover event inserts position & value for the tooltip.
   */
   svg.append("g")
     .attr("id", nameBase + "TooltipGroupHolder_" + longName)
@@ -786,16 +1026,44 @@ function renderChart(options) {
     .append("text")
     .attr('id', nameBase + 'TooltipText_' + longName)
     .attr('class', nameBase + "Tooltip");
-  /*
-    .append("tspan").attr("x",0).attr("y",0).attr('dx', '0.3em').attr('dy', '1.1em').text("XXXXXXXXXXXX: ")
-    .append("tspan").attr("x",0).attr("y",18).attr('dx', '0.3em').attr('dy', '1.1em').text("YYYYYYYYYYYY: ");
 
-  var bbox = select("#" + nameBase + "TooltipText_" + longName).node().getBBox();
-  select("#" + nameBase + "TooltipBox_" + longName)
-    //.attr('width', 96) .attr('height', 40)
-    .attr('width', bbox.width) .attr('height', bbox.height)
-    .attr('rx', 6).attr('ry', 4);
-  */
+  function makeTickValues(maxValue, tickCount) {
+    var result = [];
+    if (window.innerWidth < 1000 ) {
+      tickCount = 9;
+    } else {
+      tickCount = 18;
+    }
+    for (var i=0;i<tickCount;i++) {
+      result.push(Math.floor(i*maxValue/tickCount));
+    }
+    result.push(maxValue);
+    return result;
+  }
+  function tickText(d) {
+    var secs = (d%60);
+    var hrs =  Math.floor(d/60/60);
+    var mins = Math.floor(d/60) - hrs * 60;
+    var days = Math.floor(hrs/24);
+    //return mins + ":" + secs;
+    if (_TESTING_) {
+      if (hrs < 1) {
+        //return sprintf("%d:%02d", mins, secs);
+        return mins.toString() + ":" + secs.toString().padStart(2,"0");
+      } else {
+        //return sprintf("%d.%02d:%02d", hrs, mins, secs);
+        return hrs.toString() + "." + mins.toString().padStart(2,"0") + ":" + secs.toString().padStart(2,"0");
+      }
+    } else {
+      if (days < 1 ) {
+        //return sprintf("%d:%02d", hrs, mins);
+        return hrs.toString() + ":" + mins.toString().padStart(2,"0");
+      } else {
+        hrs -= days*24;
+        //return sprintf("%d.%02d:%02d", days, hrs, mins);
+        return days.toString() + "." + hrs.toString().padStart(2,"0") + ":" + mins.toString().padStart(2,"0");
+      } }
+  }
 }
 
 // main()
