@@ -22,29 +22,6 @@ import Configuration from "./configuration";
 import Sensor from './sensor';
 
 
-/*
-  FHEM arithmetic from
-  https://github.com/universam1/iSpindel/blob/master/docs/upload-FHEM_en.md
-*/
-var correctPlato = function (plato, temp) {
-  var k;
-
-  if (plato < 5)         k = [56.084,    -0.17885,   -0.13063];
-  else if (plato >= 5)   k = [69.685,    -1.367,     -0.10621];
-  else if (plato >= 10)  k = [77.782,    -1.7288,    -0.10822];
-  else if (plato >= 15)  k = [87.895,    -2.3601,    -0.10285];
-  else if (plato >= 20)  k = [97.052,    -2.7729,    -0.10596];
-
-  var cPlato = k[0] + k[1] * temp + k[2] * temp*temp;
-  return plato - cPlato/100;
-};
-var calcPlato = function (tilt, temp) {
-  // Get this from Excel Calibration at 20 Degrees
-  var plato=0.00438551*tilt*tilt + 0.13647658*tilt - 6.968821422;
-
-  return correctPlato(plato, temp);
-};
-
 var iSpindelDeviceList = [];
 var searchDeviceListByChipId = function (Id) {
   var duplicates = 0;
@@ -138,6 +115,7 @@ class iSpindelDevice extends Sensor {
       console.log(" temp = " + data.temperature);
       console.log(" batt = " + data.battery);
       console.log(" grav = " + data.gravity);
+      console.log(" next = " + data.next);
       */
     } catch (err) {
       console.log("newReading() Can't parse " + reading);
@@ -150,7 +128,7 @@ class iSpindelDevice extends Sensor {
     obj.temp = data.temperature;
     obj.batt = data.battery;
     obj.grav = data.gravity;
-    //obj.plato = calcPlato(obj.tilt, obj.temp);
+    obj.next = data.next;
 
     var device = searchDeviceListByChipId(obj.chipId);
     if (device) {
@@ -203,9 +181,6 @@ class iSpindelDevice extends Sensor {
   }
   get grav () {
     return this.raw.grav;
-  }
-  get plato () {
-    return calcPlato(this.raw.tilt, this.raw.temp);
   }
 
   /*
