@@ -177,7 +177,7 @@ var searchDeviceListByChipId = function (Id) {
       }
     }
     if (duplicates > 0) {
-      console.log("Removing duplicate device: " + iSpindelDevices[duplicate].raw.chipId);
+      //console.log("Removing duplicate device: " + iSpindelDevices[duplicate].raw.chipId);
       iSpindelDevices.splice(duplicate, 1);
       duplicates -= 1;
     }
@@ -581,8 +581,34 @@ class ChartInspector {
       this.parentName.appendChild(this.overlay);
     }
 
+    // scrollbarWidth function from: http://jsfiddle.net/UU9kg/17/
+    var scrollbarWidth = function () {
+      var outer = document.createElement("div");
+      outer.style.visibility = "hidden";
+      outer.style.width = "100px";
+      outer.style.msOverflowStyle = "scrollbar"; // needed for WinJS apps
+
+      document.body.appendChild(outer);
+
+      var widthNoScroll = outer.offsetWidth;
+      // force scrollbars
+      outer.style.overflow = "scroll";
+
+      // add innerdiv
+      var inner = document.createElement("div");
+      inner.style.width = "100%";
+      outer.appendChild(inner);        
+
+      var widthWithScroll = inner.offsetWidth;
+
+      // remove divs
+      outer.parentNode.removeChild(outer);
+
+      return widthNoScroll - widthWithScroll;
+    };
+
     svgWidth = window.innerWidth;
-    svgHeight = window.innerHeight - document.getElementsByClassName("page_title")[0].clientHeight;
+    svgHeight = window.innerHeight - document.getElementsByClassName("page_title")[0].clientHeight - 2*scrollbarWidth();
 
     renderArgs.chartType = "chartInspectorGraph";
     renderArgs.hScale = this.hScale;
@@ -644,7 +670,7 @@ function renderChart(options) {
   var updates = data['updates'];
   //var headerLongName = header[0]['jobName'] + '-' + header[0]['jobInstance'];
   //console.log("renderChart() headerLongName says: " + headerLongName);
-  console.log("renderChart() graphWidthScale = " + graphWidthScale);
+  //console.log("renderChart() graphWidthScale = " + graphWidthScale);
 
   /* Examples (from updateJobHistoryData()) of extracting various fields
   console.log("updateJobHistoryData() jobProfile: " + header[0]['jobProfile'] + " " + header[0]['jobProfile'].length);
@@ -665,10 +691,7 @@ function renderChart(options) {
   //var jobElementGraphInspector = document.getElementById(this[CHARTINSPECTORIDBASE] + "chartHolder_" + this[CHARTINSPECTORNAME]);
   var jobElementGraphInspector = document.getElementById(svgParentName);
 
-  console.log("AAAAA");
   var svg = select(jobElementGraphInspector).append("svg");
-
-  console.log("BBBBB");
 
   var graphMargin;
   var graphHeight;
@@ -681,15 +704,13 @@ function renderChart(options) {
     graphMargin = {top: 32, right: 40, bottom: 60, left: 80};
     graphHeight = svgHeight - (graphMargin.top + graphMargin.bottom);
   }
-  var graphWidth = svgWidth - (graphMargin.left + graphMargin.right) - 20;
+  var graphWidth = svgWidth*graphWidthScale - (graphMargin.left + graphMargin.right) - 20;
 
-  console.log("CCCCC " + svgWidth + "," + svgHeight);
   svg
     .attr("id", nameBase + "svg_" + longName)
     .attr("class", chartType)
-    .attr("width", svgWidth) .attr("height", svgHeight)
+    .attr("width", svgWidth*graphWidthScale) .attr("height", svgHeight)
     .style("border", "1px solid black");
-  console.log("DDDDD");
 
   // Extract profile & temperature data into local arrays
   var profileData = header[0]['jobProfile'];
@@ -807,7 +828,7 @@ function renderChart(options) {
 
   for (sensor_instance=0;sensor_instance<header[0]['jobSensorIds'].length;sensor_instance++) {
     //console.log("renderChart() sensor data: " + sensor_instance);
-    console.log("renderChart() sensor name: " + header[0]['jobSensorIds'][sensor_instance]);
+    //console.log("renderChart() sensor name: " + header[0]['jobSensorIds'][sensor_instance]);
     var sensorId = header[0]['jobSensorIds'][sensor_instance];
 
     // Scale temperature data
@@ -877,7 +898,7 @@ function renderChart(options) {
 
           // Find size of new text box
           bbox = select("#" + nameBase + "TooltipText_" + longName).node().getBBox();
-          console.log("bbox size = " + bbox.width + "," + bbox.height);
+          //console.log("bbox size = " + bbox.width + "," + bbox.height);
 
           // Add background
           select("#" + nameBase + "TooltipBox_" + longName)
@@ -888,12 +909,12 @@ function renderChart(options) {
             .attr("transform",
               //"translate(" + (graphMargin.left + mouse(this)[0]) + "," + (graphMargin.top + mouse(this)[1]) + ")")
               //"translate(" + mouse(this)[0] + "," + mouse(this)[1] + ")")
-              "translate(" + Math.min(graphMargin.left+mouse(this)[0],viewport.width-(bbox.width+padding+1)) + "," + Math.min(graphMargin.top+mouse(this)[1],viewport.height-(bbox.height+padding+10)) + ")")
+              "translate(" + Math.min(graphMargin.left+mouse(this)[0],graphWidthScale*viewport.width-(bbox.width+padding+1)) + "," + Math.min(graphMargin.top+mouse(this)[1],viewport.height-(bbox.height+padding+10)) + ")")
             .style("opacity", 0.9);
 
         })
         .on("mouseout", function() {
-          console.log("out");
+          //console.log("out");
 
           select("#" + nameBase + "TooltipGroupHolder_" + longName)
             .transition()
@@ -933,7 +954,7 @@ function renderChart(options) {
           //console.log("in container: " + longName + " at: " + mouse(this)[0] + "," + mouse(this)[1]);
           var padding = 6;
           var sensorId = select(this).attr("id");
-          console.log("sensor name: " + sensorId);
+          //console.log("sensor name: " + sensorId);
 
           /*
             We don't know what the values to be shown  in the popup are.
@@ -975,7 +996,7 @@ function renderChart(options) {
 
           // Find size of new text box
           bbox = select("#" + nameBase + "TooltipText_" + longName).node().getBBox();
-          console.log("bbox size = " + bbox.width + "," + bbox.height);
+          //console.log("bbox size = " + bbox.width + "," + bbox.height);
 
           // Add background
           select("#" + nameBase + "TooltipBox_" + longName)
@@ -986,12 +1007,12 @@ function renderChart(options) {
             .attr("transform",
               //"translate(" + (graphMargin.left + mouse(this)[0]) + "," + (graphMargin.top + mouse(this)[1]) + ")")
               //"translate(" + mouse(this)[0] + "," + mouse(this)[1] + ")")
-              "translate(" + Math.min(graphMargin.left+mouse(this)[0],viewport.width-(bbox.width+padding+1)) + "," + Math.min(graphMargin.top+mouse(this)[1],viewport.height-(bbox.height+padding+10)) + ")")
+              "translate(" + Math.min(graphMargin.left+mouse(this)[0],graphWidthScale*viewport.width-(bbox.width+padding+1)) + "," + Math.min(graphMargin.top+mouse(this)[1],viewport.height-(bbox.height+padding+10)) + ")")
             .style("opacity", 0.9);
 
         })
         .on("mouseout", function() {
-          console.log("out");
+          //console.log("out");
 
           select("#" + nameBase + "TooltipGroupHolder_" + longName)
             .transition()

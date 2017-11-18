@@ -354,6 +354,10 @@ div#sensor_updateHolder {
     background-color: lightsteelblue;
     border:	2px solid black;
 }
+.inspector_chart_holder {
+    overflow-x: scroll;
+    overflow-y: hidden;
+}
 .inspect_history_TooltipGroupHolder {
     pointer-events: none;
 }
