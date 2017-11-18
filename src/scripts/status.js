@@ -1050,11 +1050,7 @@ function renderChart(options) {
 
   function makeTickValues(maxValue, tickCount) {
     var result = [];
-    if (window.innerWidth < 1000 ) {
-      tickCount = 9;
-    } else {
-      tickCount = 18;
-    }
+    if (window.innerWidth < 1000 ) tickCount /= 2;
     for (var i=0;i<tickCount;i++) {
       result.push(Math.floor(i*maxValue/tickCount));
     }
@@ -3424,11 +3420,7 @@ window.onload = function () {
 
   function makeTickValues(maxValue, tickCount) {
     var result = [];
-    if (window.innerWidth < 1000 ) {
-      tickCount = 9;
-    } else {
-      tickCount = 18;
-    }
+    if (window.innerWidth < 1000 ) tickCount /= 2;
     for (var i=0;i<tickCount;i++) {
       result.push(Math.floor(i*maxValue/tickCount));
     }
