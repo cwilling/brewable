@@ -288,9 +288,8 @@ div#sensor_updateHolder {
 .isp_sol {
     background-color: #000;
     opacity:    .8;
-    /* filter: alpha(opacity=70); */
     width:      168px;
-    height:	152px;
+    height:	168px;
     z-index:    10;
 
     border:	1px solid white;

@@ -194,8 +194,10 @@ class Ispindel {
     this.tilt = report.tilt;
     this.temp = report.temperature;
     this.grav = report.grav;
-    //this.plato = report.plato;
     this.batt = report.batt;
+    if (report.hasOwnProperty("interval")) {
+      this.interval = report.interval;
+    }
     this.stamp = report.stamp;
     this.parent = parent;
     this.elementName = 'sensor_update_' + this.name;
@@ -311,7 +313,7 @@ class Ispindel {
     // Size of enclosing DIV (css isp_sensor_update)
     var els = {"w":128, "h":64};
     // Size of overlay (css .isp_sol)
-    var ols = {"w":168, "h":152};
+    var ols = {"w":168, "h":168};
 
     this.overlay = document.createElement("DIV");
     this.overlay.id = this.elementName + "_overlay";
@@ -374,23 +376,6 @@ class Ispindel {
     olGrav.appendChild(olGravVal);
     this.overlay.appendChild(olGrav);
 
-    /*
-    var olPlato = document.createElement("DIV");
-    olPlato.id = this.elementName + "_overlay_plato";
-    olPlato.className = "isp_sol_detail unselectable";
-    var olPlatoKey = document.createElement("DIV");
-    olPlatoKey.id = this.elementName + "_overlay_plato_key";
-    olPlatoKey.className = "isp_sol_key unselectable";
-    olPlatoKey.textContent = "Plato:";
-    var olPlatoVal = document.createElement("DIV");
-    olPlatoVal.id = this.elementName + "_overlay_plato_val";
-    olPlatoVal.className = "isp_sol_val unselectable";
-    olPlatoVal.textContent = this.plato.toFixed(2);
-    olPlato.appendChild(olPlatoKey);
-    olPlato.appendChild(olPlatoVal);
-    this.overlay.appendChild(olPlato);
-    */
-
     var olBatt = document.createElement("DIV");
     olBatt.id = this.elementName + "_overlay_batt";
     olBatt.className = "isp_sol_detail unselectable";
@@ -405,6 +390,24 @@ class Ispindel {
     olBatt.appendChild(olBattKey);
     olBatt.appendChild(olBattVal);
     this.overlay.appendChild(olBatt);
+
+    if (this.hasOwnProperty("interval")) {
+      var olSleep = document.createElement("DIV");
+      olSleep.id = this.elementName + "_overlay_sleep";
+      olSleep.className = "isp_sol_detail unselectable";
+      var olSleepKey = document.createElement("DIV");
+      olSleepKey.id = this.elementName + "_overlay_sleep_key";
+      olSleepKey.className = "isp_sol_key unselectable";
+      olSleepKey.textContent = "Sleep:";
+      var olSleepVal = document.createElement("DIV");
+      olSleepVal.id = this.elementName + "_overlay_sleep_val";
+      olSleepVal.className = "isp_sol_val unselectable";
+      //olSleepVal.textContent = forHumans(parseInt((new Date() - new Date(this.interval))/1000));
+      olSleepVal.textContent = this.interval + "s";
+      olSleep.appendChild(olSleepKey);
+      olSleep.appendChild(olSleepVal);
+      this.overlay.appendChild(olSleep);
+    }
 
     var olLast = document.createElement("DIV");
     olLast.id = this.elementName + "_overlay_last";
@@ -1528,7 +1531,7 @@ window.onload = function () {
     var sensor_state = data.sensor_state;
     var relay_state = data.relay_state;
     var i;
-    //console.log("Rcvd live_update " + JSON.stringify(data));
+    console.log("Rcvd live_update " + JSON.stringify(data));
 
     // Label for Sensors
     var elementName = 'sensor_update_title';

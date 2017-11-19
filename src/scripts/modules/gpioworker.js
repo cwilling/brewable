@@ -356,8 +356,14 @@ gpioWorker.prototype.liveUpdate = function () {
   var iSpindelDevices = iSpindelDevice.devices();
   iSpindelDevices.forEach( function (item) {
     if (item.fresh) {
-      //console.log("iSpindel device: " + item.name + ", " + item.stamp);
-      sensor_state.push({'sensorId':item.name, 'chipId':item.chipId, 'temperature':item.temp, 'tilt':item.tilt, 'batt':item.batt, 'grav':item.grav, 'stamp':item.stamp});
+      var keys = Object.keys(item);
+      console.log("sensor item: " + JSON.stringify(keys));
+      console.log("iSpindel device: " + item.name + ", " + item.stamp);
+      var sensor = {'sensorId':item.name, 'chipId':item.chipId, 'temperature':item.temp, 'tilt':item.tilt, 'batt':item.batt, 'grav':item.grav, 'stamp':item.stamp, 'x':'y'};
+
+      // Sleep interval new in firmware 5.6.2
+      if (item.interval)  sensor['interval'] = item.interval;
+      sensor_state.push(sensor);
     }
   });
   var fhemDevices = fhemDevice.devices();

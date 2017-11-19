@@ -128,7 +128,7 @@ class iSpindelDevice extends Sensor {
     obj.temp = data.temperature;
     obj.batt = data.battery;
     obj.grav = data.gravity;
-    obj.next = data.next;
+    obj.interval = data.interval;
 
     var device = searchDeviceListByChipId(obj.chipId);
     if (device) {
@@ -181,6 +181,9 @@ class iSpindelDevice extends Sensor {
   }
   get grav () {
     return this.raw.grav;
+  }
+  get interval () {
+    return this.raw.interval;
   }
 
   /*
