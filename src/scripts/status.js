@@ -1861,11 +1861,12 @@ window.onload = function () {
   */
   function addIspindelConfigData(passedArgs) {
     var isp_sensor = passedArgs.data;
-    var configItemData = passedArgs.branch || document.getElementById("configItemData_iSpindels");
+    //var configItemData = passedArgs.branch || document.getElementById("configItemData_iSpindels");
     console.log("addIspindelConfigData() args: " + JSON.stringify(passedArgs));
 
     iSpindelWaitTimes[isp_sensor.chipId] = parseInt(isp_sensor.timeout);
 
+    /* Nothing displayed for now
     if (configItemData.querySelector("#configItemDataValue_" + isp_sensor.name)) {
       console.log("Already have #configItemDataValue_" + isp_sensor.name);
       return;
@@ -1920,12 +1921,16 @@ window.onload = function () {
     configItemDataValue.appendChild(configItemSensorName);
     configItemDataValue.appendChild(configItemSensorIspindel);
     configItemData.appendChild(configItemDataValue);
+    */
   }
 
   function build_config_entries(configItems) {
     var configEntryHolder = document.getElementById('configEntryHolder');
     for (var key in configItems) {
       //console.log("configKey: " + key);
+      if (key == "iSpindels") {
+        continue;
+      }
       var configItem = document.createElement('DIV');
       configItem.id = 'configItem_' + key;
       configItem.className = 'configItem';
@@ -1984,56 +1989,8 @@ window.onload = function () {
           isp_sensor = configItems[key][i];
           console.log("isp: " + JSON.stringify(isp_sensor));
           addIspindelConfigData({"branch":configItemData, "data":isp_sensor});
-
-          /*
-          iSpindelWaitTimes[isp_sensor.name] = parseInt(isp_sensor.timeout);
-
-          configItemDataValue = document.createElement('DIV');
-          configItemDataValue.id = 'configItemDataValue_' + isp_sensor.name;
-          configItemDataValue.className = 'configItemDataValue';
-
-          configItemSensorName = document.createElement('DIV');
-          configItemSensorName.id = 'configItemSensorName_' + isp_sensor.name;
-          configItemSensorName.className = 'configItemSensorName';
-          configItemSensorName.textContent = isp_sensor.name;
-          var configItemSensorIspindel = document.createElement('INPUT');
-          configItemSensorIspindel.id = 'configItemSensorIspindel_' + isp_sensor.name;
-          configItemSensorIspindel.className = 'configItemSensorIspindel';
-          configItemSensorIspindel.setAttribute('type', 'text');
-          configItemSensorIspindel.value = isp_sensor.timeout;
-          configItemSensorIspindel.onblur = function () {
-            console.log("key: " + this.id + "  " + this.id.replace(/.+_/,''));
-            var idata = {};
-            idata['iSpindels'] = this.id.substring(this.id.indexOf("_") + 1);
-            idata['timeout'] = this.value;
-            msgobj = {type:'config_change', data:idata};
-            sendMessage({data:JSON.stringify(msgobj)});
-
-            // Apply to local instances
-            iSpindelWaitTimes[idata['iSpindels']] = idata['timeout'];
-            console.log("Set: " + JSON.stringify(iSpindelWaitTimes));
-            console.log("Have " + iSpindelDevices.length + " iSpindelDevices to reconfigure");
-            iSpindelDevices.forEach( function (item) {
-              console.log("name " + item.name);
-              if (item.name == idata['iSpindels']) {
-                console.log("Found " + item.name);
-                item.setNewWaitTime(idata['timeout']);
-              }
-            });
-          };
-
-
-          configItemDataValue.appendChild(configItemSensorName);
-          configItemDataValue.appendChild(configItemSensorIspindel);
-          configItemData.appendChild(configItemDataValue);
-          */
         }
 
-        configItemName.classList.add("unselectable");
-        configItemName.title = "Double click to configure new iSpindel device";
-        configItemName.addEventListener("dblclick", function() {
-          console.log("Add new iSpindel configuration");
-        });
       } else {
         configItemDataValue = document.createElement('DIV');
         configItemDataValue.id = 'configItemDataValue_' + key;

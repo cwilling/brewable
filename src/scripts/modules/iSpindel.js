@@ -72,12 +72,13 @@ class iSpindelDevice extends Sensor {
     var config = configObj.getConfiguration();
 
     this.timeout;
+    /*
     if (config.iSpindel ) {
       for (var i=0;i<config.iSpindels.length;i++) {
         //console.log("Comparing " + config.iSpindels[i].name + " vs. " + raw.name);
         if (config.iSpindels[i].name == raw.name) {
           this.timeout = 1000 * parseInt(config.iSpindels[i].timeout);
-          //console.log("Comparing was OK");
+          console.log("Comparing was OK. Timeout set to " + this.timeout);
           break;
         }
       }
@@ -90,6 +91,15 @@ class iSpindelDevice extends Sensor {
       configObj.newIspindel(raw.name);
       this.timeout = raw.timeout || 600000;
       console.log("Couldn't find " + raw.name + ". Using default timeout (" + (this.timeout/1000) + "s).");
+    }
+    */
+    // "interval" available from firmware 5.6.2
+    if (raw.hasOwnProperty("interval")) {
+      console.log("Setting iSpindel " + raw.name + " timeout to: " + parseInt(raw.interval * 2.1) + " seconds");
+      this.timeout = 1000 * parseInt(raw.interval * 2.1);
+    } else {
+      console.log("Setting iSpindel " + raw.name + " timeout to default: " + 600 + " seconds");
+      this.timeout = 600000;
     }
 
     // Periodically check whether to remove this device
