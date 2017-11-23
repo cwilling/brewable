@@ -184,7 +184,8 @@ Configuration.prototype.setFudgeFactor = function (key, val) {
   fs.writeFileSync(this._configFileName, JSON.stringify(config));
 };
 
-Configuration.prototype.setIspindelTimeout = function (key, val) {
+//Configuration.prototype.setIspindelTimeout = function (key, val) {
+Configuration.prototype.setIspindelTimeout = function () {
   //console.log("setIspindelTimeout() " + key + ", val " + val);
   console.log("setIspindelTimeout() not used at the moment");
 
@@ -211,8 +212,9 @@ Configuration.prototype.setIspindelTimeout = function (key, val) {
   */
 };
 
+Configuration.prototype.newIspindel = function () {
+/*
 Configuration.prototype.newIspindel = function (name) {
-  /*
   var config = this._configuration;
   var defaultTimeout = defaultConfigValues().iSpindels[0].timeout;
   if (config.iSpindels) {
@@ -222,7 +224,7 @@ Configuration.prototype.newIspindel = function (name) {
     config.iSpindels.push({"name":name, "timeout":defaultTimeout});
   }
   fs.writeFileSync(this._configFileName, JSON.stringify(config));
-  */
+*/
   this.loadConfigFromFile();
 };
 

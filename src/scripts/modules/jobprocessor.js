@@ -239,10 +239,15 @@ JobProcessor.prototype.jobStatus = function (nowTime, obj) {
     job_status['sensors'].push(sensor);
     //job_status[sensor] = obj.jobSensors[sensor].temp;
     job_status[sensor] = {};
-    job_status[sensor]['temp'] = obj.jobSensors[sensor].temp;
-    var grav = obj.jobSensors[sensor].grav;
-    if (grav) {
-      job_status[sensor]['grav'] = grav;
+    try {
+      job_status[sensor]['temp'] = obj.jobSensors[sensor].temp;
+      var grav = obj.jobSensors[sensor].grav;
+      if (grav) {
+        job_status[sensor]['grav'] = grav;
+      }
+    }
+    catch (err) {
+      console.log("Sensor " + sensor.name + " unavailable");
     }
   });
   //console.log("job_status: " + JSON.stringify(job_status));
@@ -327,12 +332,7 @@ JobProcessor.prototype.report = function () {
 
   // Ensure sensor objects are fresh
   // (in case an iSpindel has reappeared)
-  /*
-  console.log("report() jobSensorIds = " + this.jobSensorIds);
-  this.parent.sensorDevices().forEach( function (item) {
-    console.log("report() device: " + item.chipId);
-  });
-  */
+  //console.log("report() jobSensorIds = " + this.jobSensorIds);
   this.jobSensors = this.MatchSensorsToIds(this.parent.sensorDevices(), this.jobSensorIds);
 
 };
@@ -602,13 +602,39 @@ JobProcessor.prototype.temperatureAdjust = function (target) {
     take the first sensor's reading into account at all.
   */
   if (this.jobSensorIds.length == 1) {
-    temp = this.jobSensors[this.jobSensorIds[0]].temp;
+    try {
+      temp = this.jobSensors[this.jobSensorIds[0]].temp;
+    }
+    catch (err) {
+      console.log("Error with single sensor: " + err);
+    }
   } else if (this.jobSensorIds.length > 1) {
-    var temp0 = parseFloat(this.jobSensors[this.jobSensorIds[0]].temp);
-    var temp1 = parseFloat(this.jobSensors[this.jobSensorIds[1]].temp);
+    var temp0, temp1;
+    var temp0_OK = false;
+    var temp1_OK = false;
+    try {
+      temp0 = parseFloat(this.jobSensors[this.jobSensorIds[0]].temp);
+      temp0_OK = true;
+    }
+    catch (err) {
+      console.log("Error with first of two sensors: " + err);
+    }
+    try {
+      temp1 = parseFloat(this.jobSensors[this.jobSensorIds[1]].temp);
+      temp1_OK = true;
+    }
+    catch (err) {
+      console.log("Error with second of two sensors: " + err);
+    }
     var mswm = parseFloat(this.parent.configuration['multiSensorMeanWeight']);
     //console.log("temperatureAdjust() mswm = " + mswm);
-    temp = (temp1 * mswm + temp0 * (100-mswm))/100.0;
+    if ( temp0_OK && temp1_OK ) {
+      temp = (temp1 * mswm + temp0 * (100-mswm))/100.0;
+    } else if (temp0_OK) {
+      temp = temp0;
+    } else { //temp1_OK
+      temp = temp1;
+    }
   } else {
     console.log("No recipe for " + this.jobSensors.length + " sensors");
     /* That's not quite true; for any number greater than two,

@@ -18,7 +18,7 @@
   data.
 */
 import { eventEmitter } from "./gpioworker";
-import Configuration from "./configuration";
+//import Configuration from "./configuration";
 import Sensor from './sensor';
 
 
@@ -67,12 +67,11 @@ class iSpindelDevice extends Sensor {
     //this.chipId = raw.chipId;
     this.date = new Date();
 
+    this.timeout;
+    /*
     // Check for existing configuration
     var configObj = new Configuration();
     var config = configObj.getConfiguration();
-
-    this.timeout;
-    /*
     if (config.iSpindel ) {
       for (var i=0;i<config.iSpindels.length;i++) {
         //console.log("Comparing " + config.iSpindels[i].name + " vs. " + raw.name);
@@ -147,7 +146,7 @@ class iSpindelDevice extends Sensor {
     } else {
       //console.log("Adding new iSpindel device (" + obj.chipId + ")");
       iSpindelDeviceList.push(new iSpindelDevice(obj));
-      eventEmitter.emit('iSpindel_new_device');
+      eventEmitter.emit('iSpindel_new_device', iSpindelDeviceList[iSpindelDeviceList.length-1]);
     }
 
     eventEmitter.emit("iSpindel_reading", obj);

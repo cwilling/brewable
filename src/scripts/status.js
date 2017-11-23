@@ -1531,7 +1531,7 @@ window.onload = function () {
     var sensor_state = data.sensor_state;
     var relay_state = data.relay_state;
     var i;
-    console.log("Rcvd live_update " + JSON.stringify(data));
+    //console.log("Rcvd live_update " + JSON.stringify(data));
 
     // Label for Sensors
     var elementName = 'sensor_update_title';
@@ -2168,14 +2168,15 @@ window.onload = function () {
       temperatureLineData = [];
       gravityLineData = [];
       for (var i=0;i<updates.length;i++) {
-        if (updates[i][updates[i]['sensors'][sensor_instance]]['temp']) {
+        //console.log("Adding update: " + i);
+        if (updates[i][updates[i]['sensors'][sensor_instance]] && updates[i][updates[i]['sensors'][sensor_instance]]['temp']) {
           //setpoint = {"x":parseFloat(updates[i]['elapsed']).toFixed(2), "y":updates[i][updates[i]['sensors'][sensor_instance]]};
           setpoint = {"x":parseFloat(updates[i]['elapsed']).toFixed(2), "y":updates[i][updates[i]['sensors'][sensor_instance]]['temp']};
           // Now build a path for this sensor by going through all the history entries
           temperatureLineData.push(setpoint);
           //console.log("**** updateJobHistoryData() temperature: " + setpoint["x"] + " : " + setpoint["y"]);
         }
-        if (updates[i][updates[i]['sensors'][sensor_instance]]['grav']) {
+        if (updates[i][updates[i]['sensors'][sensor_instance]] && updates[i][updates[i]['sensors'][sensor_instance]]['grav']) {
           gsetpoint = {"x":parseFloat(updates[i]['elapsed']).toFixed(2), "y":updates[i][updates[i]['sensors'][sensor_instance]]['grav']};
           gravityLineData.push(gsetpoint);
         }
@@ -2610,7 +2611,6 @@ window.onload = function () {
       and set up a notification.
     */
     var unStartedJobsKeys = Object.keys(unStartedJobs);
-    //console.log("unstarted job(s): " + unStartedJobsKeys);
 
     unStartedJobsKeys.forEach( function (key) {
       //console.log("Advising of unstarted job: " + key + " --- " + JSON.stringify(unStartedJobs[key]));
@@ -2981,7 +2981,7 @@ window.onload = function () {
         event.stopPropagation();
       });
 
-    console.log("End of updateJobsList()");
+    //console.log("End of updateJobsList()");
   }
 
 

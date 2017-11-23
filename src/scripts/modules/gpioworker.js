@@ -85,7 +85,6 @@ function gpioWorker (input_queue, output_queue) {
   */
   this.runningJobs = [];
   this.stoppedJobs = [];
-  this.recoveredJobs = [];
   this.waitingJobs = [];        // Not real jobs, just jobData (headers & updates)
 
   this.runDir = this.configObj.dir('jobs');
@@ -105,6 +104,8 @@ function gpioWorker (input_queue, output_queue) {
           if (err) {
             console.log("Failed to load_saved_job_data from" + filePath + ": " + err);
           } else {
+            this.startJobFromFileData(data);
+            /*
             console.log("Read data from " + filePath + " OK.");
             var lines = data.split(os.EOL);
             var header = JSON.parse(lines[0]);
@@ -118,7 +119,8 @@ function gpioWorker (input_queue, output_queue) {
             console.log("job jobName: " + jobName + " has " + header.updates.length + " updates");
 
             // Check that all sensor devices are available
-            var devicesNeeded = header.jobSensorIds.length;
+            //var devicesNeeded = header.jobSensorIds.length;
+            var devicesNeeded = 0; // i.e. disable this check for now - let any job run.
             console.log("checking haveAllSensors: " + jobName + ". Needs: " + devicesNeeded + " devices. " + header.jobSensorIds);
             var devices = this.sensorDevices();
             devices.forEach( function (item) {
@@ -135,16 +137,54 @@ function gpioWorker (input_queue, output_queue) {
               } else {
                 console.log("Started job " + jobName);
               }
-              //console.log(this.recoveredJobs.length + " jobs recovered");
             } else {
               console.log("Can't start job " + jobName + " due to lack of required sensor device(s)");
               this.waitingJobs.push({'jobData': header});
             }
+            */
           }
         }.bind(this));
       }.bind(this));
     }
   }.bind(this));
+
+  this.startJobFromFileData = function (data) {
+    console.log("startJobFromFileData()");
+    var lines = data.split(os.EOL);
+    var header = JSON.parse(lines[0]);
+    console.log("header: " + JSON.stringify(header));
+
+    header['updates'] = [];
+    for (var i=0;i<lines.length-1;i++) {
+      header['updates'].push(JSON.parse(lines[i]));
+    }
+    var jobName = header.jobName;
+    console.log("job jobName: " + jobName + " has " + header.updates.length + " updates");
+
+    // Check that all sensor devices are available
+    //var devicesNeeded = header.jobSensorIds.length;
+    var devicesNeeded = 0; // i.e. disable this check for now - let any job run.
+    console.log("checking haveAllSensors: " + jobName + ". Needs: " + devicesNeeded + " devices. " + header.jobSensorIds);
+    var devices = this.sensorDevices();
+    devices.forEach( function (item) {
+      console.log("Have device: " + item.chipId + ", type: " + typeof(item.chipId));
+      if (header.jobSensorIds.indexOf(item.chipId.toString()) > -1) {
+        devicesNeeded -= 1;
+        console.log("Still need " + devicesNeeded + " devices");
+      }
+    });
+    console.log("Still need " + devicesNeeded + " devices for " + jobName);
+    if (devicesNeeded < 1) {
+      if ( (! this.setupJobRun({'jobData': header})) ) {
+        console.log("Couldn't start job " + jobName);
+      } else {
+        console.log("Started job " + jobName);
+      }
+    } else {
+      console.log("Can't start job " + jobName + " due to lack of required sensor device(s)");
+      this.waitingJobs.push({'jobData': header});
+    }
+  };
 
   eventEmitter.on('sensor_read', allSensorsRead);
   eventEmitter.on('msg_waiting', this.processMessage.bind(this));
@@ -159,70 +199,46 @@ function gpioWorker (input_queue, output_queue) {
   */
 
   /*
-    Any time a new device appears, we check if is needed by any job that
-    couldn't start due to missing sensor devices (this.waitingJobs[]).
-
-    We also check this.stoppedJobs for jobs that were placed there
-    when a sensor became unavailable (have sensorMissing == true).
+    Any time a new device appears, we check if is needed by any running job
+    (these days we allow any job to run at startup, even if not all it's devices were found).
   */
-  eventEmitter.addListener('iSpindel_new_device', function () {
-    console.log("NEW NEW NEW NEW NEW NEW iSpindel device ");
-    var i = this.waitingJobs.length;
+  eventEmitter.addListener('iSpindel_new_device', function (device) {
+    console.log("NEW NEW NEW NEW NEW NEW iSpindel device " + device.chipId + ", type: " + typeof(device.chipId));
+
+    var i = this.runningJobs.length;
     while (i--) {
-      var header = this.waitingJobs[i].jobData;
-      var devicesNeeded = header.jobSensorIds.length;
-      console.log("Checking: " + header.jobName + ". Needs: " + devicesNeeded + " devices. " + header.jobSensorIds);
-      var devices = this.sensorDevices();
-      devices.forEach( function (item) {
-        console.log("Have device: " + item.chipId + ", type: " + typeof(item.chipId));
-        if (header.jobSensorIds.indexOf(item.chipId.toString()) > -1) {
-          devicesNeeded -= 1;
-          console.log("Still need " + devicesNeeded + " devices");
-        }
-      });
-      console.log("(EOL) still need " + devicesNeeded + " devices");
-      if (devicesNeeded < 1) {
-        console.log("We could restart this job ...");
-        // We should actually check that ALL sensors are now available (not just this particular iSpindel).
-        if ( (! this.setupJobRun({'jobData': header})) ) {
-          console.log("Couldn't start job " + header.jobName);
-        } else {
-          console.log("Started job " + header.jobName);
-          this.waitingJobs.splice(i, 1);
+      //var header = this.runningJobs[i].jobData;
+      console.log("running job from file: " + this.runningJobs[i].historyFileName);
+      console.log("original sensors " +  this.runningJobs[i].rawJobInfo['sensors']);
+      console.log("type = " + typeof(this.runningJobs[i].rawJobInfo['sensors']) + ", indexOf = " + this.runningJobs[i].rawJobInfo['sensors'].indexOf(device.chipId));
+      if (this.runningJobs[i].rawJobInfo['sensors'].indexOf(device.chipId.toString()) > -1) {
+        console.log("Running job has keys: " + Object.keys(this.runningJobs[i]));
+        var jobSensorIds = this.runningJobs[i].jobSensorIds;
+        if (jobSensorIds.indexOf(device.chipId.toString()) < 0) {
+          // This sensor was included when job started
+          // but missing from current job instance
+          jobSensorIds.push(device.chipId.toString());
+          console.log("new jobSensorIds: " + jobSensorIds);
+          this.runningJobs[i].jobSensors = this.runningJobs[i].MatchSensorsToIds(this.runningJobs[i].sensorDevices(), jobSensorIds);
 
-          // Update job list for clients
-          this.load_running_jobs({"type":"run_job"});
+          // Refresh clients' status displays
+          this.load_running_jobs({"type":"show_running_jobs"});
 
-          // Process the new job
-          for (var j=0;j<this.runningJobs.length;j++) {
-            console.log("runningJobs: " + this.runningJobs[j].name());
-            if (this.runningJobs[j].name() == header.jobName) {
-              this.runningJobs[j].process();
-            }
-          }
         }
       }
     }
-    console.log("waiting jobs = " + this.waitingJobs.length);
-
-    i = this.stoppedJobs.length;
-    console.log("Checking stoppedJobs[] for sensorMissing");
-    while (i--) {
-      console.log("sensorMissing = " + (this.stoppedJobs[i].sensorMissing == true));
-
-      // Check that all sensors are available
-      // but assume that's true for now (while testing).
-      this.stoppedJobs[i].resume();
-    }
-    console.log("Finished checking stoppedJobs[] for sensorMissing. " + this.stoppedJobs.length + " stoppedJobs remain.");
 
   }.bind(this));
 
   /*
     Anytime a device disappears, we need to suspend any running jobs using it.
+    However for now (while using iSpindel only as an "observer", it's disappearance
+    shouldn't impact on the job itself. Therefore, do nothing!
   */
   eventEmitter.addListener('iSpindel_reaped', function (device) {
     console.log("DISAPPEARED DISAPPEARED " + device.chipId + " has DISAPPEARED!");
+    console.log("Since iSpindel only observing, do nothing");
+    /*
     var msg = {};
 
     for (var i=0;i<this.runningJobs.length;i++ ) {
@@ -238,6 +254,7 @@ function gpioWorker (input_queue, output_queue) {
         this.stop_running_job({'msg':{'data':msg}, 'stopStatus':'suspend', 'device':device.chipId.toString()});
       }
     }
+    */
 
   }.bind(this));
 
