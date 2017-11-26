@@ -1,7 +1,6 @@
 import os from 'os';
 import fs from 'fs';
 import path from 'path';
-//import { iSpindelCount } from './iSpindel.js';
 
 
 function JobProcessor(options) {
@@ -35,10 +34,15 @@ function JobProcessor(options) {
       this.rawJobInfo['preheat'] = options.job['preheat'];
     }
     this.rawJobInfo['profile'] = options.job['jobProfile'];
-    this.rawJobInfo['sensors'] = options.job['jobSensorIds'];
+    if (options.job.hasOwnProperty('sensors')) {
+      this.rawJobInfo['sensors'] = options.job['sensors'];
+    } else {
+      this.rawJobInfo['sensors'] = options.job['jobSensorIds'];
+    }
     this.rawJobInfo['relays'] = options.job['jobRelays'];
     console.log("rawJobInfo (rec): " + JSON.stringify(this.rawJobInfo));
   }
+  this.sensors = this.rawJobInfo['sensors'];
 
 
   this.configObj = options.parent.configObj;
@@ -46,6 +50,7 @@ function JobProcessor(options) {
   this.runningJobs = options.parent.runningJobs;
   this.stoppedJobs = options.parent.stoppedJobs;
   this.output_queue = options.parent.output_queue;
+
 
   // A job could have been stopped by user interaction
   // or by a sensor becoming unavailable e.g. iSpindel does down
@@ -123,6 +128,7 @@ function JobProcessor(options) {
     'jobPreheat':this.jobPreheat,
     'jobProfile':this.jobProfile,
     'jobSensorIds':this.jobSensorIds,
+    'sensors':this.sensors,
     'jobRelays':this.jobRelays,
     'startTime':this.startTime,
     'historyFileName':this.historyFileName
@@ -147,9 +153,7 @@ function JobProcessor(options) {
   // Apply fudges to job configuration
   var fudges = options.parent.configObj.getConfiguration()['sensorFudgeFactors'];
   var keys = Object.keys(fudges);
-  console.log("YYYYY");
   this.jobSensorIds.forEach( function (sensor) {
-    console.log("type: " + typeof(jSensors[sensor]));
     for (var sensorKey in keys) {
       if (keys[sensorKey] == jSensors[sensor].name) {
         console.log("Setting fudge of " + keys[sensorKey] + " to " + fudges[keys[sensorKey]]);
@@ -201,9 +205,11 @@ JobProcessor.prototype.jobInfo = function () {
     'jobPreheat':this.jobPreheat,
     'jobProfile':this.jobProfile,
     'jobSensorIds':this.jobSensorIds,
+    'sensors':this.sensors,
     'jobRelays':this.jobRelays,
   };
   //console.log("jobInfo(): " + JSON.stringify(info));
+  //console.log("jobInfo() sensors: " + info.sensors);
   return info;
 };
 
@@ -297,18 +303,16 @@ JobProcessor.prototype.validateSensors = function (sensorIds) {
 
   //console.log("sensorDevices = " + JSON.stringify(this.sensorDevices()));
   this.sensorDevices().forEach( function (item) {
-    console.log("Considering A sensor: " + item.chipId);
-    //var sid = item.chipId.toString().split(" ").pop();
+    //console.log("Considering A sensor: " + item.chipId);
     var sid = item.chipId.toString();
-    console.log("Considering B sensor: " + sid + " (" + typeof(sid) + ")");
+    //console.log("Considering B sensor: " + sid + " (" + typeof(sid) + ")");
     valid_ids.push(sid);
-    console.log("Found sensor: " + sid);
+    //console.log("Found sensor: " + sid);
     if (sensorIds.indexOf(sid) > -1) {
       valid_sensorIds.push(sid);
     }
   });
-  //console.log("VALIDATE: " + valid_sensorIds);
-  console.log("VALIDATE: " + JSON.stringify(valid_sensorIds));
+  console.log("VALIDATED: " + JSON.stringify(valid_sensorIds));
 
   return valid_sensorIds;
 };
@@ -327,7 +331,6 @@ JobProcessor.prototype.makeStamp = function (now) {
 
 JobProcessor.prototype.report = function () {
   console.log("REPORT time for job " + this.jobName + "-" + this.instanceId + ": " + new Date().toString());
-  //iSpindelCount();
   //console.log(JSON.stringify(this.history));
 
   // Ensure sensor objects are fresh

@@ -207,24 +207,20 @@ function gpioWorker (input_queue, output_queue) {
 
     var i = this.runningJobs.length;
     while (i--) {
-      //var header = this.runningJobs[i].jobData;
-      console.log("running job from file: " + this.runningJobs[i].historyFileName);
-      console.log("original sensors " +  this.runningJobs[i].rawJobInfo['sensors']);
-      console.log("type = " + typeof(this.runningJobs[i].rawJobInfo['sensors']) + ", indexOf = " + this.runningJobs[i].rawJobInfo['sensors'].indexOf(device.chipId));
+      //console.log("running job from file: " + this.runningJobs[i].historyFileName);
+      //console.log("original sensors " +  this.runningJobs[i].rawJobInfo['sensors']);
       if (this.runningJobs[i].rawJobInfo['sensors'].indexOf(device.chipId.toString()) > -1) {
-        console.log("Running job has keys: " + Object.keys(this.runningJobs[i]));
+        //console.log("Running job has keys: " + Object.keys(this.runningJobs[i]));
         var jobSensorIds = this.runningJobs[i].jobSensorIds;
         if (jobSensorIds.indexOf(device.chipId.toString()) < 0) {
           // This sensor was included when job started
           // but missing from current job instance
           jobSensorIds.push(device.chipId.toString());
-          console.log("new jobSensorIds: " + jobSensorIds);
+          //console.log("new jobSensorIds: " + jobSensorIds);
           this.runningJobs[i].jobSensors = this.runningJobs[i].MatchSensorsToIds(this.runningJobs[i].sensorDevices(), jobSensorIds);
-
-          // Refresh clients' status displays
-          this.load_running_jobs({"type":"show_running_jobs"});
-
         }
+        // Process the job with new sensor
+        this.runningJobs[i].process();
       }
     }
 
@@ -569,8 +565,9 @@ gpioWorker.prototype.config_change = function (msg) {
   //this.configObj.saveConfigToFile();
 };
 
-gpioWorker.prototype.list_sensors = function (msg) {
-  console.log("list_sensors() Rcvd: " + JSON.stringify(msg.data));
+//gpioWorker.prototype.list_sensors = function (msg) {
+//  console.log("list_sensors() Rcvd: " + JSON.stringify(msg.data));
+gpioWorker.prototype.list_sensors = function () {
   var sensor_ids = [];
 
   sensorDevices.forEach( function(item) {
@@ -582,11 +579,12 @@ gpioWorker.prototype.list_sensors = function (msg) {
     'data':sensor_ids
   });
   this.output_queue.enqueue(jdata);
-  console.log("list_sensors(): " + jdata);
+  //console.log("list_sensors(): " + jdata);
 };
 
-gpioWorker.prototype.list_relays = function (msg) {
-  console.log("list_relays() Rcvd: " + JSON.stringify(msg.data));
+//gpioWorker.prototype.list_relays = function (msg) {
+//  console.log("list_relays() Rcvd: " + JSON.stringify(msg.data));
+gpioWorker.prototype.list_relays = function () {
   var relay_ids = [];
 
   for (var i=0;i<this.relay.deviceCount();i++) {
@@ -598,7 +596,7 @@ gpioWorker.prototype.list_relays = function (msg) {
     'data':relay_ids
   });
   this.output_queue.enqueue(jdata);
-  console.log("list_relays(): " + jdata);
+  //console.log("list_relays(): " + jdata);
 };
 
 gpioWorker.prototype.closeRelays = function () {
@@ -832,6 +830,7 @@ gpioWorker.prototype.load_running_jobs = function (msg) {
       job_info['header'] = job.jobInfo();
       job_info['updates'] = job.history.slice(1);
       running_jobs.push(job_info);
+      //console.log("jobInfo() header: " + JSON.stringify(job_info['header']));
     });
     //console.log("running_jobs list: " + JSON.stringify(running_jobs));
   } else {

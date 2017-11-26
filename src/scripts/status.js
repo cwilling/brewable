@@ -731,22 +731,25 @@ function renderChart(options) {
     nextStep += parseFloat(profileData[sp]["duration"]);
     //console.log("**** renderChart() profile: " + setpoint["x"] + " : " + setpoint["y"]);
   }
+  var sensorList = header[0]["jobSensorIds"];
+  if (header[0].hasOwnProperty("sensors")) {
+    sensorList = header[0]["sensors"];
+  }
   // Extract temperature data for all sensors
   var sensor_instance;
-  for (sensor_instance=0;sensor_instance<header[0]['jobSensorIds'].length;sensor_instance++) {
-    //console.log("renderChart() sensor name: " + header[0]['jobSensorIds'][sensor_instance]);
-    //var sensorName = header[0]['jobSensorIds'][sensor_instance];
+  for (sensor_instance=0;sensor_instance<sensorList.length;sensor_instance++) {
+    //console.log("renderChart() sensor name: " + sensorList[sensor_instance]);
 
     temperatureLineData = [];
     gravityLineData = [];
     for (var i=0;i<updates.length;i++) {
-      if (updates[i][updates[i]['sensors'][sensor_instance]]['temp']) {
+      if (updates[i][updates[i]['sensors'][sensor_instance]] && updates[i][updates[i]['sensors'][sensor_instance]]['temp']) {
         setpoint = {"x":parseFloat(updates[i]['elapsed']).toFixed(2), "y":updates[i][updates[i]['sensors'][sensor_instance]]['temp']};
         // Now build a path for this sensor by going through all the entries
         temperatureLineData.push(setpoint);
         //console.log("**** updateJobHistoryData() temperature: " + setpoint["x"] + " : " + setpoint["y"]);
       }
-      if (updates[i][updates[i]['sensors'][sensor_instance]]['grav']) {
+      if (updates[i][updates[i]['sensors'][sensor_instance]] && updates[i][updates[i]['sensors'][sensor_instance]]['grav']) {
         gsetpoint = {"x":parseFloat(updates[i]['elapsed']).toFixed(2), "y":updates[i][updates[i]['sensors'][sensor_instance]]['grav']};
         gravityLineData.push(gsetpoint);
       }
@@ -761,7 +764,7 @@ function renderChart(options) {
   var maxDataPoint = max(profileLineData, function(d) {return parseFloat(d.y);});
   var maxTime = max(profileLineData, function(d) {return parseFloat(d.x);});
 
-  for (sensor_instance=0;sensor_instance<header[0]['jobSensorIds'].length;sensor_instance++) {
+  for (sensor_instance=0;sensor_instance<sensorList.length;sensor_instance++) {
     if (temperatureLineDataHolder[sensor_instance].length > 0) {
       var temperature = min(temperatureLineDataHolder[sensor_instance], function(d) {return parseFloat(d.y);});
       if (temperature < minDataPoint ) minDataPoint = temperature;
@@ -829,10 +832,10 @@ function renderChart(options) {
     .attr("stroke-width", 2)
     .attr("fill", "none");
 
-  for (sensor_instance=0;sensor_instance<header[0]['jobSensorIds'].length;sensor_instance++) {
+  for (sensor_instance=0;sensor_instance<sensorList.length;sensor_instance++) {
     //console.log("renderChart() sensor data: " + sensor_instance);
-    //console.log("renderChart() sensor name: " + header[0]['jobSensorIds'][sensor_instance]);
-    var sensorId = header[0]['jobSensorIds'][sensor_instance];
+    //console.log("renderChart() sensor name: " + sensorList[sensor_instance]);
+    var sensorId = sensorList[sensor_instance];
 
     // Scale temperature data
     if (temperatureLineDataHolder[sensor_instance].length > 0) {
@@ -862,29 +865,22 @@ function renderChart(options) {
           var padding = 6;
           var sensorId = select(this).attr("id");
           //console.log("sensor name: " + sensorId);
-
-          /*
-            We don't know what the values to be shown  in the popup are.
+          /* We don't know what the values to be shown  in the popup are.
             Therefore make a dummy version first that's close enough to measure a bounding box.
             Finally delete the dummy, then fill & position the real popup.
           */
-
           var viewport = select("#" + nameBase + "chartHolder_" + longName).node().getBoundingClientRect();
           //console.log("viewport size = " + viewport.width + "," + viewport.height);
 
           // First make a dummy text
           select("#" + nameBase + "TooltipText_" + longName)
             .append("tspan").attr("x",0).attr("y",0).attr('dy', '1.1em').attr("text-anchor","start").text(sensorId)
-
             .append("tspan").attr("x",50).attr("y",18).attr('dy', '1.1em').attr("text-anchor", "end").text("Time:")
             .append("tspan").attr("x",60).attr("y",18).attr('dy', '1.1em').attr("text-anchor", "start").text(tickText(linearScaleX.invert(mouse(this)[0])))
-
             .append("tspan").attr("x",50).attr("y",36).attr('dy', '1.1em').attr("text-anchor", "end").text("Temp:")
             .append("tspan").attr("x",60).attr("y",36).attr('dy', '1.1em').attr("text-anchor", "start").text((linearScaleY.invert(mouse(this)[1])).toFixed(2) + "\u00B0");
-
           // Measure dummy text
           var bbox = select("#" + nameBase + "TooltipText_" + longName).node().getBBox();
-
           // Remove dummy text
           select("#" + nameBase + "TooltipGroupHolder_" + longName)
             .selectAll("tspan").remove();
@@ -892,10 +888,8 @@ function renderChart(options) {
           // Now the real text (with first line centred)
           select("#" + nameBase + "TooltipText_" + longName)
             .append("tspan").attr("x",bbox.width/2 + padding).attr("y",0).attr('dy', '1.1em').attr("text-anchor","middle").text(sensorId)
-
             .append("tspan").attr("x",50).attr("y",18).attr('dy', '1.1em').attr("text-anchor", "end").text("Time:")
             .append("tspan").attr("x",60).attr("y",18).attr('dy', '1.1em').attr("text-anchor", "start").text(tickText(linearScaleX.invert(mouse(this)[0])))
-
             .append("tspan").attr("x",50).attr("y",36).attr('dy', '1.1em').attr("text-anchor", "end").text("Temp:")
             .append("tspan").attr("x",60).attr("y",36).attr('dy', '1.1em').attr("text-anchor", "start").text((linearScaleY.invert(mouse(this)[1])).toFixed(2) + "\u00B0");
 
@@ -910,24 +904,18 @@ function renderChart(options) {
           // Reposition & show tooltip
           select("#" + nameBase + "TooltipGroupHolder_" + longName)
             .attr("transform",
-              //"translate(" + (graphMargin.left + mouse(this)[0]) + "," + (graphMargin.top + mouse(this)[1]) + ")")
-              //"translate(" + mouse(this)[0] + "," + mouse(this)[1] + ")")
               "translate(" + Math.min(graphMargin.left+mouse(this)[0],graphWidthScale*viewport.width-(bbox.width+padding+1)) + "," + Math.min(graphMargin.top+mouse(this)[1],viewport.height-(bbox.height+padding+10)) + ")")
             .style("opacity", 0.9);
-
         })
         .on("mouseout", function() {
           //console.log("out");
-
           select("#" + nameBase + "TooltipGroupHolder_" + longName)
             .transition()
             .duration(200)
             .style("opacity", 0.0);
-
           // Remove previous entry
           select("#" + nameBase + "TooltipGroupHolder_" + longName)
             .selectAll("tspan").remove();
-
         });
     }
     // Scale gravity data
@@ -958,31 +946,22 @@ function renderChart(options) {
           var padding = 6;
           var sensorId = select(this).attr("id");
           //console.log("sensor name: " + sensorId);
-
-          /*
-            We don't know what the values to be shown  in the popup are.
-            In particular we don't know how wide the text box will be,
-            so we can't centre the first line (identifying the sensor).
+          /* We don't know what the values to be shown  in the popup are.
             Therefore make a dummy version first that's close enough to measure a bounding box.
             Finally delete the dummy, then fill & position the real popup.
           */
-
           var viewport = select("#" + nameBase + "chartHolder_" + longName).node().getBoundingClientRect();
           //console.log("viewport size = " + viewport.width + "," + viewport.height);
 
           // First make a dummy text
           select("#" + nameBase + "TooltipText_" + longName)
             .append("tspan").attr("x",0).attr("y",0).attr('dy', '1.1em').attr("text-anchor","start").text(sensorId)
-
             .append("tspan").attr("x",50).attr("y",18).attr('dy', '1.1em').attr("text-anchor", "end").text("Time:")
             .append("tspan").attr("x",60).attr("y",18).attr('dy', '1.1em').attr("text-anchor", "start").text(tickText(linearScaleX.invert(mouse(this)[0])))
-
             .append("tspan").attr("x",50).attr("y",36).attr('dy', '1.1em').attr("text-anchor", "end").text("Grav:")
-            .append("tspan").attr("x",60).attr("y",36).attr('dy', '1.1em').attr("text-anchor", "start").text((linearScaleY.invert(mouse(this)[1])).toFixed(2) + "\u00B0");
-
+            .append("tspan").attr("x",60).attr("y",36).attr('dy', '1.1em').attr("text-anchor", "start").text((linearScaleY.invert(mouse(this)[1])).toFixed(2));
           // Measure dummy text
           var bbox = select("#" + nameBase + "TooltipText_" + longName).node().getBBox();
-
           // Remove dummy text
           select("#" + nameBase + "TooltipGroupHolder_" + longName)
             .selectAll("tspan").remove();
@@ -990,10 +969,8 @@ function renderChart(options) {
           // Now the real text (with first line centred)
           select("#" + nameBase + "TooltipText_" + longName)
             .append("tspan").attr("x",bbox.width/2 + padding).attr("y",0).attr('dy', '1.1em').attr("text-anchor","middle").text(sensorId)
-
             .append("tspan").attr("x",50).attr("y",18).attr('dy', '1.1em').attr("text-anchor", "end").text("Time:")
             .append("tspan").attr("x",60).attr("y",18).attr('dy', '1.1em').attr("text-anchor", "start").text(tickText(linearScaleX.invert(mouse(this)[0])))
-
             .append("tspan").attr("x",50).attr("y",36).attr('dy', '1.1em').attr("text-anchor", "end").text("Grav:")
             .append("tspan").attr("x",60).attr("y",36).attr('dy', '1.1em').attr("text-anchor", "start").text((linearScaleY.invert(mouse(this)[1])).toFixed(2));
 
@@ -1003,29 +980,23 @@ function renderChart(options) {
 
           // Add background
           select("#" + nameBase + "TooltipBox_" + longName)
-            .attr('width', bbox.width + padding*2) .attr('height', bbox.height + padding);
+            .attr('width', bbox.width + padding*4) .attr('height', bbox.height + padding);
 
           // Reposition & show tooltip
           select("#" + nameBase + "TooltipGroupHolder_" + longName)
             .attr("transform",
-              //"translate(" + (graphMargin.left + mouse(this)[0]) + "," + (graphMargin.top + mouse(this)[1]) + ")")
-              //"translate(" + mouse(this)[0] + "," + mouse(this)[1] + ")")
               "translate(" + Math.min(graphMargin.left+mouse(this)[0],graphWidthScale*viewport.width-(bbox.width+padding+1)) + "," + Math.min(graphMargin.top+mouse(this)[1],viewport.height-(bbox.height+padding+10)) + ")")
             .style("opacity", 0.9);
-
         })
         .on("mouseout", function() {
           //console.log("out");
-
           select("#" + nameBase + "TooltipGroupHolder_" + longName)
             .transition()
             .duration(200)
             .style("opacity", 0.0);
-
           // Remove previous entry
           select("#" + nameBase + "TooltipGroupHolder_" + longName)
             .selectAll("tspan").remove();
-
         });
     }
   }
@@ -2159,11 +2130,19 @@ window.onload = function () {
       nextStep += parseFloat(profileData[sp]["duration"]);
       //console.log("**** updateJobHistoryData() profile: " + setpoint["x"] + " : " + setpoint["y"]);
     }
+
     // Extract temperature data for all sensors
+
+    // jobSensorIds only represents existing ("found") devices
+    // without considering those yet to be found e.g. iSpindel prior to first report.
+    // Therefore newer versions include a "sensors" array;
+    var sensorList = header[0]["jobSensorIds"];
+    if (header[0].hasOwnProperty("sensors")) {
+      sensorList = header[0]["sensors"];
+    }
     var sensor_instance;
-    for (sensor_instance=0;sensor_instance<header[0]['jobSensorIds'].length;sensor_instance++) {
-      //console.log("updateJobHistoryData() sensor name: " + header[0]['jobSensorIds'][sensor_instance]);
-      //var sensorName = header[0]['jobSensorIds'][sensor_instance];
+    for (sensor_instance=0;sensor_instance<sensorList.length;sensor_instance++) {
+      //console.log("updateJobHistoryData() sensor name: " + sensorList[sensor_instance]);
 
       temperatureLineData = [];
       gravityLineData = [];
@@ -2191,7 +2170,7 @@ window.onload = function () {
     var maxDataPoint = max(profileLineData, function(d) {return parseFloat(d.y);});
     var maxTime = max(profileLineData, function(d) {return parseFloat(d.x);});
 
-    for (sensor_instance=0;sensor_instance<header[0]['jobSensorIds'].length;sensor_instance++) {
+    for (sensor_instance=0;sensor_instance<sensorList.length;sensor_instance++) {
       if (temperatureLineDataHolder[sensor_instance].length > 0) {
         var temperature = min(temperatureLineDataHolder[sensor_instance], function(d) {return parseFloat(d.y);});
         if (temperature < minDataPoint ) minDataPoint = temperature;
@@ -2261,7 +2240,7 @@ window.onload = function () {
       .attr("stroke-width", 2)
       .attr("fill", "none");
 
-    for (sensor_instance=0;sensor_instance<header[0]['jobSensorIds'].length;sensor_instance++) {
+    for (sensor_instance=0;sensor_instance<sensorList.length;sensor_instance++) {
       //console.log("updateJobHistoryData() sensor data: " + sensor_instance);
 
       // Scale temperature data
