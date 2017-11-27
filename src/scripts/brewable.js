@@ -95,7 +95,7 @@ var output_queue = new Queue({'name':'output_queue', 'action':updateClients});
 
 
 eventEmitter.on('temps_ready', function () { worker.liveUpdate(); });
-var worker = new gpioworker(input_queue, output_queue);
+var worker = new gpioworker(input_queue, output_queue, options.jobCheckInterval);
 
 var handle = {};
 handle["/"] = rhindex;
@@ -123,7 +123,6 @@ setInterval( function() {
 }, 2000);
 
 setInterval( function() {
-  //console.log("jobCheckInterval = " + new Date());
   worker.processRunningJobs();
 }, ((1000 * options.jobCheckInterval) + Math.floor((Math.random() * 1000) + 1)));
 

@@ -17,9 +17,10 @@ var sensorResults = [];
 var sensorsRead = 0;
 
 
-function gpioWorker (input_queue, output_queue) {
+function gpioWorker (input_queue, output_queue, interval) {
   this.input_queue = input_queue;
   this.output_queue = output_queue;
+  this.jobCheckInterval = interval;
 
   gpioWorker.prototype.__proto__ = events.EventEmitter.prototype;
 
@@ -478,6 +479,7 @@ gpioWorker.prototype.load_startup_data = function (msg) {
     'data': {
       'testing': this.brewtest(),
       'config' : configObj.getConfiguration(),
+      'jobCheckInterval': this.jobCheckInterval,
       'the_end': 'orange'
     }
   });
@@ -786,7 +788,6 @@ gpioWorker.prototype.setupJobRun = function (options) {
 
 gpioWorker.prototype.processRunningJobs = function () {
   //console.log("processRunningJobs()");
-  //this.runningJobs.forEach( function (job, index) {
   this.runningJobs.forEach( function (job) {
     //console.log("Process job: " + index + " (" + job.jobName + ")");
     //console.log("Process job: " + index + " " + JSON.stringify(job.jobProfile));

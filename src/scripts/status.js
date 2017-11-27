@@ -44,6 +44,13 @@ var historyData = {};
 var runningData = {};
 var unStartedJobs = [];
 
+// Time (milliseconds).
+// If running job isn't updated with real data
+// e.g. iSpindel goes missing
+// we wait currentTimeTickUpdateInterval before updating the graph anyway.
+// Set a default value here but normally use value returned in startup_data()
+var currentTimeTickUpdateInterval = 40000;
+
 /*
   Running, stopped, suspended etc.
   Each jobStatus entry is a jobLongName:{item0:val0, item1:val1, ...}
@@ -1104,7 +1111,6 @@ window.onload = function () {
   content_1.appendChild(running_jobsHolder);
 
 
-
   var content_2 = document.createElement('DIV');
   content_2.id = 'content_2';
   content_2.className = 'content';
@@ -1742,6 +1748,9 @@ window.onload = function () {
         //for (var key in configKeys) {
         //  console.log("configKey: " + key);
         //}
+      } else if (data_keys[k] == 'jobCheckInterval') {
+        currentTimeTickUpdateInterval = (data[data_keys[k]] + 10) * 1000;
+        console.log("currentTimeTickUpdateInterval set to " + currentTimeTickUpdateInterval);
       } else if (data_keys[k] == 'the_end') {
         console.log("the_end of startup_data");
       } else {
@@ -1804,21 +1813,43 @@ window.onload = function () {
       }
       //console.log("ZZZ");
       updateJobsList(longJobNames, 'running_jobsHolder');
+
+      runningData[longName]['refreshInterval'] = setInterval( showCurrentTimeTick, currentTimeTickUpdateInterval, longName);
     });
+  }
+
+  //setInterval( showCurrentTimeTick, 1000);
+
+  // A line to show current time in running jobs
+  // Normally a job graph is redrawn each time there is new sensor data.
+  // However if a sensor goes off line, the tick representing current time
+  // is not updated.
+  // Hence we redraw the graph if an update hasn't been received in a reasonable time.
+  function showCurrentTimeTick (longJobName) {
+    console.log("running jobs time cursor " + longJobName);
+    updateRunningJob({"type":"refresh", "longJobName":longJobName});
   }
 
   function updateRunningJob(data) {
     //console.log("updateRunningJob() " + JSON.stringify(data));
+    var longJobName;
     if ( data.type == 'status' ) {
-      var longJobName = data['jobName'] + '-' + data['jobInstance'];
+      longJobName = data['jobName'] + '-' + data['jobInstance'];
       //console.log("updateRunningJob() longJobName " + longJobName);
       if (!runningData.hasOwnProperty(longJobName)) {
         console.log("No job " + longJobName + " yet");
         return;
       }
       runningData[longJobName]['updates'].push(data);
-      //console.log("updateRunningJob() longJobName 2 " + longJobName);
+
+      if (runningData[longJobName]['refreshInterval']) clearInterval(runningData[longJobName]['refreshInterval']);
       updateJobHistoryData(0, longJobName);
+      runningData[longJobName]['refreshInterval'] = setInterval( showCurrentTimeTick, currentTimeTickUpdateInterval, longJobName);
+    } else if ( data.type == 'refresh' ) {
+      longJobName = data.longJobName;
+      if (runningData[longJobName]['refreshInterval']) clearInterval(runningData[longJobName]['refreshInterval']);
+      updateJobHistoryData(0, longJobName);
+      runningData[longJobName]['refreshInterval'] = setInterval( showCurrentTimeTick, currentTimeTickUpdateInterval, longJobName);
     } else if ( data.type == 'header' ) {
       console.log("Received header update for " + data.jobName + "-" + data.jobInstance);
     } else {
@@ -2450,6 +2481,12 @@ window.onload = function () {
 
   function jobRemoved(data) {
     console.log("jobRemoved() data: " + JSON.stringify(data));
+
+    if (runningData[data.longName]['refreshInterval']) {
+      console.log("Removing runningData[data.longName]['refreshInterval']");
+      clearInterval(runningData[data.longName]['refreshInterval']);
+    }
+
     jobStatus[data.longName] = {'running':'remove'};
     jobFinishedWith(data, 'remove');
   }
@@ -2470,6 +2507,10 @@ window.onload = function () {
     Move data associated with jobName from runningData to historyData
   */
   function jobFinishedWith(data) {
+    var jobName = data['jobName'];
+    var longName = data['longName'];
+    //console.log("Received " + endStatus + "_job message " + jobName + " : " + longName);
+
     var endStatus;
     if (data.reason) {
       console.log("jobFinishedWith() reason: " + data.reason.stopStatus);
@@ -2478,10 +2519,6 @@ window.onload = function () {
       console.log("jobFinishedWith() No reason => plain stop");
       endStatus = "stop";
     }
-
-    var jobName = data['jobName'];
-    var longName = data['longName'];
-    //console.log("Received " + endStatus + "_job message " + jobName + " : " + longName);
 
     // Remove graph from status (running jobs) page
     var running_jobsHolder = document.getElementById('running_jobsHolder');
