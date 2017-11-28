@@ -171,6 +171,9 @@ td {
 .tick text {
     font-size:  80%;
 }
+.currentTimeCursorText {
+    font-size:  80%;
+}
 
 .grid .tick {
     stroke: lightgrey;

@@ -1064,6 +1064,30 @@ function renderChart(options) {
   }
 }
 
+/* Use a long version of job name to generate
+  a Date object representing the start time of a job.
+*/
+function dateFromJobLongName(jobLongName) {
+  var instancePattern = /[0-9]{8}_[0-9]{6}/;
+  var instance = instancePattern.exec(jobLongName)[0];
+
+  // instance is always is a string of the form:
+  //    YYYYMMDD_hhmmss
+  var year = parseInt(instance.substr(0,4));
+  var month = parseInt(instance.substr(4,2)) - 1;
+  var day = parseInt(instance.substr(6,2));
+  var hours = parseInt(instance.substr(9,2));
+  var mins = parseInt(instance.substr(11,2));
+  var secs = parseInt(instance.substr(13,2));
+  //console.log(" job instance: " + 
+  //  year + ", " + month + ", " + day + ", " +
+  //  hours + ", " + mins + ", " + secs);
+
+  var startDate = new Date(year, month, day, hours, mins, secs);
+  //console.log("Start date = " + startDate);
+  return startDate;
+}
+
 // main()
 //domReady( function(){
 //$(document).ready( function()
@@ -2064,6 +2088,9 @@ window.onload = function () {
     //console.log("Received msg: saved_job_data " + data);
     //console.log("updateJobHistoryData(): jobLongName " + jobLongName);
 
+    // elapsedJobTime only used for running jobs
+    var elapsedJobTime;
+
     // Is it new (via data parameter) or are we redrawing stored data?
     var header, updates, longName;
     if ( jobLongName === undefined ) {
@@ -2089,6 +2116,12 @@ window.onload = function () {
         //console.log("updateJobHistoryData() 1 longName: " + longName);
         //console.log("updateJobHistoryData() 2 updates =  " + updates.length);
         //console.log("updateJobHistoryData() 3 updates =  " + JSON.stringify(updates));
+        // Calculate running time for display of current time cursor
+        // Extract start time from longJobName (subtract from current real time)
+        var now = new Date();
+        var started = dateFromJobLongName(jobLongName);
+        elapsedJobTime = parseFloat((now - started)/1000).toFixed(2);
+        //console.log("Elapsed time = " + new Date(elapsedJobTime));
       } else {
         // Nothing to do here
         return;
@@ -2200,6 +2233,7 @@ window.onload = function () {
     var minDataPoint = min(profileLineData, function(d) {return parseFloat(d.y);});
     var maxDataPoint = max(profileLineData, function(d) {return parseFloat(d.y);});
     var maxTime = max(profileLineData, function(d) {return parseFloat(d.x);});
+    if (elapsedJobTime && elapsedJobTime > maxTime) maxTime = elapsedJobTime;
 
     for (sensor_instance=0;sensor_instance<sensorList.length;sensor_instance++) {
       if (temperatureLineDataHolder[sensor_instance].length > 0) {
@@ -2403,6 +2437,38 @@ window.onload = function () {
       .append("text")
       .attr('id', 'detailTooltipText_' + longName.replace('%', '\\%'))
       .attr('class', 'detailtooltip');
+
+
+    /* A vertical line denoting the current time (only needed for running jobs).
+    */
+    if (runningData.hasOwnProperty(jobLongName)) {
+      //console.log("need vertical line");
+      //console.log("elapsed job time " + forHumans(parseInt(elapsedJobTime)));
+      console.log("elapsed job time " + tickText(Math.floor(elapsedJobTime)));
+      var extension = 5;
+
+      historyJobsGraphHolder.append("g")
+        .attr("id", "currentTimeGroup_" + longName.replace('%', '\\%'))
+        .attr("class", "currentTimeGroup")
+        .attr("transform",
+          "translate(" + historyJobsGraphMargin.left + "," + (historyJobsGraphMargin.top-extension) + ")");
+
+      select("#currentTimeGroup_" + longName.replace('%', '\\%')).append("line")
+        .attr("id", "currentTimeCursor")
+        .attr("class", "currentTimeCursor")
+        .style("stroke-dasharray", ("6, 3"))
+        .style("stroke", "black")
+        .attr("x1", historyLinearScaleX(Math.floor(elapsedJobTime))).attr("y1", 0)
+        .attr("x2", historyLinearScaleX(Math.floor(elapsedJobTime))).attr("y2", historyJobsGraphHeight+extension);
+
+      select("#currentTimeGroup_" + longName.replace('%', '\\%')).append("text")
+        .attr('id', 'currentTimeCursorText_' + longName.replace('%', '\\%'))
+        .attr('class', 'currentTimeCursorText')
+        .attr("x", historyLinearScaleX(Math.floor(elapsedJobTime)))
+        .attr("y", (0-extension))
+        .attr("text-anchor", "middle")
+        .text(tickText(Math.floor(elapsedJobTime)));
+    }
 
 
     // Group for Resume/Waiting button & text
