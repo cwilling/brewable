@@ -488,8 +488,8 @@ class ChartInspector {
     this[CHARTINSPECTORNAME] = data.header[0]['jobName'] + '-' + data.header[0]['jobInstance'].replace('%', '\\%');
     this.elementName = this[CHARTINSPECTORIDBASE] + this[CHARTINSPECTORNAME];
 
-    // Keep a copy in historyData{} to avoid unnecessar retrieval;
-    historyData[this[CHARTINSPECTORNAME]] = data;
+    // Keep a copy in historyData{} to avoid unnecessary retrieval;
+    //historyData[this[CHARTINSPECTORNAME]] = data;
 
     // Horizontal scale factor;
     this[CHARTHSCALE] = 1;
@@ -506,11 +506,12 @@ class ChartInspector {
       break;
     }
 
-    console.log("Hello World from new ChartInspector: " + this[CHARTINSPECTORNAME] + ", prefix: " + data.who);
+    //console.log("Hello World from new ChartInspector: " + this[CHARTINSPECTORNAME] + ", prefix: " + data.who);
     this.showInspectorOverlay();
   }
 
   get name () { return this[CHARTINSPECTORNAME]; }
+  get idbase () { return this[CHARTINSPECTORIDBASE]; }
   get header () { return this[CHARTINSPECTORHEADER]; }
   get updates () { return this[CHARTINSPECTORUPDATES]; }
   set hScale (val) { this[CHARTHSCALE] = val; }
@@ -521,7 +522,7 @@ class ChartInspector {
   }
 
   addInspectorKeyboardHandler (e) {
-    console.log("Pressed key " + e.key + " from: " + this.name);
+    //console.log("Pressed key " + e.key + " from: " + this.name);
     if (this.overlay.style.display == "none") {
       console.log("Inspector is not visible");
     } else {
@@ -534,7 +535,7 @@ class ChartInspector {
           this.hScale -= 1;
         }
         if (this.hScale < 1) this.hScale = 1;
-        console.log("hScale now = " + this.hScale);
+        //console.log("hScale now = " + this.hScale);
         this.showInspectorOverlay();
       } else if (e.key == "ArrowRight") {
         if (e.shiftKey) {
@@ -542,14 +543,14 @@ class ChartInspector {
         } else {
           this.hScale += 1;
         }
-        console.log("hScale now = " + this.hScale);
+        //console.log("hScale now = " + this.hScale);
         this.showInspectorOverlay();
       }
     }
   }
 
   showInspectorOverlay () {
-    console.log("showInspectorOverlay() for " + this.elementName);
+    //console.log("showInspectorOverlay() for " + this.elementName);
     var inspectorExists = document.getElementById(this.elementName);
     var svgWidth, svgHeight;
     var renderArgs = {};
@@ -581,7 +582,7 @@ class ChartInspector {
       this.overlay.appendChild(jobInspectorChartHolder);
 
       jobInspectorTitle.onclick = function() {
-        console.log("Removing addInspectorKeyboardHandler()");
+        //console.log("Removing addInspectorKeyboardHandler()");
         document.body.removeEventListener("keydown", this.bindListener);
         this.hasBindListener = false;
         this.overlay.style.display = "none";
@@ -627,9 +628,28 @@ class ChartInspector {
     renderArgs.svgParentName = this[CHARTINSPECTORIDBASE] + "chartHolder_" + this[CHARTINSPECTORNAME];
     renderArgs.nameBase = this[CHARTINSPECTORIDBASE];
     renderArgs.longName = this[CHARTINSPECTORNAME];
-    renderArgs.data = historyData[this[CHARTINSPECTORNAME]];
+    if (this[CHARTINSPECTORIDBASE] == "inspect_history_") {
+      renderArgs.data = historyData[this[CHARTINSPECTORNAME]];
+    } else if (this[CHARTINSPECTORIDBASE] == "inspect_running_") {
+      renderArgs.data = runningData[this[CHARTINSPECTORNAME]];
+    }
+    renderArgs.who = this[CHARTINSPECTORIDBASE];
 
     renderChart(renderArgs);
+  }
+
+  updateData(newData) {
+    //console.log("Updating chart inspector with new data (" + newData.updates.length + ")");
+    this[CHARTINSPECTORUPDATES] = newData['updates'];
+
+    // Don't display updated data unless the inspector is visible
+    var inspector = document.getElementById(this[CHARTINSPECTORIDBASE] + this[CHARTINSPECTORNAME]);
+    if (inspector) {
+      //console.log("inspector display = " + inspector.style.display);
+      if (inspector.style.display != "none" ) {
+        this.showInspectorOverlay();
+      }
+    }
   }
 
   // Inspector detail overlay - an overlay over the overlay
@@ -670,6 +690,10 @@ function renderChart(options) {
   var longName = options.longName;
   var data = options.data;
   var graphWidthScale = options.hScale;
+  var who = options.who;
+
+  // elapsedJobTime only used for running jobs
+  var elapsedJobTime;
 
   /*
   header = historyData[jobLongName]['header'];
@@ -692,6 +716,16 @@ function renderChart(options) {
   }
   console.log("updateJobHistoryData() grav at " + parseFloat(updates[updates.length - 1]['elapsed']).toFixed(2) + " = " + updates[updates.length - 1][updates[updates.length - 1]['sensors'][1]]['grav']);
   */
+
+  //console.log("renderChart() longName = " + longName);
+  if (who == "inspect_running_") {
+    // Calculate running time for display of current time cursor
+    // Extract start time from longJobName (subtract from current real time)
+    var now = new Date();
+    var started = dateFromJobLongName(longName);
+    elapsedJobTime = parseFloat((now - started)/1000).toFixed(2);
+    //console.log("renderChart(): elapsedJobTime = " + elapsedJobTime);
+  }
 
   // Now (re)draw graph
 
@@ -1028,6 +1062,39 @@ function renderChart(options) {
     .append("text")
     .attr('id', nameBase + 'TooltipText_' + longName)
     .attr('class', nameBase + "Tooltip");
+
+  /* A vertical line denoting the current time (only needed for running jobs).
+  */
+  //if (runningData.hasOwnProperty(jobLongName)) {
+  //if (data.who == "inspect_running_") {
+  if (who == "inspect_running_") {
+    //console.log("need vertical line");
+    //console.log("elapsed job time " + tickText(Math.floor(elapsedJobTime)));
+    var extension = 5;
+
+    svg.append("g")
+      .attr("id", "inspector_currentTimeGroup_" + longName.replace('%', '\\%'))
+      .attr("class", "inspector_currentTimeGroup")
+      .attr("transform",
+        "translate(" + graphMargin.left + "," + (graphMargin.top-extension) + ")");
+
+    select("#inspector_currentTimeGroup_" + longName.replace('%', '\\%')).append("line")
+      .attr("id", "inspector_currentTimeCursor")
+      .attr("class", "inspector_currentTimeCursor")
+      .style("stroke-dasharray", ("6, 3"))
+      .style("stroke", "black")
+      .attr("x1", linearScaleX(Math.floor(elapsedJobTime))).attr("y1", 0)
+      .attr("x2", linearScaleX(Math.floor(elapsedJobTime))).attr("y2", graphHeight+extension);
+
+    select("#inspector_currentTimeGroup_" + longName.replace('%', '\\%')).append("text")
+      .attr('id', 'inspector_currentTimeCursorText_' + longName.replace('%', '\\%'))
+      .attr('class', 'inspector_currentTimeCursorText')
+      .attr("x", linearScaleX(Math.floor(elapsedJobTime)))
+      .attr("y", (0-extension))
+      .attr("text-anchor", "middle")
+      .text(tickText(Math.floor(elapsedJobTime)));
+  }
+
 
   function makeTickValues(maxValue, tickCount) {
     var result = [];
@@ -1850,7 +1917,7 @@ window.onload = function () {
   // is not updated.
   // Hence we redraw the graph if an update hasn't been received in a reasonable time.
   function showCurrentTimeTick (longJobName) {
-    console.log("running jobs time cursor " + longJobName);
+    //console.log("running jobs time cursor " + longJobName);
     updateRunningJob({"type":"refresh", "longJobName":longJobName});
   }
 
@@ -1869,6 +1936,11 @@ window.onload = function () {
       if (runningData[longJobName]['refreshInterval']) clearInterval(runningData[longJobName]['refreshInterval']);
       updateJobHistoryData(0, longJobName);
       runningData[longJobName]['refreshInterval'] = setInterval( showCurrentTimeTick, currentTimeTickUpdateInterval, longJobName);
+
+      // Update possible running job inspector graphs
+      if (jobHistoryInspectors.hasOwnProperty(longJobName)) {
+        jobHistoryInspectors[longJobName].updateData(runningData[longJobName]);
+      }
     } else if ( data.type == 'refresh' ) {
       longJobName = data.longJobName;
       if (runningData[longJobName]['refreshInterval']) clearInterval(runningData[longJobName]['refreshInterval']);
@@ -2051,21 +2123,21 @@ window.onload = function () {
   /* START HISTORY INSPECTOR */
 
   function showJobHistoryDataInspector (data) {
-    console.log("Have saved_job_data for job: " + data.who);
+    //console.log("Have saved_job_data for job: " + data.who);
     var header, longName;
 
-    console.log("showJobHistoryDataInspector() New job");
+    //console.log("showJobHistoryDataInspector() New job");
     header = data['header'];
     longName = header[0]['jobName'] + '-' + header[0]['jobInstance'];
     historyData[longName] = data;
-    console.log("showJobHistoryDataInspector() longName: " + longName);
+    //console.log("showJobHistoryDataInspector() longName: " + longName);
 
     if (jobHistoryInspectors.hasOwnProperty(longName)) {
       // An Inspector already exists
       console.log("showJobHistoryDataInspector() already have an Inspector for " + longName);
     } else {
       // Need to create a new Inspector
-      console.log("showJobHistoryDataInspector() need to create new Inspector for " + longName);
+      //console.log("showJobHistoryDataInspector() need to create new Inspector for " + longName);
       jobHistoryInspectors[longName] = new ChartInspector(data);
     }
   }
@@ -2101,14 +2173,15 @@ window.onload = function () {
       longName = header[0]['jobName'] + '-' + header[0]['jobInstance'];
       historyData[longName] = data;
     } else {
-      // Must have previously saved data
+      // Must have previously saved data (history or running data)
 
       if ( historyData.hasOwnProperty(jobLongName) ) {
         // It's a saved job
         header = historyData[jobLongName]['header'];
         updates = historyData[jobLongName]['updates'];
         longName = header[0]['jobName'] + '-' + header[0]['jobInstance'];
-      } else if (runningData.hasOwnProperty(jobLongName)) {
+      }
+      if (runningData.hasOwnProperty(jobLongName)) {
         // Must be a running job
         header = runningData[jobLongName]['header'] || [];
         updates = runningData[jobLongName]['updates'];
@@ -2121,11 +2194,15 @@ window.onload = function () {
         var now = new Date();
         var started = dateFromJobLongName(jobLongName);
         elapsedJobTime = parseFloat((now - started)/1000).toFixed(2);
-        //console.log("Elapsed time = " + new Date(elapsedJobTime));
-      } else {
+        //console.log("Elapsed time = " + elapsedJobTime);
+      }
+      /*
+      else {
+        console.log("history or running = NEITHER");
         // Nothing to do here
         return;
       }
+      */
       //var longName = header[0]['jobName'] + '-' + header[0]['jobInstance'];
     }
     //console.log("updateJobHistoryData() longName: " + longName);
@@ -2441,10 +2518,10 @@ window.onload = function () {
 
     /* A vertical line denoting the current time (only needed for running jobs).
     */
-    if (runningData.hasOwnProperty(jobLongName)) {
+    if (elapsedJobTime) {
+    //if (runningData.hasOwnProperty(jobLongName)) {
       //console.log("need vertical line");
-      //console.log("elapsed job time " + forHumans(parseInt(elapsedJobTime)));
-      console.log("elapsed job time " + tickText(Math.floor(elapsedJobTime)));
+      //console.log("OOO elapsed job time " + tickText(Math.floor(elapsedJobTime)));
       var extension = 5;
 
       historyJobsGraphHolder.append("g")
@@ -2822,8 +2899,8 @@ window.onload = function () {
       // Start of popup menu
       jobElementMenu = [{
         title: 'Display',
-        action: function(elm, data, index) {
-          console.log('menu item #1 from ' + elm.id + " " + data.title + " " + index);
+        //action: function(elm, data, index) {
+        action: function(elm) {
           var jobElementGraphName = 'jobElementGraph_' + elm.id.slice('jobItemInstance_'.length);
           var jobLongName = elm.id.slice('jobItemInstance_'.length);
           //console.log('jobElementGraphName = ' + jobElementGraphName);
@@ -2847,8 +2924,7 @@ window.onload = function () {
         }
       }, {
         title: 'Inspect',
-        action: function(elm, data, index) {
-          console.log('menu item #2 from ' + elm.id + " " + data.title + " " + index);
+        action: function(elm) {
           var jobElementGraphName = 'jobElementGraph_' + elm.id.slice('jobItemInstance_'.length);
           var jobLongName = elm.id.slice('jobItemInstance_'.length);
           console.log("Inspect jobLongName " + jobLongName);
@@ -2873,8 +2949,7 @@ window.onload = function () {
         // At the server, move from history to archive directory
         // In the browser, remove item from list
         title: 'Archive',
-        action: function(elm, data, index) {
-          console.log('menu item #3 from ' + elm.id + " " + data.title + " " + index);
+        action: function(elm) {
           var longName = elm.id.replace('jobItemInstance_', '');
           var jobName = longName.slice(0, (longName.length - 16)); // e.g. '-20160504_103213'
           var jobInstance = longName.replace(jobName + '-', '');
@@ -2889,8 +2964,7 @@ window.onload = function () {
         }
       }, {
         title: 'Delete',
-        action: function(elm, data, index) {
-          console.log('menu item #4 from ' + elm.id + " " + data.title + " " + index);
+        action: function(elm) {
           var longName = elm.id.replace('jobItemInstance_', '');
           var jobName = longName.slice(0, (longName.length - 16)); // e.g. '-20160504_103213'
           var jobInstance = longName.replace(jobName + '-', '');
@@ -2910,8 +2984,7 @@ window.onload = function () {
       // Start of popup menu
       jobElementMenu = [{
         title: 'Hide/Display',
-        action: function(elm, data, index) {
-          console.log('menu item #1 from ' + elm.id + " " + data.title + " " + index);
+        action: function(elm) {
           var jobElementGraphName = 'jobElementGraph_' +
                                   elm.id.slice('jobItemInstance_'.length);
           var jobLongName = elm.id.slice('jobItemInstance_'.length);
@@ -2925,9 +2998,31 @@ window.onload = function () {
           }
         }
       }, {
+        title: 'Inspect',
+        action: function(elm) {
+          var jobElementGraphName = 'jobElementGraph_' + elm.id.slice('jobItemInstance_'.length);
+          var jobLongName = elm.id.slice('jobItemInstance_'.length);
+          console.log("Inspect jobLongName " + jobLongName);
+
+          if (jobHistoryInspectors[jobLongName]) {
+            console.log("Already have an Inspector for " + jobLongName);
+            jobHistoryInspectors[jobLongName].showInspectorOverlay();
+          } else if (runningData[jobLongName]) {
+            console.log("Don't have an Inspector for " + jobLongName + " yet but already have the data");
+            var hdata = runningData[jobLongName];
+            hdata["who"] = "inspect_running_";
+            showJobHistoryDataInspector(hdata);
+          } else {
+            msgobj = {       
+              type:'load_saved_job_data',
+              data:{'fileName':jobElementGraphName.slice('jobElementGraph_'.length), 'who':'inspect_running_'}
+            };
+            sendMessage({data:JSON.stringify(msgobj)});
+          }
+        }
+      }, {
         title: 'Stop',
-        action: function(elm, data, index) {
-          console.log('menu item #2 from ' + elm.id + " " + data.title + " " + index);
+        action: function(elm) {
           var longJobName = elm.id.replace('jobItemInstance_', '');
           var jobInstance = instancePattern.exec(longJobName);
           var nodeName = longJobName.slice(0,(longJobName.indexOf(jobInstance)-1));
@@ -2949,8 +3044,7 @@ window.onload = function () {
         }
       }, {
         title: 'Remove',
-        action: function(elm, data, index) {
-          console.log('menu item #3 from ' + elm.id + " " + data.title + " " + index);
+        action: function(elm) {
           var longJobName = elm.id.replace('jobItemInstance_', '');
           var jobInstance = instancePattern.exec(longJobName);
           var nodeName = longJobName.slice(0,(longJobName.indexOf(jobInstance)-1));
@@ -2965,8 +3059,7 @@ window.onload = function () {
         }
       }, {
         title: 'Save',
-        action: function(elm, data, index) {
-          console.log('menu item #4 from ' + elm.id + " " + data.title + " " + index);
+        action: function(elm) {
           var longJobName = elm.id.replace('jobItemInstance_', '');
           var jobInstance = instancePattern.exec(longJobName);
           var nodeName = longJobName.slice(0,(longJobName.indexOf(jobInstance)-1));
@@ -2982,8 +3075,7 @@ window.onload = function () {
       // Start of popup menu
       jobElementMenu = [{
         title: 'Display',
-        action: function(elm, data, index) {
-          console.log('menu item #1 from ' + elm.id + " " + data.title + " " + index);
+        action: function(elm) {
           var jobElementGraphName = 'jobElementGraph_' +
                                   elm.id.slice('jobItemInstance_'.length);
           var jobLongName = elm.id.slice('jobItemInstance_'.length);
@@ -3044,7 +3136,7 @@ window.onload = function () {
           .data(jobElementMenu).enter()
           .append('li')
           .on('click',function(d) {
-            console.log('popup selected: ' + d.title);
+            //console.log('popup selected: ' + d.title);
             d.action(elm, d, i);
             select('.context-menu')
               .style('display', 'none');
@@ -3919,8 +4011,7 @@ window.onload = function () {
       // Start of templateItemName menu
       var templateItemNameMenu = [{
         title: 'Delete',
-        action: function(elm, data, index) {
-          console.log('menu item #3 from ' + elm.id + " " + data.title + " " + index);
+        action: function(elm) {
           var templateItemIndex = elm.getAttribute('templateItemIndex');
           var jobName = elm.textContent;
 
@@ -3945,8 +4036,7 @@ window.onload = function () {
         }
       }, {
         title: 'New',
-        action: function(elm, data, index) {
-          console.log('menu item #2 from ' + elm.id + " " + data.title + " " + index);
+        action: function() {
 
           var jobComposer = document.getElementById("jobComposer");
           if ( jobComposer.style.display == 'block') {
@@ -3965,9 +4055,8 @@ window.onload = function () {
         }
       }, {
         title: 'Refresh',
-        action: function(elm, data, index) {
-          console.log('menu item #1 from ' + elm.id + " " + data.title + " " + index);
-          console.log("REFRESH job button clicked");
+        action: function() {
+          //console.log("REFRESH job button clicked");
 
           // Request job data
           var msgobj = {type:'load_jobs', data:[]};
@@ -3975,9 +4064,7 @@ window.onload = function () {
         }
       }, {
         title: 'Run',
-        //action: function(elm, data, index) {
         action: function(elm) {
-          //console.log('menu item #4 from ' + elm.id + " " + data.title + " " + index);
           var templateItemIndex = elm.getAttribute('templateItemIndex');
           var jobName = elm.textContent;
 
@@ -4024,7 +4111,7 @@ window.onload = function () {
             .data(templateItemNameMenu).enter()
             .append('li')
             .on('click',function(d) {
-              console.log('popup selected: ' + d.title);
+              //console.log('popup selected: ' + d.title);
               d.action(elm, d, i);
               select('.context-menu')
                 .style('display', 'none');
