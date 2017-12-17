@@ -507,7 +507,7 @@ class ChartInspector {
     }
 
     //console.log("Hello World from new ChartInspector: " + this[CHARTINSPECTORNAME] + ", prefix: " + data.who);
-    this.showInspectorOverlay();
+    this.showInspectorOverlay({});
   }
 
   get name () { return this[CHARTINSPECTORNAME]; }
@@ -536,7 +536,7 @@ class ChartInspector {
         }
         if (this.hScale < 1) this.hScale = 1;
         //console.log("hScale now = " + this.hScale);
-        this.showInspectorOverlay();
+        this.showInspectorOverlay({});
       } else if (e.key == "ArrowRight") {
         if (e.shiftKey) {
           this.hScale += 10;
@@ -544,12 +544,23 @@ class ChartInspector {
           this.hScale += 1;
         }
         //console.log("hScale now = " + this.hScale);
-        this.showInspectorOverlay();
+        this.showInspectorOverlay({});
+      } else if (e.deltaY < 0 ) {
+        //console.log("addInspectorKeyboardHandler() at: " + e.clientX + "," + e.clientY + " (" + e.deltaX + "," + e.deltaY + "," + e.deltaZ + ")");
+        this.hScale += 1;
+        this.showInspectorOverlay({"xpos":e.clientX});
+      } else if (e.deltaY > 0 ) {
+        //console.log("addInspectorKeyboardHandler() at: " + e.clientX + "," + e.clientY + " (" + e.deltaX + "," + e.deltaY + "," + e.deltaZ + ")");
+        this.hScale -= 1;
+        if (this.hScale < 1) this.hScale = 1;
+        this.showInspectorOverlay({"xpos":e.clientX});
+      } else {
+        console.log("addInspectorKeyboardHandler(): ???");
       }
     }
   }
 
-  showInspectorOverlay () {
+  showInspectorOverlay (options) {
     //console.log("showInspectorOverlay() for " + this.elementName);
     var inspectorExists = document.getElementById(this.elementName);
     var svgWidth, svgHeight;
@@ -558,6 +569,7 @@ class ChartInspector {
     if (! this.hasBindListener ) {
       this.bindListener = this.addInspectorKeyboardHandler.bind(this);
       document.body.addEventListener("keydown", this.bindListener);
+      document.body.addEventListener("wheel", this.bindListener);
       this.hasBindListener = true;
     }
 
@@ -634,6 +646,7 @@ class ChartInspector {
       renderArgs.data = runningData[this[CHARTINSPECTORNAME]];
     }
     renderArgs.who = this[CHARTINSPECTORIDBASE];
+    if (options.xpos) renderArgs.xpos = options.xpos;
 
     renderChart(renderArgs);
   }
@@ -647,7 +660,7 @@ class ChartInspector {
     if (inspector) {
       //console.log("inspector display = " + inspector.style.display);
       if (inspector.style.display != "none" ) {
-        this.showInspectorOverlay();
+        this.showInspectorOverlay({});
       }
     }
   }
@@ -691,6 +704,10 @@ function renderChart(options) {
   var data = options.data;
   var graphWidthScale = options.hScale;
   var who = options.who;
+  var scrollTarget = options.xpos || undefined;
+
+  var holder;
+  var currentScrollPos;
 
   // elapsedJobTime only used for running jobs
   var elapsedJobTime;
@@ -727,12 +744,22 @@ function renderChart(options) {
     //console.log("renderChart(): elapsedJobTime = " + elapsedJobTime);
   }
 
+  var viewport = select("#" + nameBase + "chartHolder_" + longName).node().getBoundingClientRect();
+  //console.log("viewport size = " + viewport.width + "," + viewport.height);
+
+  // Store current scroll position
+  if (scrollTarget) {
+    holder = document.getElementById(svgParentName);
+    holder.onscroll = function () {
+      console.log("scroll pos = " + holder.scrollLeft);
+    };
+    currentScrollPos = holder.scrollLeft;
+    console.log("current scroll = " + currentScrollPos + " (" + (currentScrollPos%viewport.width) + ")");
+  }
+
   // Now (re)draw graph
 
-  //select("#" + this[CHARTINSPECTORIDBASE] + "svg_" + this[CHARTINSPECTORNAME]).remove();
   select("#" + nameBase + "svg_" + longName).remove();
-  //var jobElementGraphInspector = document.getElementById(this.elementName);
-  //var jobElementGraphInspector = document.getElementById(this[CHARTINSPECTORIDBASE] + "chartHolder_" + this[CHARTINSPECTORNAME]);
   var jobElementGraphInspector = document.getElementById(svgParentName);
 
   var svg = select(jobElementGraphInspector).append("svg");
@@ -907,7 +934,8 @@ function renderChart(options) {
           var sensorId = select(this).attr("id");
           //console.log("sensor name: " + sensorId);
           /* We don't know what the values to be shown  in the popup are.
-            Therefore make a dummy version first that's close enough to measure a bounding box.
+            Therefore make a dummy version first that's close enough to measure a bounding box,
+            otherwise we can't centre the first line like we want to.
             Finally delete the dummy, then fill & position the real popup.
           */
           var viewport = select("#" + nameBase + "chartHolder_" + longName).node().getBoundingClientRect();
@@ -1041,6 +1069,42 @@ function renderChart(options) {
         });
     }
   }
+
+  /*
+  svg.on("mousemove", function() {
+    inspectorCoords = mouse(this);
+  });
+  svg.on("click", function() {
+    var holder = document.getElementById(svgParentName);
+    console.log("click at " + inspectorCoords[0] + "," + inspectorCoords[1] + " scroll = " + holder.scrollLeft);
+    console.log("and remainder = " + inspectorCoords[1]%svgWidth);
+  });
+  var holder = document.getElementById(svgParentName);
+  //holder.scrollLeft = (svgWidth * (graphWidthScale - 1)) - (svgWidth - (svgWidth%inspectorCoords[1]));
+  console.log("Remainder = " + inspectorCoords[1]%svgWidth);
+  holder.scrollLeft = graphWidthScale*(graphWidthScale - 1) - graphWidthScale*(inspectorCoords[1]%svgWidth);
+  svg.call(zoom().on("zoom", function () {
+    inspectorCoords = mouse(this);
+    var holder = document.getElementById(svgParentName);
+    console.log("click at " + inspectorCoords[0] + "," + inspectorCoords[1] + " scroll = " + holder.scrollLeft);
+    //console.log("Zoom = " + (-event.deltaY * (event.deltaMode ? 120 : 1) / 500));
+    console.log("Zoom = " + event.deltaY);
+  }));
+  */
+
+  // Attempt to reposition graph to keep scrollTarget in view
+  if (scrollTarget) {
+    console.log("scrollTarget = " + scrollTarget);
+    //currentScrollPos
+
+    holder = document.getElementById(svgParentName);
+    holder.scrollLeft = (scrollTarget - graphMargin.left)*(graphWidthScale - 1);
+    //console.log("scrollTarget = " + scrollTarget + " (" + holder.scrollLeft%viewport.width + ")");
+    //console.log("Propose: " + (holder.scrollLeft/viewport.width + scrollTarget) + " (" + (holder.scrollLeft/viewport.width + scrollTarget)%viewport.width + ")");
+    //holder.scrollLeft = Math.floor(holder.scrollLeft/viewport.width + scrollTarget);
+    console.log("scroll result = " + holder.scrollLeft);
+  }
+
 
 
   /*
@@ -2931,7 +2995,7 @@ window.onload = function () {
 
           if (jobHistoryInspectors[jobLongName]) {
             console.log("Already have an Inspector for " + jobLongName);
-            jobHistoryInspectors[jobLongName].showInspectorOverlay();
+            jobHistoryInspectors[jobLongName].showInspectorOverlay({});
           } else if (historyData[jobLongName]) {
             console.log("Don't have an Inspector for " + jobLongName + " yet but already have the data");
             var hdata = historyData[jobLongName];
@@ -3006,7 +3070,7 @@ window.onload = function () {
 
           if (jobHistoryInspectors[jobLongName]) {
             console.log("Already have an Inspector for " + jobLongName);
-            jobHistoryInspectors[jobLongName].showInspectorOverlay();
+            jobHistoryInspectors[jobLongName].showInspectorOverlay({});
           } else if (runningData[jobLongName]) {
             console.log("Don't have an Inspector for " + jobLongName + " yet but already have the data");
             var hdata = runningData[jobLongName];
@@ -3709,7 +3773,7 @@ window.onload = function () {
       if (jobHistoryInspectors[item].overlay.style.display == "none") {
         console.log("Not redrawing: " + jobHistoryInspectors[item].name);
       } else {
-        jobHistoryInspectors[item].showInspectorOverlay();
+        jobHistoryInspectors[item].showInspectorOverlay({});
       }
     });
 
