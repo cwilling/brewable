@@ -196,6 +196,10 @@ var searchDeviceListByChipId = function (Id) {
 
 class Ispindel {
   constructor (report, parent) {
+    // How long to wait (ms) after last report before removing this device
+    // 61 * 60 * 1000 = 3660000 (61 minutes)
+    var defaultWaitTime = 60000;     // 60000 = 1min
+
     this.name = report.sensorId;
     this.chipId = report.chipId;
     this.tilt = report.tilt;
@@ -204,20 +208,21 @@ class Ispindel {
     this.batt = report.batt;
     if (report.hasOwnProperty("interval")) {
       this.interval = report.interval;
+    } else {
+      this.interval = parseInt(report.interval / 1000);
     }
     this.stamp = report.stamp;
     this.parent = parent;
     this.elementName = 'sensor_update_' + this.name;
 
-    // How long to wait (ms) after last report before removing this device
-    // 61 * 60 * 1000 = 3660000 (61 minutes)
-    var defaultWaitTime = 60000;     // 60000 = 1min
     //if (iSpindelWaitTimes[report.sensorId]) {
     console.log("iSpindelWaitTimes has keys: " + JSON.stringify(Object.keys(iSpindelWaitTimes)));
     console.log("iSpindelWaitTimes has " + JSON.stringify(iSpindelWaitTimes));
     console.log("report.sensorId = " + report.sensorId);
-    console.log("waitTime should be = " + iSpindelWaitTimes[report.sensorId]);
-    this.waitTime = 1000 * iSpindelWaitTimes[report.sensorId] || defaultWaitTime;
+    //console.log("waitTime should be = " + iSpindelWaitTimes[report.sensorId]);
+    //this.waitTime = 1000 * iSpindelWaitTimes[report.sensorId] || defaultWaitTime;
+    console.log("waitTime should be = " + this.interval);
+    this.waitTime = 1000 * this.interval || defaultWaitTime;
 
     var isp_temp, isp_grav;
     /*
@@ -2018,8 +2023,8 @@ window.onload = function () {
   }
 
   /*
-    Ispindel config data can come from saved data
-    or from new instances appearing on the network.
+    Ispindel config data can come from
+    new instances appearing on the network.
   */
   function addIspindelConfigData(passedArgs) {
     var isp_sensor = passedArgs.data;
@@ -2144,15 +2149,6 @@ window.onload = function () {
 
           configItemDataValue.blur();
         }
-      } else if (key == "iSpindels") {
-        console.log("Configure ISpindels");
-        var isp_sensor;
-        for (var i in configItems[key]) {
-          isp_sensor = configItems[key][i];
-          console.log("isp: " + JSON.stringify(isp_sensor));
-          addIspindelConfigData({"branch":configItemData, "data":isp_sensor});
-        }
-
       } else {
         configItemDataValue = document.createElement('DIV');
         configItemDataValue.id = 'configItemDataValue_' + key;
