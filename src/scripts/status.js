@@ -298,7 +298,7 @@ class Ispindel {
     //console.log("Checking iSpindel timeout " + ispindel.waitTime);
 
     var elapsed = new Date() - new Date(ispindel.stamp);
-    if (elapsed > ispindel.waitTime ) {
+    if (elapsed > (2.1 * ispindel.waitTime) ) {
       clearInterval(ispindel.ispindelUpdateInterval);
       console.log("Toooo long since last report");
       ispindel.removeOverlay();
@@ -459,7 +459,7 @@ class Ispindel {
     //console.log("checkOverlayTimeout() " + ispindel.stamp);
 
     var elapsed = new Date() - new Date(ispindel.stamp);
-    if (elapsed > ispindel.waitTime ) {
+    if (elapsed > (2.1 * ispindel.waitTime) ) {
       console.log("Too long since last report");
       ispindel.removeOverlay();
       var x = document.getElementById(ispindel.elementName);
