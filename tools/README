@@ -1,0 +1,13 @@
+convertFile.js:
+	converts old (pre-iSpindel) history or archive files to new format.
+	Without arguments, converts files in ~/brewable/history directory.
+	With argument, converts files in ~/brewable/XXXX e.g.
+		./convertFile.js archive
+	converts files in ~/brewable/archive
+
+	Copies of the original old format files are
+	stored in ~/brewable/oldFiles directory (created as required).
+
+	New format files are ignored.
+
+
