@@ -29,6 +29,8 @@ var profileData = [];
 var profileDisplayData = [];        // "processed" data for display
 var profileLinearScaleY = [];
 var profileLinearScaleX = [];
+var tempDisplayPrecision = 2;
+var gravDisplayPrecision = 3;
 var temperatureStrokeWidth = 2;
 var gravityStrokeWidth = 3;
 var temperatureColours = ["blue", "green", "red", "fuchsia"];
@@ -274,11 +276,11 @@ class Ispindel {
     }
     try {
       if (tempScale == 'F') {
-        document.getElementById(this.elementName + "_temp").textContent = ((state.temperature * 9 / 5 ) + 32).toFixed(2);
+        document.getElementById(this.elementName + "_temp").textContent = ((state.temperature * 9 / 5 ) + 32).toFixed(tempDisplayPrecision);
       } else {
-        document.getElementById(this.elementName + "_temp").textContent = (state.temperature).toFixed(2);
+        document.getElementById(this.elementName + "_temp").textContent = (state.temperature).toFixed(tempDisplayPrecision);
       }
-      document.getElementById(this.elementName + "_grav").textContent = (state.grav).toFixed(2);
+      document.getElementById(this.elementName + "_grav").textContent = (state.grav).toFixed(gravDisplayPrecision);
     }
     catch (err) {
       console.log("set_contents() caught " + err);
@@ -383,7 +385,7 @@ class Ispindel {
     var olGravVal = document.createElement("DIV");
     olGravVal.id = this.elementName + "_overlay_grav_val";
     olGravVal.className = "isp_sol_val unselectable";
-    olGravVal.textContent = this.grav.toFixed(2);
+    olGravVal.textContent = this.grav.toFixed(gravDisplayPrecision);
     olGrav.appendChild(olGravKey);
     olGrav.appendChild(olGravVal);
     this.overlay.appendChild(olGrav);
@@ -733,10 +735,10 @@ function renderChart(options) {
   console.log("updateJobHistoryData() jobName: " + header[0]['jobName'] + " " + header.length);
   console.log("updateJobHistoryData() updates: " + updates + " " + updates.length);
   for (var i=0;i<updates.length;i++) {
-    //console.log("updateJobHistoryData() temp at " + parseFloat(updates[i]['elapsed']).toFixed(2) + " = " + updates[i][updates[i]['sensors'][0]]);
-    console.log("updateJobHistoryData() temp at " + parseFloat(updates[i]['elapsed']).toFixed(2) + " = " + updates[i][updates[i]['sensors'][1]]['temp']);
+    //console.log("updateJobHistoryData() temp at " + parseFloat(updates[i]['elapsed']).toFixed(tempDisplayPrecision) + " = " + updates[i][updates[i]['sensors'][0]]);
+    console.log("updateJobHistoryData() temp at " + parseFloat(updates[i]['elapsed']).toFixed(tempDisplayPrecision) + " = " + updates[i][updates[i]['sensors'][1]]['temp']);
   }
-  console.log("updateJobHistoryData() grav at " + parseFloat(updates[updates.length - 1]['elapsed']).toFixed(2) + " = " + updates[updates.length - 1][updates[updates.length - 1]['sensors'][1]]['grav']);
+  console.log("updateJobHistoryData() grav at " + parseFloat(updates[updates.length - 1]['elapsed']).toFixed(gravDisplayPrecision) + " = " + updates[updates.length - 1][updates[updates.length - 1]['sensors'][1]]['grav']);
   */
 
   //console.log("renderChart() longName = " + longName);
@@ -952,7 +954,7 @@ function renderChart(options) {
             .append("tspan").attr("x",50).attr("y",18).attr('dy', '1.1em').attr("text-anchor", "end").text("Time:")
             .append("tspan").attr("x",60).attr("y",18).attr('dy', '1.1em').attr("text-anchor", "start").text(tickText(linearScaleX.invert(mouse(this)[0])))
             .append("tspan").attr("x",50).attr("y",36).attr('dy', '1.1em').attr("text-anchor", "end").text("Temp:")
-            .append("tspan").attr("x",60).attr("y",36).attr('dy', '1.1em').attr("text-anchor", "start").text((linearScaleY.invert(mouse(this)[1])).toFixed(2) + "\u00B0");
+            .append("tspan").attr("x",60).attr("y",36).attr('dy', '1.1em').attr("text-anchor", "start").text((linearScaleY.invert(mouse(this)[1])).toFixed(tempDisplayPrecision) + "\u00B0");
           // Measure dummy text
           var bbox = select("#" + nameBase + "TooltipText_" + longName).node().getBBox();
           // Remove dummy text
@@ -965,7 +967,7 @@ function renderChart(options) {
             .append("tspan").attr("x",50).attr("y",18).attr('dy', '1.1em').attr("text-anchor", "end").text("Time:")
             .append("tspan").attr("x",60).attr("y",18).attr('dy', '1.1em').attr("text-anchor", "start").text(tickText(linearScaleX.invert(mouse(this)[0])))
             .append("tspan").attr("x",50).attr("y",36).attr('dy', '1.1em').attr("text-anchor", "end").text("Temp:")
-            .append("tspan").attr("x",60).attr("y",36).attr('dy', '1.1em').attr("text-anchor", "start").text((linearScaleY.invert(mouse(this)[1])).toFixed(2) + "\u00B0");
+            .append("tspan").attr("x",60).attr("y",36).attr('dy', '1.1em').attr("text-anchor", "start").text((linearScaleY.invert(mouse(this)[1])).toFixed(tempDisplayPrecision) + "\u00B0");
 
           // Find size of new text box
           bbox = select("#" + nameBase + "TooltipText_" + longName).node().getBBox();
@@ -1033,7 +1035,7 @@ function renderChart(options) {
             .append("tspan").attr("x",50).attr("y",18).attr('dy', '1.1em').attr("text-anchor", "end").text("Time:")
             .append("tspan").attr("x",60).attr("y",18).attr('dy', '1.1em').attr("text-anchor", "start").text(tickText(linearScaleX.invert(mouse(this)[0])))
             .append("tspan").attr("x",50).attr("y",36).attr('dy', '1.1em').attr("text-anchor", "end").text("Grav:")
-            .append("tspan").attr("x",60).attr("y",36).attr('dy', '1.1em').attr("text-anchor", "start").text((linearScaleY.invert(mouse(this)[1])).toFixed(2));
+            .append("tspan").attr("x",60).attr("y",36).attr('dy', '1.1em').attr("text-anchor", "start").text((linearScaleY.invert(mouse(this)[1])).toFixed(gravDisplayPrecision));
           // Measure dummy text
           var bbox = select("#" + nameBase + "TooltipText_" + longName).node().getBBox();
           // Remove dummy text
@@ -1046,7 +1048,7 @@ function renderChart(options) {
             .append("tspan").attr("x",50).attr("y",18).attr('dy', '1.1em').attr("text-anchor", "end").text("Time:")
             .append("tspan").attr("x",60).attr("y",18).attr('dy', '1.1em').attr("text-anchor", "start").text(tickText(linearScaleX.invert(mouse(this)[0])))
             .append("tspan").attr("x",50).attr("y",36).attr('dy', '1.1em').attr("text-anchor", "end").text("Grav:")
-            .append("tspan").attr("x",60).attr("y",36).attr('dy', '1.1em').attr("text-anchor", "start").text((linearScaleY.invert(mouse(this)[1])).toFixed(2));
+            .append("tspan").attr("x",60).attr("y",36).attr('dy', '1.1em').attr("text-anchor", "start").text((linearScaleY.invert(mouse(this)[1])).toFixed(gravDisplayPrecision));
 
           // Find size of new text box
           bbox = select("#" + nameBase + "TooltipText_" + longName).node().getBBox();
@@ -1762,9 +1764,9 @@ window.onload = function () {
         }
       } else {
         if (tempScale == 'F') {
-          document.getElementById(elementName).textContent = ((parseFloat(sensor_state[i].temperature) * 9 / 5 ) + 32).toFixed(2);
+          document.getElementById(elementName).textContent = ((parseFloat(sensor_state[i].temperature) * 9 / 5 ) + 32).toFixed(tempDisplayPrecision);
         } else {
-          document.getElementById(elementName).textContent = (sensor_state[i].temperature).toFixed(2);
+          document.getElementById(elementName).textContent = (sensor_state[i].temperature).toFixed(tempDisplayPrecision);
         }
       }
     }
@@ -2275,7 +2277,7 @@ window.onload = function () {
       //console.log("updateJobHistoryData() temp at " + parseFloat(updates[i]['elapsed']).toFixed(2) + " = " + updates[i][updates[i]['sensors'][0]]);
       console.log("updateJobHistoryData() temp at " + parseFloat(updates[i]['elapsed']).toFixed(2) + " = " + updates[i][updates[i]['sensors'][1]]['temp']);
     }
-    console.log("updateJobHistoryData() grav at " + parseFloat(updates[updates.length - 1]['elapsed']).toFixed(2) + " = " + updates[updates.length - 1][updates[updates.length - 1]['sensors'][1]]['grav']);
+    console.log("updateJobHistoryData() grav at " + parseFloat(updates[updates.length - 1]['elapsed']).toFixed(gravDisplayPrecision) + " = " + updates[updates.length - 1][updates[updates.length - 1]['sensors'][1]]['grav']);
     */
 
     // We need holderName just to identify the correct zoom box to access scale factor
@@ -2478,7 +2480,7 @@ window.onload = function () {
             */
             select("#detailTooltipText_" + longName.replace('%', '\\%'))
               .append("tspan").attr("x",0).attr("y",0).attr('dx', '0.3em').attr('dy', '1.1em').text("Time: " + tickText(historyLinearScaleX.invert(mouse(this)[0])))
-              .append("tspan").attr("x",0).attr("y",18).attr('dx','0.3em').attr('dy', '1.1em').text("Temp:" + (historyLinearScaleY.invert(mouse(this)[1])).toFixed(2));
+              .append("tspan").attr("x",0).attr("y",18).attr('dx','0.3em').attr('dy', '1.1em').text("Temp:" + (historyLinearScaleY.invert(mouse(this)[1])).toFixed(tempDisplayPrecision));
 
             select("#detailTooltipGroup_" + longName.replace('%', '\\%'))
               .attr("transform",
@@ -2530,7 +2532,7 @@ window.onload = function () {
             */
             select("#detailTooltipText_" + longName.replace('%', '\\%'))
               .append("tspan").attr("x",0).attr("y",0).attr('dx', '0.3em').attr('dy', '1.1em').text("Time: " + tickText(historyLinearScaleX.invert(mouse(this)[0])))
-              .append("tspan").attr("x",0).attr("y",18).attr('dx','0.3em').attr('dy', '1.1em').text("Grav: " + (historyLinearScaleY.invert(mouse(this)[1])).toFixed(2));
+              .append("tspan").attr("x",0).attr("y",18).attr('dx','0.3em').attr('dy', '1.1em').text("Grav: " + (historyLinearScaleY.invert(mouse(this)[1])).toFixed(gravDisplayPrecision));
 
             select("#detailTooltipGroup_" + longName.replace('%', '\\%'))
               .attr("transform",
