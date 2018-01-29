@@ -6,7 +6,7 @@ import { max, min } from "d3-array";
 import { scaleLinear, scaleTime } from "d3-scale";
 import { drag } from "d3-drag";
 import { zoom } from "d3-zoom";
-import { axisBottom, axisLeft } from "d3-axis";
+import { axisBottom, axisLeft, axisRight } from "d3-axis";
 import { line } from "d3-shape";
 //import { timeFormat } from "d3-time-format";
 
@@ -791,6 +791,7 @@ function renderChart(options) {
     .style("border", "1px solid black");
 
   // Extract profile & temperature data into local arrays
+  // First: profiles
   var profileData = header[0]['jobProfile'];
   var profileLineData = [];
   var temperatureLineDataHolder = [];
@@ -810,7 +811,7 @@ function renderChart(options) {
   if (header[0].hasOwnProperty("sensors")) {
     sensorList = header[0]["sensors"];
   }
-  // Extract temperature data for all sensors
+  // Second, extract temperature data for all sensors
   var sensor_instance;
   for (sensor_instance=0;sensor_instance<sensorList.length;sensor_instance++) {
     //console.log("renderChart() sensor name: " + sensorList[sensor_instance]);
@@ -834,10 +835,14 @@ function renderChart(options) {
   }
 
   // Find extent of values in both profileLineData & all the temperatureLineData arrays (1 for each sensor)
-  // N.B. could maybe do this while populating the *LineData arrays
   var minDataPoint = min(profileLineData, function(d) {return parseFloat(d.y);});
   var maxDataPoint = max(profileLineData, function(d) {return parseFloat(d.y);});
   var maxTime = max(profileLineData, function(d) {return parseFloat(d.x);});
+
+  // Separate scaling for gravity, so need separate min/max points
+  var minGravDataPoint = 1.0;
+  var maxGravDataPoint = 1.0;
+  var maxGravTime = maxTime;
 
   for (sensor_instance=0;sensor_instance<sensorList.length;sensor_instance++) {
     if (temperatureLineDataHolder[sensor_instance].length > 0) {
@@ -851,27 +856,40 @@ function renderChart(options) {
 
     if (gravityLineDataHolder[sensor_instance].length > 0) {
       var gravity = min(gravityLineDataHolder[sensor_instance], function(d) {return parseFloat(d.y);});
-      if (gravity < minDataPoint ) minDataPoint = gravity;
+      if (gravity < minGravDataPoint ) minGravDataPoint = gravity;
       gravity = max(gravityLineDataHolder[sensor_instance], function(d) {return parseFloat(d.y);});
-      if (gravity > maxDataPoint ) maxDataPoint = gravity;
+      if (gravity > maxGravDataPoint ) maxGravDataPoint = gravity;
       gravity = max(gravityLineDataHolder[sensor_instance], function(d) {return parseFloat(d.x);});
-      if ( gravity > maxTime ) maxTime = gravity;
+      if ( gravity > maxGravTime ) maxGravTime = gravity;
     }
   }
   // Add some clearance
   minDataPoint -= 5;
   maxDataPoint += 5;
   maxTime += 60;
+  minGravDataPoint -= 0.05;
+  maxGravDataPoint += 0.05;
+  maxGravTime += 60;
 
   //console.log("Min = " + minDataPoint + " Max = " + maxDataPoint);
   var linearScaleY = scaleLinear()
     .domain([minDataPoint, maxDataPoint])
     .range([graphHeight,0]);
-  var yAxis = axisLeft(linearScaleY).ticks(5);
+  var yAxis = axisLeft(linearScaleY).ticks(10);
   svg.append("g")
     .attr('class', 'y ' + nameBase + 'Axis unselectable')
     .attr("transform", "translate(" + graphMargin.left + "," + graphMargin.top + ")")
     .call(yAxis);
+
+  var linearGravScaleY = scaleLinear()
+    .domain([minGravDataPoint, maxGravDataPoint])
+    .range([graphHeight,0]);
+  var yGravAxis = axisRight(linearGravScaleY).ticks(8);
+  svg.append("g")
+    .attr('class', 'y grav ' + nameBase + 'Axis unselectable')
+    .attr("transform", "translate(" + (graphWidth + graphMargin.left) + "," + graphMargin.top + ")")
+    .call(yGravAxis);
+
   var linearScaleX = scaleTime()
     .domain([0,maxTime])
     .range([0,graphWidth]);
@@ -1002,7 +1020,7 @@ function renderChart(options) {
         //console.log("scaled sp = " + gravityLineData[sp].x + " : " + gravityLineData[sp].y);
         scaledGravityLineData.push({
           "x":linearScaleX(gravityLineData[sp].x),
-          "y":linearScaleY(gravityLineData[sp].y)
+          "y":linearGravScaleY(gravityLineData[sp].y)
         });
       }
       // Draw gravity graph
@@ -1035,7 +1053,7 @@ function renderChart(options) {
             .append("tspan").attr("x",50).attr("y",18).attr('dy', '1.1em').attr("text-anchor", "end").text("Time:")
             .append("tspan").attr("x",60).attr("y",18).attr('dy', '1.1em').attr("text-anchor", "start").text(tickText(linearScaleX.invert(mouse(this)[0])))
             .append("tspan").attr("x",50).attr("y",36).attr('dy', '1.1em').attr("text-anchor", "end").text("Grav:")
-            .append("tspan").attr("x",60).attr("y",36).attr('dy', '1.1em').attr("text-anchor", "start").text((linearScaleY.invert(mouse(this)[1])).toFixed(gravDisplayPrecision));
+            .append("tspan").attr("x",60).attr("y",36).attr('dy', '1.1em').attr("text-anchor", "start").text((linearGravScaleY.invert(mouse(this)[1])).toFixed(gravDisplayPrecision));
           // Measure dummy text
           var bbox = select("#" + nameBase + "TooltipText_" + longName).node().getBBox();
           // Remove dummy text
@@ -1048,7 +1066,7 @@ function renderChart(options) {
             .append("tspan").attr("x",50).attr("y",18).attr('dy', '1.1em').attr("text-anchor", "end").text("Time:")
             .append("tspan").attr("x",60).attr("y",18).attr('dy', '1.1em').attr("text-anchor", "start").text(tickText(linearScaleX.invert(mouse(this)[0])))
             .append("tspan").attr("x",50).attr("y",36).attr('dy', '1.1em').attr("text-anchor", "end").text("Grav:")
-            .append("tspan").attr("x",60).attr("y",36).attr('dy', '1.1em').attr("text-anchor", "start").text((linearScaleY.invert(mouse(this)[1])).toFixed(gravDisplayPrecision));
+            .append("tspan").attr("x",60).attr("y",36).attr('dy', '1.1em').attr("text-anchor", "start").text((linearGravScaleY.invert(mouse(this)[1])).toFixed(gravDisplayPrecision));
 
           // Find size of new text box
           bbox = select("#" + nameBase + "TooltipText_" + longName).node().getBBox();
