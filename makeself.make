@@ -3,7 +3,7 @@
 NODEEXE=$(which node)
 BREWTEMPDIR=`mktemp -d  /tmp/brewtemp.XXXXXX` || exit 1
 TARGET=$(pwd)/brewable
-VERSION=0.5.0
+VERSION=0.5.1
 
 echo './node brewableserverbundle.js "$@"' > $BREWTEMPDIR/run.sh
 chmod a+x $BREWTEMPDIR/run.sh
