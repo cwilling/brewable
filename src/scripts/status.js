@@ -2392,6 +2392,11 @@ window.onload = function () {
     var maxTime = max(profileLineData, function(d) {return parseFloat(d.x);});
     if (elapsedJobTime && elapsedJobTime > maxTime) maxTime = elapsedJobTime;
 
+    // Separate scaling for gravity, so need separate min/max points
+    var minGravDataPoint = 1.0;
+    var maxGravDataPoint = 1.0;
+    var maxGravTime = maxTime;
+
     for (sensor_instance=0;sensor_instance<sensorList.length;sensor_instance++) {
       if (temperatureLineDataHolder[sensor_instance].length > 0) {
         var temperature = min(temperatureLineDataHolder[sensor_instance], function(d) {return parseFloat(d.y);});
@@ -2404,17 +2409,20 @@ window.onload = function () {
 
       if (gravityLineDataHolder[sensor_instance].length > 0) {
         var gravity = min(gravityLineDataHolder[sensor_instance], function(d) {return parseFloat(d.y);});
-        if (gravity < minDataPoint ) minDataPoint = gravity;
+        if (gravity < minGravDataPoint ) minGravDataPoint = gravity;
         gravity = max(gravityLineDataHolder[sensor_instance], function(d) {return parseFloat(d.y);});
-        if (gravity > maxDataPoint ) maxDataPoint = gravity;
+        if (gravity > maxGravDataPoint ) maxGravDataPoint = gravity;
         gravity = max(gravityLineDataHolder[sensor_instance], function(d) {return parseFloat(d.x);});
-        if ( gravity > maxTime ) maxTime = gravity;
+        if ( gravity > maxGravTime ) maxGravTime = gravity;
       }
     }
     // Add some clearance
     minDataPoint -= 5;
     maxDataPoint += 5;
     maxTime += 60;
+    minGravDataPoint -= 0.05;
+    maxGravDataPoint += 0.05;
+    maxGravTime += 60;
 
     //console.log("Min = " + minDataPoint + " Max = " + maxDataPoint);
     var historyLinearScaleY = scaleLinear()
@@ -2426,6 +2434,16 @@ window.onload = function () {
       .attr('class', 'y historyAxis unselectable')
       .attr("transform", "translate(" + historyJobsGraphMargin.left + "," + historyJobsGraphMargin.top + ")")
       .call(historyYAxis);
+
+    var historyLinearGravScaleY = scaleLinear()
+      .domain([minGravDataPoint, maxGravDataPoint])
+      .range([historyJobsGraphHeight,0]);
+    var yGravAxis = axisRight(historyLinearGravScaleY).ticks(8);
+    historyJobsGraphHolder.append("g")
+      .attr('class', 'y grav historyAxis unselectable')
+      .attr("transform", "translate(" + (historyJobsGraphWidth + historyJobsGraphMargin.left) + "," + historyJobsGraphMargin.top + ")")
+      .call(yGravAxis);
+
     var historyLinearScaleX = scaleTime()
       .domain([0,maxTime])
       .range([0,historyJobsGraphWidth]);
@@ -2528,7 +2546,7 @@ window.onload = function () {
           //console.log("scaled sp = " + gravityLineData[sp].x + " : " + gravityLineData[sp].y);
           scaledGravityLineData.push({
             "x":historyLinearScaleX(gravityLineData[sp].x),
-            "y":historyLinearScaleY(gravityLineData[sp].y)
+            "y":historyLinearGravScaleY(gravityLineData[sp].y)
           });
         }
         // Draw gravity graph
@@ -2550,7 +2568,7 @@ window.onload = function () {
             */
             select("#detailTooltipText_" + longName.replace('%', '\\%'))
               .append("tspan").attr("x",0).attr("y",0).attr('dx', '0.3em').attr('dy', '1.1em').text("Time: " + tickText(historyLinearScaleX.invert(mouse(this)[0])))
-              .append("tspan").attr("x",0).attr("y",18).attr('dx','0.3em').attr('dy', '1.1em').text("Grav: " + (historyLinearScaleY.invert(mouse(this)[1])).toFixed(gravDisplayPrecision));
+              .append("tspan").attr("x",0).attr("y",18).attr('dx','0.3em').attr('dy', '1.1em').text("Grav: " + (historyLinearGravScaleY.invert(mouse(this)[1])).toFixed(gravDisplayPrecision));
 
             select("#detailTooltipGroup_" + longName.replace('%', '\\%'))
               .attr("transform",
