@@ -844,8 +844,8 @@ function renderChart(options) {
   var maxTime = max(profileLineData, function(d) {return parseFloat(d.x);});
 
   // Separate scaling for gravity, so need separate min/max points
-  var minGravDataPoint = 1.0;
-  var maxGravDataPoint = 1.0;
+  var minGravDataPoint = 1.000;
+  var maxGravDataPoint = 1.000;
   var maxGravTime = maxTime;
 
   for (sensor_instance=0;sensor_instance<sensorList.length;sensor_instance++) {
@@ -871,8 +871,8 @@ function renderChart(options) {
   minDataPoint -= 5;
   maxDataPoint += 5;
   maxTime += 60;
-  minGravDataPoint -= 0.05;
-  maxGravDataPoint += 0.05;
+  minGravDataPoint -= 0.050;
+  maxGravDataPoint += 0.050;
   maxGravTime += 60;
 
   //console.log("Min = " + minDataPoint + " Max = " + maxDataPoint);
@@ -888,7 +888,7 @@ function renderChart(options) {
   var linearGravScaleY = scaleLinear()
     .domain([minGravDataPoint, maxGravDataPoint])
     .range([graphHeight,0]);
-  var yGravAxis = axisRight(linearGravScaleY).ticks(8);
+  var yGravAxis = axisRight(linearGravScaleY).ticks(8, ".3f");
   // Don't display SG axis if there's no SG data to show
   if (haveIspindelData) {
     svg.append("g")
@@ -2449,7 +2449,7 @@ window.onload = function () {
     var historyLinearGravScaleY = scaleLinear()
       .domain([minGravDataPoint, maxGravDataPoint])
       .range([historyJobsGraphHeight,0]);
-    var yGravAxis = axisRight(historyLinearGravScaleY).ticks(8);
+    var yGravAxis = axisRight(historyLinearGravScaleY).ticks(8, ".3f");
     // Don't display SG axis if there's no SG data to show
     if (haveIspindelData) {
       historyJobsGraphHolder.append("g")
