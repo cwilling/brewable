@@ -712,6 +712,7 @@ function renderChart(options) {
   var graphWidthScale = options.hScale;
   var who = options.who;
   var scrollTarget = options.xpos || undefined;
+  var haveIspindelData = false;
 
   var holder;
   var currentScrollPos;
@@ -831,6 +832,9 @@ function renderChart(options) {
       }
     }
     temperatureLineDataHolder[sensor_instance] = temperatureLineData;
+    if (gravityLineData.length > 0 ) {
+      haveIspindelData = true;
+    }
     gravityLineDataHolder[sensor_instance] = gravityLineData;
   }
 
@@ -885,10 +889,13 @@ function renderChart(options) {
     .domain([minGravDataPoint, maxGravDataPoint])
     .range([graphHeight,0]);
   var yGravAxis = axisRight(linearGravScaleY).ticks(8);
-  svg.append("g")
-    .attr('class', 'y grav ' + nameBase + 'Axis unselectable')
-    .attr("transform", "translate(" + (graphWidth + graphMargin.left) + "," + graphMargin.top + ")")
-    .call(yGravAxis);
+  // Don't display SG axis if there's no SG data to show
+  if (haveIspindelData) {
+    svg.append("g")
+      .attr('class', 'y grav ' + nameBase + 'Axis unselectable')
+      .attr("transform", "translate(" + (graphWidth + graphMargin.left) + "," + graphMargin.top + ")")
+      .call(yGravAxis);
+  }
 
   var linearScaleX = scaleTime()
     .domain([0,maxTime])
@@ -2340,6 +2347,7 @@ window.onload = function () {
     var profileLineData = [];
     var temperatureLineDataHolder = [];
     var gravityLineDataHolder = [];
+    var haveIspindelData = false;
     var temperatureLineData = [];
     var gravityLineData = [];
     var setpoint = {};
@@ -2383,6 +2391,9 @@ window.onload = function () {
       }
       temperatureLineDataHolder[sensor_instance] = temperatureLineData;
       gravityLineDataHolder[sensor_instance] = gravityLineData;
+      if (gravityLineData.length > 0 ) {
+        haveIspindelData = true;
+      }
     }
 
     // Find extent of values in both profileLineData & all the temperatureLineData arrays (1 for each sensor)
@@ -2439,10 +2450,13 @@ window.onload = function () {
       .domain([minGravDataPoint, maxGravDataPoint])
       .range([historyJobsGraphHeight,0]);
     var yGravAxis = axisRight(historyLinearGravScaleY).ticks(8);
-    historyJobsGraphHolder.append("g")
-      .attr('class', 'y grav historyAxis unselectable')
-      .attr("transform", "translate(" + (historyJobsGraphWidth + historyJobsGraphMargin.left) + "," + historyJobsGraphMargin.top + ")")
-      .call(yGravAxis);
+    // Don't display SG axis if there's no SG data to show
+    if (haveIspindelData) {
+      historyJobsGraphHolder.append("g")
+        .attr('class', 'y grav historyAxis unselectable')
+        .attr("transform", "translate(" + (historyJobsGraphWidth + historyJobsGraphMargin.left) + "," + historyJobsGraphMargin.top + ")")
+        .call(yGravAxis);
+    }
 
     var historyLinearScaleX = scaleTime()
       .domain([0,maxTime])
