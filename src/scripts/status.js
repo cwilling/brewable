@@ -780,7 +780,7 @@ function renderChart(options) {
     graphHeight = svgHeight - (graphMargin.top + graphMargin.bottom);
   } else {
     //console.log("smallDevice is FALSE");
-    graphMargin = {top: 32, right: 40, bottom: 60, left: 80};
+    graphMargin = {top: 32, right: 70, bottom: 60, left: 80};
     graphHeight = svgHeight - (graphMargin.top + graphMargin.bottom);
   }
   var graphWidth = svgWidth*graphWidthScale - (graphMargin.left + graphMargin.right) - 20;
@@ -884,6 +884,12 @@ function renderChart(options) {
     .attr('class', 'y ' + nameBase + 'Axis unselectable')
     .attr("transform", "translate(" + graphMargin.left + "," + graphMargin.top + ")")
     .call(yAxis);
+  svg.append("text")
+    .attr("transform", "translate(" + graphMargin.left + "," + (graphHeight/2) + ")rotate(-90)")
+    .attr("dy", "-3em")
+    .style("text-anchor", "middle")
+    .style("text-decoration","underline")
+    .text("Temperature");
 
   var linearGravScaleY = scaleLinear()
     .domain([minGravDataPoint, maxGravDataPoint])
@@ -895,6 +901,12 @@ function renderChart(options) {
       .attr('class', 'y grav ' + nameBase + 'Axis unselectable')
       .attr("transform", "translate(" + (graphWidth + graphMargin.left) + "," + graphMargin.top + ")")
       .call(yGravAxis);
+    svg.append("text")
+      .attr("transform", "translate(" + (graphWidth + graphMargin.left) + "," + (graphHeight/2) + ")rotate(90)")
+      .attr("dy", "-4em")
+      .style("text-anchor", "middle")
+      .style("text-decoration","underline")
+      .text("Specific Gravity");
   }
 
   var linearScaleX = scaleTime()
@@ -3513,7 +3525,6 @@ window.onload = function () {
         return tickText(d) ;
       });
 
-    //var xaxistext = profileGraphHolder
     profileGraphHolder
       .append("g")
       .attr("id", "xaxistext_profileGraph")
