@@ -770,7 +770,20 @@ function renderChart(options) {
   select("#" + nameBase + "svg_" + longName).remove();
   var jobElementGraphInspector = document.getElementById(svgParentName);
 
-  var svg = select(jobElementGraphInspector).append("svg");
+  var start_x;
+  var svgdrag = drag()
+    .on("start", function () {
+      start_x = event.x;
+    })
+    .on("drag", function () {
+      document.getElementById(svgParentName).scrollBy((start_x - event.x), 0);
+      start_x = event.x;
+    });
+
+  var svg = select(jobElementGraphInspector)
+    .append("svg")
+    .call(svgdrag);
+
 
   var graphMargin;
   var graphHeight;
