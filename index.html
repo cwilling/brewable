@@ -175,7 +175,7 @@ See also:
   xmlhttp.send();
   function processTagData(arr) {
     var dl_version = arr[0].name;
-    var tarball_url = 'http://github.com/cwilling/brewable/releases/download/' + dl_version + '/brewable-' + dl_version + '-armv61-1.tar.gz';
+    var tarball_url = 'https://github.com/cwilling/brewable/releases/download/' + dl_version + '/brewable-' + dl_version + '-armv61-1.tar.gz';
     //console.log('Download: ' + tarball_url);
     document.getElementById('download-tar-gz').setAttribute("href", tarball_url);
     document.getElementById('code_wget').innerHTML = 'wget <a href="' + tarball_url + '">' + tarball_url + '</a>';
