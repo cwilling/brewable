@@ -2055,6 +2055,13 @@ window.onload = function () {
       runningData[longJobName]['updates'].push(data);
 
       if (runningData[longJobName]['refreshInterval']) clearInterval(runningData[longJobName]['refreshInterval']);
+
+      var holderNode = document.getElementById('jobElementGraph_' + longJobName);
+      if (holderNode == null) {
+        console.log('updateRunningJob() XXXXX: jobElementGraph_' + longJobName + ' does not exist');
+        //return;
+      }
+
       updateJobHistoryData(0, longJobName);
       runningData[longJobName]['refreshInterval'] = setInterval( showCurrentTimeTick, currentTimeTickUpdateInterval, longJobName);
 
@@ -2317,6 +2324,7 @@ window.onload = function () {
       */
       //var longName = header[0]['jobName'] + '-' + header[0]['jobInstance'];
     }
+    if (longName == undefined) return;
     //console.log("updateJobHistoryData() longName: " + longName);
 
     /* Examples of extracting various fields
