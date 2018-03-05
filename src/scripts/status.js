@@ -31,6 +31,7 @@ var profileLinearScaleY = [];
 var profileLinearScaleX = [];
 var tempDisplayPrecision = 2;
 var gravDisplayPrecision = 3;
+const gravityScaleMargin = 0.005;
 var temperatureStrokeWidth = 2;
 var gravityStrokeWidth = 3;
 var temperatureColours = ["blue", "green", "red", "fuchsia"];
@@ -884,8 +885,8 @@ function renderChart(options) {
   minDataPoint -= 5;
   maxDataPoint += 5;
   maxTime += 60;
-  minGravDataPoint -= 0.050;
-  maxGravDataPoint += 0.050;
+  minGravDataPoint -= gravityScaleMargin;
+  maxGravDataPoint += gravityScaleMargin;
   maxGravTime += 60;
 
   //console.log("Min = " + minDataPoint + " Max = " + maxDataPoint);
@@ -2464,8 +2465,8 @@ window.onload = function () {
     minDataPoint -= 5;
     maxDataPoint += 5;
     maxTime += 60;
-    minGravDataPoint -= 0.05;
-    maxGravDataPoint += 0.05;
+    minGravDataPoint -= gravityScaleMargin;
+    maxGravDataPoint += gravityScaleMargin;
     maxGravTime += 60;
 
     //console.log("Min = " + minDataPoint + " Max = " + maxDataPoint);
