@@ -1,0 +1,6 @@
+Use the command:
+    curl --request POST --header "PRIVATE-TOKEN: XXXXXXXXXXXXXXXXXX" --form "file=@brewable-0.5.2-armv61-1.tar.gz" https://gitlab.com/api/v4/projects/chris.willing%2Fbrewable/uploads
+
+- where XXXXXXXXXXXXXXXXXX is private token (named brewable) which could be
+found in another poly-like tool. That command returns the saved location as a
+url suitable for markdown in release note.
