@@ -10,7 +10,13 @@ Basic feature list:
 * supports multiple [SainSmart](http://www.sainsmart.com/sainsmart-relay-module-for-arduino-raspberry-pi.html) 5V relay modules for total of up to 20x relays
 * supports multiple simultaneous jobs, limited only by numbers of attached input sensors and relay outputs
 
-This is a complete javascript rewrite of the original (pre 0.3) python version.
 
-See https://cwilling.github.io/brewable for installation and usage information.
+## Downloads:
+
+RPi binary installer [brewable-0.5.2-armv61-1.tar.gz](/uploads/2a28d91fa213a1554b82fb3072deb3e0/brewable-0.5.2-armv61-1.tar.gz)
+
+Source code tarball [brewable-0.5.2.tar.gz](https://gitlab.com/chris.willing/brewable/-/archive/0.5.2/brewable-0.5.2.tar.gz)
+
+
+See [brewable wiki](https://gitlab.com/chris.willing/brewable/wikis/brewable) for quick installation.
 
