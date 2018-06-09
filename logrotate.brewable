@@ -1,9 +1,11 @@
 
-/var/log/brewable/brewable_std* {
+/var/log/brewable/brewable_std*.log {
    rotate 5
    weekly
    size 1M
    copytruncate
    shred
    missingok
+   compress
+   delaycompress
 }
