@@ -13,7 +13,7 @@ Basic feature list:
 
 ## Downloads:
 
-RPi binary installer [brewable-0.5.2-armv61-1.tar.gz](https://gitlab.com/chris.willing/brewable/wikis/uploads/brewable-0.5.2-armv61-1.tar.gz)
+RPi binary installer [brewable-0.5.2-armv61-1.tar.gz](https://gitlab.com/chris.willing/brewable/wikis/binaries/brewable-0.5.2-armv61-1.tar.gz)
 
 Source code tarball [brewable-0.5.2.tar.gz](https://gitlab.com/chris.willing/brewable/-/archive/0.5.2/brewable-0.5.2.tar.gz)
 
