@@ -19,7 +19,7 @@
     "d3": "^4.10.0",
     "ds18b20": "^0.1.0",
     "mkdirp": "^0.5.1",
-    "postcss-cssnext": "^3.0.2",
+    "postcss-cssnext": "^3.1.0",
     "postcss-nested": "^2.1.0",
     "postcss-simple-vars": "^4.0.0",
     "rollup": "^0.45.2",
