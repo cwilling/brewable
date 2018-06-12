@@ -940,18 +940,24 @@ gpioWorker.prototype.load_saved_jobs = function (msg) {
         console.log("full path: " + file);
 
         fs.readFile(path.join(this.historyDir, file), 'utf8', function (err, data) {
-          var lines = data.split(os.EOL);
-          var last_line = JSON.parse(lines[lines.length-2]);
-          console.log("last line: " + JSON.stringify(last_line));
-          if (last_line['running'] == 'saved') {
-            goodhistoryfiles.push(file);
+          try {
+            var lines = data.split(os.EOL);
+            var last_line = JSON.parse(lines[lines.length-2]);
+            console.log("last line: " + JSON.stringify(last_line));
+            if (last_line['running'] == 'saved') {
+              goodhistoryfiles.push(file);
+            }
+            console.log("good history files: " + goodhistoryfiles);
+            var jdata = JSON.stringify({
+              'type':'saved_jobs_list',
+              'data':{'historyfiles':goodhistoryfiles}
+            });
+            this.output_queue.enqueue(jdata);
           }
-          console.log("good history files: " + goodhistoryfiles);
-          var jdata = JSON.stringify({
-            'type':'saved_jobs_list',
-            'data':{'historyfiles':goodhistoryfiles}
-          });
-          this.output_queue.enqueue(jdata);
+          catch (err) {
+            console.log("WARNING! Could not parse file: " + file + " !!!");
+            // Also need new feature: notify client (popup?)
+          }
         }.bind(this));
       }.bind(this));
     }
